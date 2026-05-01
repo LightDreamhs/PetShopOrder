@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.petshop.order.mapper.CategoryMapper">
+
+    <resultMap id="categoryResultMap" type="com.petshop.order.entity.Category">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="icon" column="icon"/>
+        <result property="type" column="type"/>
+        <result property="sort" column="sort"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="productCount" column="product_count"/>
+    </resultMap>
+
+    <select id="selectList" resultMap="categoryResultMap">
+        SELECT c.*,
+               (SELECT COUNT(*) FROM product WHERE category_id = c.id) AS product_count
+        FROM category c
+        <where>
+            <if test="type != null and type != ''">
+                AND c.type = #{type}
+            </if>
+        </where>
+        ORDER BY c.sort ASC, c.id ASC
+    </select>
+
+    <select id="selectById" resultMap="categoryResultMap">
+        SELECT c.*,
+               (SELECT COUNT(*) FROM product WHERE category_id = c.id) AS product_count
+        FROM category c
+        WHERE c.id = #{id}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO category (name, icon, type, sort)
+        VALUES (#{name}, #{icon}, #{type}, #{sort})
+    </insert>
+
+    <update id="updateById">
+        UPDATE category
+        SET name = #{name},
+            icon = #{icon},
+            sort = #{sort}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM category WHERE id = #{id}
+    </delete>
+
+    <select id="countProductsById" resultType="int">
+        SELECT COUNT(*) FROM product WHERE category_id = #{id}
+    </select>
+
+</mapper>

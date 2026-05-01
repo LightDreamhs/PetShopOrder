@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.petshop.order.mapper.SkuMapper">
+
+    <select id="selectByProductId" resultType="com.petshop.order.entity.Sku">
+        SELECT * FROM sku WHERE product_id = #{productId} ORDER BY sort ASC, id ASC
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sku (product_id, spec_name, price, member_price, stock, sort)
+        VALUES (#{productId}, #{specName}, #{price}, #{memberPrice}, #{stock}, #{sort})
+    </insert>
+
+    <insert id="insertBatch">
+        INSERT INTO sku (product_id, spec_name, price, member_price, stock, sort)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.productId}, #{item.specName}, #{item.price}, #{item.memberPrice}, #{item.stock}, #{item.sort})
+        </foreach>
+    </insert>
+
+    <delete id="deleteByProductId">
+        DELETE FROM sku WHERE product_id = #{productId}
+    </delete>
+
+</mapper>
