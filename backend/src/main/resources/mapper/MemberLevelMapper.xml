@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.petshop.order.mapper.MemberLevelMapper">
+
+    <resultMap id="BaseResultMap" type="com.petshop.order.entity.MemberLevel">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="discountRate" column="discount_rate"/>
+        <result property="sort" column="sort"/>
+        <result property="status" column="status"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <resultMap id="ListResultMap" extends="BaseResultMap" type="com.petshop.order.entity.MemberLevel">
+        <result property="memberCount" column="member_count"/>
+    </resultMap>
+
+    <select id="selectList" resultMap="ListResultMap">
+        SELECT ml.*,
+               (SELECT COUNT(*) FROM member m WHERE m.level_id = ml.id) AS member_count
+        FROM member_level ml
+        ORDER BY ml.sort ASC, ml.id ASC
+    </select>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT * FROM member_level WHERE id = #{id}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO member_level (name, discount_rate, sort, status)
+        VALUES (#{name}, #{discountRate}, #{sort}, #{status})
+    </insert>
+
+    <update id="updateById">
+        UPDATE member_level
+        SET name = #{name},
+            discount_rate = #{discountRate},
+            sort = #{sort}
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateStatus">
+        UPDATE member_level SET status = #{status} WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM member_level WHERE id = #{id}
+    </delete>
+
+    <select id="countByLevelId" resultType="int">
+        SELECT COUNT(*) FROM member WHERE level_id = #{levelId}
+    </select>
+
+</mapper>

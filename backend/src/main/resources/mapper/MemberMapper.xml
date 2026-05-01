@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.petshop.order.mapper.MemberMapper">
+
+    <resultMap id="BaseResultMap" type="com.petshop.order.entity.Member">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="levelId" column="level_id"/>
+        <result property="remark" column="remark"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <resultMap id="DetailResultMap" extends="BaseResultMap" type="com.petshop.order.entity.Member">
+        <result property="levelName" column="level_name"/>
+        <collection property="phones" ofType="string">
+            <result column="phone"/>
+        </collection>
+    </resultMap>
+
+    <select id="selectPageList" resultMap="DetailResultMap">
+        SELECT m.*,
+               ml.name AS level_name,
+               mp.phone
+        FROM member m
+        LEFT JOIN member_level ml ON m.level_id = ml.id
+        LEFT JOIN member_phone mp ON m.id = mp.member_id
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND m.name LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+            <if test="levelId != null">
+                AND m.level_id = #{levelId}
+            </if>
+        </where>
+        ORDER BY m.id DESC
+    </select>
+
+    <select id="selectById" resultMap="DetailResultMap">
+        SELECT m.*,
+               ml.name AS level_name,
+               mp.phone
+        FROM member m
+        LEFT JOIN member_level ml ON m.level_id = ml.id
+        LEFT JOIN member_phone mp ON m.id = mp.member_id
+        WHERE m.id = #{id}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO member (name, level_id, remark)
+        VALUES (#{name}, #{levelId}, #{remark})
+    </insert>
+
+    <update id="updateById">
+        UPDATE member
+        SET name = #{name},
+            level_id = #{levelId},
+            remark = #{remark}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM member WHERE id = #{id}
+    </delete>
+
+</mapper>

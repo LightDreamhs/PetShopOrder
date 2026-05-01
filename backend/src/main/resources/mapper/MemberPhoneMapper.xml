@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.petshop.order.mapper.MemberPhoneMapper">
+
+    <select id="selectByMemberId" resultType="com.petshop.order.entity.MemberPhone">
+        SELECT * FROM member_phone WHERE member_id = #{memberId}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO member_phone (member_id, phone)
+        VALUES (#{memberId}, #{phone})
+    </insert>
+
+    <delete id="deleteByMemberId">
+        DELETE FROM member_phone WHERE member_id = #{memberId}
+    </delete>
+
+    <select id="countByPhone" resultType="int">
+        SELECT COUNT(*) FROM member_phone WHERE phone = #{phone}
+        <if test="excludeMemberId != null">
+            AND member_id != #{excludeMemberId}
+        </if>
+    </select>
+
+    <select id="selectMemberIdByPhone" resultType="java.lang.Long">
+        SELECT member_id FROM member_phone WHERE phone = #{phone} LIMIT 1
+    </select>
+
+</mapper>
