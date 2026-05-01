@@ -1,0 +1,81 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  font-family: 'PingFang SC', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #333;
+  background: #f5f5f7;
+}
+
+#app {
+  height: 100%;
+}
+
+/* Element Plus 全局覆盖 */
+
+// 主色调
+:root {
+  --el-color-primary: #ff5a00;
+  --el-color-primary-light-3: #ff7f33;
+  --el-color-primary-light-5: #ff9f66;
+  --el-color-primary-light-7: #ffbf99;
+  --el-color-primary-light-8: #ffcfb3;
+  --el-color-primary-light-9: #ffdfcc;
+  --el-color-primary-dark-2: #cc4800;
+}
+
+// 表格圆角卡片
+.el-table {
+  --el-table-border-color: #eee;
+  --el-table-header-bg-color: #fafafa;
+}
+
+// 分页
+.el-pagination {
+  margin-top: 16px;
+  justify-content: flex-end;
+}
+
+// 对话框
+.el-dialog {
+  border-radius: 12px;
+}
+
+// 按钮
+.el-button--primary {
+  --el-button-bg-color: #ff5a00;
+  --el-button-border-color: #ff5a00;
+  --el-button-hover-bg-color: #ff7f33;
+  --el-button-hover-border-color: #ff7f33;
+  --el-button-active-bg-color: #cc4800;
+  --el-button-active-border-color: #cc4800;
+}
+
+/* 通用工具类 */
+.page-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.text-orange {
+  color: #ff5a00;
+}
