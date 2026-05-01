@@ -32,7 +32,7 @@ public class AppAuthServiceImpl implements AppAuthService {
     }
 
     @Override
-    public AppUser login(String phone, String code) {
+    public Map<String, Object> login(String phone, String code) {
         String stored = codeStore.get(phone);
         if (stored == null || !stored.equals(code)) {
             throw new BusinessException("验证码错误");
@@ -56,7 +56,11 @@ public class AppAuthServiceImpl implements AppAuthService {
 
         StpUtil.login(user.getId());
         codeStore.remove(phone);
-        return user;
+
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("user", user);
+        result.put("isNew", isNew);
+        return result;
     }
 
     @Override

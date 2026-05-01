@@ -28,12 +28,13 @@ public class AppAuthController {
 
     @PostMapping("/login")
     public R<Map<String, Object>> login(@Validated @RequestBody LoginRequest req) {
-        AppUser user = appAuthService.login(req.getPhone(), req.getCode());
-        String masked = maskPhone(user.getPhone());
-        Map<String, Object> result = Map.of(
-                "phone", masked,
-                "isNew", false // 简化处理
-        );
+        Map<String, Object> loginResult = appAuthService.login(req.getPhone(), req.getCode());
+        AppUser user = (AppUser) loginResult.get("user");
+        boolean isNew = (boolean) loginResult.get("isNew");
+
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("phone", maskPhone(user.getPhone()));
+        result.put("isNew", isNew);
         return R.ok(result);
     }
 
@@ -51,7 +52,10 @@ public class AppAuthController {
             AppUser user = appAuthService.getCurrentUser();
             phone = maskPhone(user.getPhone());
         }
-        return R.ok(Map.of("loggedIn", loggedIn, "phone", phone));
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("loggedIn", loggedIn);
+        result.put("phone", phone);
+        return R.ok(result);
     }
 
     private String maskPhone(String phone) {
