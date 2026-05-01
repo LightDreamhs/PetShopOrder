@@ -1,0 +1,33 @@
+// 主题变量
+$primary: #ff5a00;
+$primary-light: #fff5ef;
+$primary-dark: #e65100;
+$bg: #f4f4f4;
+$bg-white: #ffffff;
+$text: #1a1a1a;
+$text-secondary: #666666;
+$text-muted: #999999;
+$border: #eeeeee;
+$danger: #ee0a24;
+$success: #07c160;
+$shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.05);
+$shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+$shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+$radius-sm: 8px;
+$radius-md: 12px;
+$radius-lg: 16px;
+$radius-xl: 20px;
+
+// CSS 自定义属性（与 Vant 共用）
+:root {
+  --van-primary-color: #{$primary};
+  --van-danger-color: #{$danger};
+  --van-success-color: #{$success};
+  --van-background: #{$bg};
+  --van-text-color: #{$text};
+  --van-text-color-2: #{$text-secondary};
+  --van-text-color-3: #{$text-muted};
+  --van-border-color: #{$border};
+  --van-active-color: #f2f2f2;
+  --van-background-2: #{$bg-white};
+}

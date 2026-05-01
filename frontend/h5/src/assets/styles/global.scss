@@ -1,0 +1,87 @@
+@use './reset.scss';
+@use './variables.scss';
+
+// 页面容器
+.page {
+  min-height: 100vh;
+  background-color: $bg;
+}
+
+// 安全区域底部
+.safe-area-bottom {
+  padding-bottom: constant(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+// 价格显示
+.price {
+  color: $primary;
+  font-weight: 700;
+
+  &--original {
+    color: $text-muted;
+    text-decoration: line-through;
+    font-weight: 400;
+    font-size: 12px;
+  }
+}
+
+// 文本工具类
+.text-muted {
+  color: $text-secondary;
+  font-size: 12px;
+}
+
+.text-primary {
+  color: $primary;
+}
+
+// 弹性布局
+.flex {
+  display: flex;
+}
+
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+// Vant 全局覆盖
+:root {
+  --van-button-primary-background: #{$primary};
+  --van-button-primary-border-color: #{$primary};
+  --van-button-border-radius: 20px;
+  --van-field-input-text-color: #{$text};
+  --van-nav-bar-icon-color: #{$text};
+  --van-nav-bar-text-color: #{$text};
+  --van-tab-active-text-color: #{$primary};
+  --van-switch-on-background-color: #{$primary};
+  --van-stepper-button-round-theme-color: #{$primary};
+}
+
+// 全局细线分割
+.van-cell::after {
+  border-color: #f0f0f0 !important;
+}
+
+.van-cell-group--inset {
+  border-radius: 14px !important;
+  overflow: hidden;
+}
+
+// 弹窗圆角增强
+.van-popup--bottom.van-popup--round {
+  border-radius: 20px 20px 0 0 !important;
+}
+
+// 全局过渡
+.van-overlay {
+  backdrop-filter: blur(2px);
+}
