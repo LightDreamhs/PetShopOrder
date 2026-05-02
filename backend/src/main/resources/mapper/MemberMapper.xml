@@ -14,18 +14,15 @@
 
     <resultMap id="DetailResultMap" extends="BaseResultMap" type="com.petshop.order.entity.Member">
         <result property="levelName" column="level_name"/>
-        <collection property="phones" ofType="string">
-            <result column="phone"/>
-        </collection>
+        <collection property="phones" column="{memberId=id}"
+                    select="com.petshop.order.mapper.MemberPhoneMapper.selectPhonesByMemberId"/>
     </resultMap>
 
     <select id="selectPageList" resultMap="DetailResultMap">
         SELECT m.*,
-               ml.name AS level_name,
-               mp.phone
+               ml.name AS level_name
         FROM member m
         LEFT JOIN member_level ml ON m.level_id = ml.id
-        LEFT JOIN member_phone mp ON m.id = mp.member_id
         <where>
             <if test="keyword != null and keyword != ''">
                 AND m.name LIKE CONCAT('%', #{keyword}, '%')
@@ -39,11 +36,9 @@
 
     <select id="selectById" resultMap="DetailResultMap">
         SELECT m.*,
-               ml.name AS level_name,
-               mp.phone
+               ml.name AS level_name
         FROM member m
         LEFT JOIN member_level ml ON m.level_id = ml.id
-        LEFT JOIN member_phone mp ON m.id = mp.member_id
         WHERE m.id = #{id}
     </select>
 

@@ -18,4 +18,6 @@ public interface MemberPhoneMapper {
     int countByPhone(@Param("phone") String phone, @Param("excludeMemberId") Long excludeMemberId);
 
     Long selectMemberIdByPhone(@Param("phone") String phone);
+
+    List<String> selectPhonesByMemberId(@Param("memberId") Long memberId);
 }

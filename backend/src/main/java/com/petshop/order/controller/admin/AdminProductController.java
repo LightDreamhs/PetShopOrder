@@ -177,6 +177,7 @@ public class AdminProductController {
     @Data
     public static class StatusRequest {
         @NotBlank
+        @jakarta.validation.constraints.Pattern(regexp = "ON_SALE|OFF_SALE", message = "商品状态不合法")
         private String status;
     }
 }

@@ -4,6 +4,9 @@ import com.petshop.order.common.PageResult;
 import com.petshop.order.common.R;
 import com.petshop.order.entity.Member;
 import com.petshop.order.service.MemberService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -39,7 +42,7 @@ public class AdminMemberController {
     }
 
     @PostMapping
-    public R<Map<String, Object>> create(@RequestBody MemberRequest req) {
+    public R<Map<String, Object>> create(@Valid @RequestBody MemberRequest req) {
         Member member = new Member();
         member.setName(req.getName());
         member.setLevelId(req.getLevelId());
@@ -50,7 +53,7 @@ public class AdminMemberController {
     }
 
     @PutMapping("/{id}")
-    public R<Map<String, Object>> update(@PathVariable Long id, @RequestBody MemberRequest req) {
+    public R<Map<String, Object>> update(@PathVariable Long id, @Valid @RequestBody MemberRequest req) {
         Member member = new Member();
         member.setName(req.getName());
         member.setLevelId(req.getLevelId());
@@ -92,7 +95,9 @@ public class AdminMemberController {
 
     @Data
     public static class MemberRequest {
+        @NotBlank(message = "会员名称不能为空")
         private String name;
+        @NotNull(message = "会员等级不能为空")
         private Long levelId;
         private String remark;
         private List<String> phones;

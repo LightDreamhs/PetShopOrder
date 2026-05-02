@@ -27,4 +27,8 @@
         SELECT member_id FROM member_phone WHERE phone = #{phone} LIMIT 1
     </select>
 
+    <select id="selectPhonesByMemberId" resultType="java.lang.String">
+        SELECT phone FROM member_phone WHERE member_id = #{memberId}
+    </select>
+
 </mapper>

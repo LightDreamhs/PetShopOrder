@@ -55,7 +55,7 @@ public class AppProductController {
     @GetMapping("/products/{id}")
     public R<Map<String, Object>> getDetail(@PathVariable Long id) {
         Product product = productMapper.selectById(id);
-        if (product == null) {
+        if (product == null || !"ON_SALE".equals(product.getStatus())) {
             return R.fail("商品不存在");
         }
         List<Sku> skus = skuMapper.selectByProductId(id);

@@ -48,7 +48,7 @@ public class FileServiceImpl implements FileService {
         File dest = new File(dir, filename);
         try {
             file.transferTo(dest);
-        } catch (IOException e) {
+        } catch (IOException | IllegalStateException e) {
             throw new BusinessException("文件上传失败");
         }
 
@@ -59,7 +59,15 @@ public class FileServiceImpl implements FileService {
 
     @Override
     public void delete(String key) {
-        File file = new File(uploadDir, key);
+        File baseDir = new File(uploadDir).getAbsoluteFile();
+        File file = new File(baseDir, key);
+        try {
+            if (!file.getCanonicalPath().startsWith(baseDir.getCanonicalPath() + File.separator)) {
+                throw new BusinessException("非法文件路径");
+            }
+        } catch (IOException e) {
+            throw new BusinessException("非法文件路径");
+        }
         if (file.exists()) {
             FileUtil.del(file);
         }
