@@ -18,6 +18,9 @@ const saving = ref(false)
 const testingWebhook = ref(false)
 const changeLogs = ref<SystemConfigChangeLog[]>([])
 const initialSnapshot = ref('')
+const webhookEdited = ref(false)
+const webhookRawValue = ref('')
+const webhookMaskedFromServer = ref(false)
 
 const form = reactive<UpdateSystemConfigRequest>({
   deliveryRadiusKm: 5,
@@ -61,7 +64,12 @@ function applyConfig(config: SystemConfig) {
   form.orderTimeEnabled = config.orderTimeEnabled
   form.orderStartTime = config.orderStartTime
   form.orderEndTime = config.orderEndTime
-  form.qywxWebhookUrl = config.qywxWebhookUrl || ''
+  webhookRawValue.value = (config.qywxWebhookUrl || '').trim()
+  webhookMaskedFromServer.value = webhookRawValue.value.includes('key=***')
+  form.qywxWebhookUrl = webhookRawValue.value
+    ? (webhookMaskedFromServer.value ? webhookRawValue.value : maskWebhookUrl(webhookRawValue.value))
+    : ''
+  webhookEdited.value = false
 }
 
 function normalizeMoney(value: string) {
@@ -89,6 +97,47 @@ function getErrorMessage(error: unknown, fallback: string) {
   return fallback
 }
 
+function maskWebhookUrl(url: string) {
+  return url.replace(/([?&]key=)[^&]+/i, '$1***')
+}
+
+function isValidQywxWebhookUrl(url: string) {
+  return /^https:\/\/qyapi\.weixin\.qq\.com\/cgi-bin\/webhook\/send\?key=[A-Za-z0-9_-]+$/i.test(url)
+}
+
+function resolveWebhookForSave(): string | undefined {
+  const inputValue = form.qywxWebhookUrl?.trim() || ''
+  if (webhookEdited.value) {
+    return inputValue
+  }
+  if (!inputValue) {
+    return ''
+  }
+  if (webhookMaskedFromServer.value) {
+    // 后端只返回脱敏值时，前端不覆盖原值
+    return undefined
+  }
+  return webhookRawValue.value
+}
+
+function resolveWebhookForTest(): string | null {
+  const inputValue = form.qywxWebhookUrl?.trim() || ''
+  if (webhookEdited.value) {
+    return inputValue || null
+  }
+  if (!inputValue) {
+    return null
+  }
+  if (webhookMaskedFromServer.value) {
+    return null
+  }
+  return webhookRawValue.value || null
+}
+
+function handleWebhookInput() {
+  webhookEdited.value = true
+}
+
 function buildSnapshot() {
   const tieredRules = [...form.tieredDeliveryFeeRules]
     .map((rule) => ({
@@ -108,6 +157,7 @@ function buildSnapshot() {
     orderStartTime: form.orderStartTime,
     orderEndTime: form.orderEndTime,
     qywxWebhookUrl: form.qywxWebhookUrl?.trim() || '',
+    webhookEdited: webhookEdited.value,
   })
 }
 
@@ -177,6 +227,12 @@ function validateForm() {
     return false
   }
 
+  const webhookValue = resolveWebhookForSave()
+  if (webhookValue && !isValidQywxWebhookUrl(webhookValue)) {
+    ElMessage.warning('Webhook 地址仅支持企业微信机器人地址（https://qyapi.weixin.qq.com/...）')
+    return false
+  }
+
   return true
 }
 
@@ -231,7 +287,10 @@ async function handleSave() {
       orderTimeEnabled: form.orderTimeEnabled,
       orderStartTime: form.orderStartTime,
       orderEndTime: form.orderEndTime,
-      qywxWebhookUrl: form.qywxWebhookUrl || '',
+    }
+    const webhookValue = resolveWebhookForSave()
+    if (webhookValue !== undefined) {
+      payload.qywxWebhookUrl = webhookValue
     }
 
     const res = await updateSystemConfig(payload)
@@ -247,13 +306,22 @@ async function handleSave() {
 }
 
 async function handleTestWebhook() {
-  if (!form.qywxWebhookUrl) {
+  const webhookValue = resolveWebhookForTest()
+  if (!webhookValue) {
+    if (!webhookEdited.value && webhookMaskedFromServer.value) {
+      ElMessage.warning('当前仅有脱敏地址，请重新输入完整 Webhook 后再测试')
+      return
+    }
     ElMessage.warning('请先填写企微 Webhook 地址')
+    return
+  }
+  if (!isValidQywxWebhookUrl(webhookValue)) {
+    ElMessage.warning('Webhook 地址仅支持企业微信机器人地址（https://qyapi.weixin.qq.com/...）')
     return
   }
   testingWebhook.value = true
   try {
-    await testQywxWebhook(form.qywxWebhookUrl)
+    await testQywxWebhook(webhookValue)
     ElMessage.success('测试消息已发送')
   } catch (error) {
     ElMessage.error(`测试发送失败：${getErrorMessage(error, '请检查地址或网络后重试')}`)
@@ -380,6 +448,7 @@ onMounted(() => {
             <el-input
               v-model="form.qywxWebhookUrl"
               placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=***"
+              @input="handleWebhookInput"
             />
             <el-button :loading="testingWebhook" :disabled="!form.qywxWebhookUrl" @click="handleTestWebhook">发送测试</el-button>
           </div>
