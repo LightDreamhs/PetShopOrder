@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.petshop.order.mapper.OrdersMapper">
+
+    <insert id="insert" parameterType="com.petshop.order.entity.Orders" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO orders (order_no, user_id, customer_phone_snapshot, customer_name,
+                            member_id, member_level_snapshot, goods_amount, service_amount,
+                            delivery_fee, total_amount, need_delivery, delivery_address,
+                            delivery_lat, delivery_lng, delivery_distance, processed, remark)
+        VALUES (#{orderNo}, #{userId}, #{customerPhoneSnapshot}, #{customerName},
+                #{memberId}, #{memberLevelSnapshot}, #{goodsAmount}, #{serviceAmount},
+                #{deliveryFee}, #{totalAmount}, #{needDelivery}, #{deliveryAddress},
+                #{deliveryLat}, #{deliveryLng}, #{deliveryDistance}, #{processed}, #{remark})
+    </insert>
+
+    <select id="selectById" resultType="com.petshop.order.entity.Orders">
+        SELECT id, order_no, user_id, customer_phone_snapshot, customer_name,
+               member_id, member_level_snapshot, goods_amount, service_amount,
+               delivery_fee, total_amount, need_delivery, delivery_address,
+               delivery_lat, delivery_lng, delivery_distance, processed, remark,
+               create_time, update_time
+        FROM orders WHERE id = #{id}
+    </select>
+
+    <select id="selectPageListByUserId" resultType="com.petshop.order.entity.Orders">
+        SELECT id, order_no, user_id, customer_phone_snapshot, customer_name,
+               member_id, member_level_snapshot, goods_amount, service_amount,
+               delivery_fee, total_amount, need_delivery, delivery_address,
+               delivery_lat, delivery_lng, delivery_distance, processed, remark,
+               create_time, update_time
+        FROM orders WHERE user_id = #{userId}
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="selectPageListAdmin" resultType="com.petshop.order.entity.Orders">
+        SELECT id, order_no, user_id, customer_phone_snapshot, customer_name,
+               member_id, member_level_snapshot, goods_amount, service_amount,
+               delivery_fee, total_amount, need_delivery, delivery_address,
+               delivery_lat, delivery_lng, delivery_distance, processed, remark,
+               create_time, update_time
+        FROM orders
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (order_no LIKE CONCAT('%', #{keyword}, '%')
+                     OR customer_phone_snapshot LIKE CONCAT('%', #{keyword}, '%')
+                     OR customer_name LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="processed != null">
+                AND processed = #{processed}
+            </if>
+            <if test="needDelivery != null">
+                AND need_delivery = #{needDelivery}
+            </if>
+            <if test="startTime != null and startTime != ''">
+                AND create_time &gt;= #{startTime}
+            </if>
+            <if test="endTime != null and endTime != ''">
+                AND create_time &lt;= #{endTime}
+            </if>
+        </where>
+        ORDER BY create_time DESC
+    </select>
+
+    <update id="updateProcessed">
+        UPDATE orders SET processed = #{processed} WHERE id = #{id}
+    </update>
+
+</mapper>

@@ -16,4 +16,6 @@ public interface SkuMapper {
     int insertBatch(@Param("list") List<Sku> list);
 
     int deleteByProductId(@Param("productId") Long productId);
+
+    int deductStock(@Param("id") Long id, @Param("qty") Integer qty);
 }

@@ -24,4 +24,8 @@
         DELETE FROM sku WHERE product_id = #{productId}
     </delete>
 
+    <update id="deductStock">
+        UPDATE sku SET stock = stock - #{qty} WHERE id = #{id} AND stock &gt;= #{qty}
+    </update>
+
 </mapper>

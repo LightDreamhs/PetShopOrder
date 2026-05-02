@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.petshop.order.mapper.OrderItemMapper">
+
+    <insert id="insertBatch">
+        INSERT INTO order_item (order_id, product_id, sku_id, type, product_name,
+                                sku_name, original_price, deal_price, quantity, subtotal)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.orderId}, #{item.productId}, #{item.skuId}, #{item.type}, #{item.productName},
+             #{item.skuName}, #{item.originalPrice}, #{item.dealPrice}, #{item.quantity}, #{item.subtotal})
+        </foreach>
+    </insert>
+
+    <select id="selectByOrderId" resultType="com.petshop.order.entity.OrderItem">
+        SELECT id, order_id, product_id, sku_id, type, product_name,
+               sku_name, original_price, deal_price, quantity, subtotal,
+               create_time, update_time
+        FROM order_item WHERE order_id = #{orderId}
+    </select>
+
+</mapper>
