@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.petshop.order.mapper.StatsMapper">
+
+    <select id="selectOverview" resultType="map">
+        SELECT
+            COUNT(CASE WHEN DATE(create_time) = CURDATE() THEN 1 END) as todayOrderCount,
+            IFNULL(SUM(CASE WHEN DATE(create_time) = CURDATE() THEN total_amount ELSE 0 END), 0) as todayAmount,
+            COUNT(*) as totalOrderCount,
+            IFNULL(SUM(total_amount), 0) as totalAmount,
+            (SELECT COUNT(*) FROM member) as totalMemberCount,
+            COUNT(CASE WHEN processed = 0 THEN 1 END) as unprocessedCount
+        FROM orders
+    </select>
+
+    <select id="selectOrderTrends" resultType="map">
+        <if test="period == 'DAY'">
+            SELECT DATE_FORMAT(create_time, '%m-%d') as label,
+                   COUNT(*) as orderCount,
+                   IFNULL(SUM(total_amount), 0) as amount
+            FROM orders
+            WHERE create_time &gt;= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+            GROUP BY DATE(create_time)
+            ORDER BY DATE(create_time)
+        </if>
+        <if test="period == 'WEEK'">
+            SELECT CONCAT('第', WEEK(create_time, 1), '周') as label,
+                   COUNT(*) as orderCount,
+                   IFNULL(SUM(total_amount), 0) as amount
+            FROM orders
+            WHERE create_time &gt;= DATE_SUB(CURDATE(), INTERVAL 12 WEEK)
+            GROUP BY WEEK(create_time, 1)
+            ORDER BY WEEK(create_time, 1)
+        </if>
+        <if test="period == 'MONTH'">
+            SELECT DATE_FORMAT(create_time, '%Y-%m') as label,
+                   COUNT(*) as orderCount,
+                   IFNULL(SUM(total_amount), 0) as amount
+            FROM orders
+            WHERE create_time &gt;= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+            GROUP BY DATE_FORMAT(create_time, '%Y-%m')
+            ORDER BY DATE_FORMAT(create_time, '%Y-%m')
+        </if>
+    </select>
+
+    <select id="selectMemberRanking" resultType="map">
+        SELECT m.id as memberId, m.name, mp.phone, ml.name as levelName,
+               COUNT(o.id) as orderCount, IFNULL(SUM(o.total_amount), 0) as totalAmount
+        FROM member m
+        LEFT JOIN member_phone mp ON mp.member_id = m.id AND mp.id = (SELECT MIN(id) FROM member_phone WHERE member_id = m.id)
+        LEFT JOIN member_level ml ON ml.id = m.level_id
+        LEFT JOIN orders o ON o.member_id = m.id
+        GROUP BY m.id
+        HAVING orderCount &gt; 0
+        ORDER BY totalAmount DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>
