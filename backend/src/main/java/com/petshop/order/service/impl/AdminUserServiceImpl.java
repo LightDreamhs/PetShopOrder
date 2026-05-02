@@ -45,6 +45,12 @@ public class AdminUserServiceImpl implements AdminUserService {
         if (existing == null) {
             throw new BusinessException("管理员不存在");
         }
+        if ("BOSS".equals(existing.getRole())) {
+            throw new BusinessException("BOSS 角色不可修改");
+        }
+        if (!ALLOWED_ROLES.contains(user.getRole())) {
+            throw new BusinessException("角色只能是 MANAGER 或 STAFF");
+        }
         user.setId(id);
         adminUserMapper.updateById(user);
         return adminUserMapper.selectById(id);

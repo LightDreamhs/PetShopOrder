@@ -106,7 +106,9 @@ public class AdminUserController {
 
     @Data
     public static class UpdateUserRequest {
+        @NotBlank(message = "姓名不能为空")
         private String realName;
+        @NotBlank(message = "角色不能为空")
         private String role;
     }
 

@@ -25,13 +25,13 @@
             ORDER BY DATE(create_time)
         </if>
         <if test="period == 'WEEK'">
-            SELECT CONCAT('第', WEEK(create_time, 1), '周') as label,
+            SELECT CONCAT(YEAR(create_time), '-W', LPAD(WEEK(create_time, 1), 2, '0')) as label,
                    COUNT(*) as orderCount,
                    IFNULL(SUM(total_amount), 0) as amount
             FROM orders
             WHERE create_time &gt;= DATE_SUB(CURDATE(), INTERVAL 12 WEEK)
-            GROUP BY WEEK(create_time, 1)
-            ORDER BY WEEK(create_time, 1)
+            GROUP BY YEAR(create_time), WEEK(create_time, 1)
+            ORDER BY YEAR(create_time), WEEK(create_time, 1)
         </if>
         <if test="period == 'MONTH'">
             SELECT DATE_FORMAT(create_time, '%Y-%m') as label,

@@ -39,6 +39,9 @@ public class AppCartController {
     public R<Map<String, Object>> calculate(@RequestBody Map<String, Object> body) {
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> inputItems = (List<Map<String, Object>>) body.get("items");
+        if (inputItems == null || inputItems.isEmpty()) {
+            return R.ok(buildEmptyResult());
+        }
         String deliveryLat = (String) body.get("deliveryLat");
         String deliveryLng = (String) body.get("deliveryLng");
 
@@ -46,25 +49,36 @@ public class AppCartController {
         List<DeliveryItem> deliveryItems = new ArrayList<>();
 
         for (Map<String, Object> item : inputItems) {
+            Long productId = toLong(item.get("productId"));
+            Long skuId = toLong(item.get("skuId"));
+            Integer quantity = toInteger(item.get("quantity"));
+            if (productId == null || skuId == null || quantity == null || quantity <= 0) {
+                continue;
+            }
+
             CartItemInput cartItem = new CartItemInput();
-            cartItem.setProductId(toLong(item.get("productId")));
-            cartItem.setSkuId(toLong(item.get("skuId")));
-            cartItem.setQuantity(toInteger(item.get("quantity")));
+            cartItem.setProductId(productId);
+            cartItem.setSkuId(skuId);
+            cartItem.setQuantity(quantity);
             cartItems.add(cartItem);
 
-            Product product = productMapper.selectById(cartItem.getProductId());
+            Product product = productMapper.selectById(productId);
             if (product != null) {
-                List<Sku> skus = skuMapper.selectByProductId(cartItem.getProductId());
+                List<Sku> skus = skuMapper.selectByProductId(productId);
                 Sku sku = skus.stream()
-                        .filter(s -> s.getId().equals(cartItem.getSkuId()))
+                        .filter(s -> s.getId().equals(skuId))
                         .findFirst().orElse(null);
 
+                if (sku == null) {
+                    continue;
+                }
+
                 DeliveryItem deliveryItem = new DeliveryItem();
-                deliveryItem.setProductId(cartItem.getProductId());
-                deliveryItem.setSkuId(cartItem.getSkuId());
-                deliveryItem.setQuantity(cartItem.getQuantity());
+                deliveryItem.setProductId(productId);
+                deliveryItem.setSkuId(skuId);
+                deliveryItem.setQuantity(quantity);
                 deliveryItem.setType(product.getType());
-                deliveryItem.setOriginalPrice(sku != null ? sku.getPrice() : BigDecimal.ZERO);
+                deliveryItem.setOriginalPrice(sku.getPrice());
                 deliveryItem.setSupportDelivery(product.getSupportDelivery() != null && product.getSupportDelivery() == 1);
                 deliveryItems.add(deliveryItem);
             }
@@ -123,5 +137,16 @@ public class AppCartController {
         if (val == null) return null;
         if (val instanceof Number) return ((Number) val).intValue();
         return Integer.parseInt(val.toString());
+    }
+
+    private Map<String, Object> buildEmptyResult() {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("items", List.of());
+        result.put("goodsAmount", "0.00");
+        result.put("serviceAmount", "0.00");
+        result.put("deliveryFee", "0.00");
+        result.put("totalAmount", "0.00");
+        result.put("deliveryCheck", null);
+        return result;
     }
 }

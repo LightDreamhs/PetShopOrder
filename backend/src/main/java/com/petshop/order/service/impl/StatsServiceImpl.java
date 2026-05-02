@@ -28,6 +28,9 @@ public class StatsServiceImpl implements StatsService {
 
     @Override
     public List<Map<String, Object>> getOrderTrends(String period) {
+        if (!"DAY".equals(period) && !"WEEK".equals(period) && !"MONTH".equals(period)) {
+            throw new com.petshop.order.common.BusinessException("period 参数只支持 DAY、WEEK、MONTH");
+        }
         List<Map<String, Object>> trends = statsMapper.selectOrderTrends(period);
         for (Map<String, Object> item : trends) {
             if (item.get("amount") != null) {

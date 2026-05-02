@@ -43,11 +43,12 @@ public class DeliveryServiceImpl implements DeliveryService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         boolean canDeliver = hasDeliverableGoods;
-        boolean reachedMinAmount = deliveryMinAmount != null
-                && deliverableGoodsOriginal.compareTo(deliveryMinAmount) >= 0;
+        boolean reachedMinAmount = deliveryMinAmount == null
+                || deliverableGoodsOriginal.compareTo(deliveryMinAmount) >= 0;
         BigDecimal gap = BigDecimal.ZERO;
-        if (!reachedMinAmount && deliveryMinAmount != null) {
+        if (!reachedMinAmount) {
             gap = deliveryMinAmount.subtract(deliverableGoodsOriginal);
+            canDeliver = false;
         }
 
         boolean withinRadius = true;
