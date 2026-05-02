@@ -18,13 +18,15 @@ public class AdminOrderController {
     @GetMapping
     public R<PageResult<Map<String, Object>>> getAdminOrders(
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) Integer processed,
-            @RequestParam(required = false) Integer needDelivery,
+            @RequestParam(required = false) Boolean processed,
+            @RequestParam(required = false) Boolean needDelivery,
             @RequestParam(required = false) String startTime,
             @RequestParam(required = false) String endTime) {
-        return R.ok(orderService.getAdminOrders(page, size, keyword, processed, needDelivery, startTime, endTime));
+        Integer processedInt = processed != null ? (processed ? 1 : 0) : null;
+        Integer needDeliveryInt = needDelivery != null ? (needDelivery ? 1 : 0) : null;
+        return R.ok(orderService.getAdminOrders(page, size, keyword, processedInt, needDeliveryInt, startTime, endTime));
     }
 
     @GetMapping("/{id}")

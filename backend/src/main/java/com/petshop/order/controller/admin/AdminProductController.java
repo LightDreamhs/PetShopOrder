@@ -1,5 +1,7 @@
 package com.petshop.order.controller.admin;
 
+import cn.dev33.satoken.stp.StpUtil;
+import com.petshop.order.common.BusinessException;
 import com.petshop.order.common.PageResult;
 import com.petshop.order.common.R;
 import com.petshop.order.entity.Product;
@@ -27,14 +29,21 @@ public class AdminProductController {
 
     private final ProductService productService;
 
+    private void checkManager() {
+        if (!StpUtil.hasRole("BOSS") && !StpUtil.hasRole("MANAGER")) {
+            throw new BusinessException(403, "无权限访问");
+        }
+    }
+
     @GetMapping
     public R<Map<String, Object>> getList(
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String status) {
+        checkManager();
         PageResult<Product> pr = productService.getList(page, size, keyword, categoryId, type, status);
         List<Map<String, Object>> list = pr.getList().stream().map(this::toListMap).toList();
         Map<String, Object> result = Map.of(
@@ -48,12 +57,14 @@ public class AdminProductController {
 
     @GetMapping("/{id}")
     public R<Map<String, Object>> getDetail(@PathVariable Long id) {
+        checkManager();
         Product product = productService.getDetail(id);
         return R.ok(toDetailMap(product));
     }
 
     @PostMapping
     public R<Map<String, Object>> create(@Validated @RequestBody ProductRequest req) {
+        checkManager();
         Product product = toEntity(req);
         Product saved = productService.create(product);
         return R.ok(toDetailMap(saved));
@@ -61,6 +72,7 @@ public class AdminProductController {
 
     @PutMapping("/{id}")
     public R<Map<String, Object>> update(@PathVariable Long id, @Validated @RequestBody ProductRequest req) {
+        checkManager();
         Product product = toEntity(req);
         Product updated = productService.update(id, product);
         return R.ok(toDetailMap(updated));
@@ -68,12 +80,14 @@ public class AdminProductController {
 
     @PutMapping("/{id}/status")
     public R<Void> updateStatus(@PathVariable Long id, @Validated @RequestBody StatusRequest req) {
+        checkManager();
         productService.updateStatus(id, req.getStatus());
         return R.ok();
     }
 
     @DeleteMapping("/{id}")
     public R<Void> delete(@PathVariable Long id) {
+        checkManager();
         productService.delete(id);
         return R.ok();
     }

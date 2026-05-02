@@ -11,6 +11,7 @@ import com.petshop.order.mapper.MemberMapper;
 import com.petshop.order.mapper.MemberPhoneMapper;
 import com.petshop.order.mapper.OrderItemMapper;
 import com.petshop.order.mapper.OrdersMapper;
+import com.petshop.order.mapper.ProductMapper;
 import com.petshop.order.mapper.SkuMapper;
 import com.petshop.order.service.AppAuthService;
 import com.petshop.order.service.DeliveryService;
@@ -45,6 +46,7 @@ public class OrderServiceImpl implements OrderService {
     private final MemberMapper memberMapper;
     private final MemberLevelMapper memberLevelMapper;
     private final NotificationService notificationService;
+    private final ProductMapper productMapper;
 
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final DateTimeFormatter ORDER_NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
@@ -89,13 +91,17 @@ public class OrderServiceImpl implements OrderService {
         if (needDelivery) {
             List<DeliveryItem> deliveryItems = new ArrayList<>();
             for (CalculatedItemResult ci : calculatedItems) {
+                Product product = productMapper.selectById(ci.getProductId());
                 DeliveryItem di = new DeliveryItem();
                 di.setProductId(ci.getProductId());
                 di.setSkuId(ci.getSkuId());
                 di.setQuantity(ci.getQuantity());
                 di.setType(ci.getType());
                 di.setOriginalPrice(new BigDecimal(ci.getOriginalPrice()));
-                di.setSupportDelivery(true);
+                di.setSupportDelivery(product != null
+                        && product.getSupportDelivery() != null
+                        && product.getSupportDelivery() == 1
+                        && "GOODS".equals(product.getType()));
                 deliveryItems.add(di);
             }
 

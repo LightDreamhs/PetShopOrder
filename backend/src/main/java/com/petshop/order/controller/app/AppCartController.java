@@ -19,10 +19,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/app/cart")
@@ -52,7 +50,7 @@ public class AppCartController {
             Long productId = toLong(item.get("productId"));
             Long skuId = toLong(item.get("skuId"));
             Integer quantity = toInteger(item.get("quantity"));
-            if (productId == null || skuId == null || quantity == null || quantity <= 0) {
+            if (productId == null || quantity == null || quantity <= 0) {
                 continue;
             }
 
@@ -65,9 +63,16 @@ public class AppCartController {
             Product product = productMapper.selectById(productId);
             if (product != null) {
                 List<Sku> skus = skuMapper.selectByProductId(productId);
-                Sku sku = skus.stream()
-                        .filter(s -> s.getId().equals(skuId))
-                        .findFirst().orElse(null);
+                Sku sku;
+                if (skuId != null) {
+                    sku = skus.stream()
+                            .filter(s -> s.getId().equals(skuId))
+                            .findFirst().orElse(null);
+                } else {
+                    sku = skus.stream()
+                            .min(Comparator.comparingInt(s -> s.getSort() != null ? s.getSort() : 0))
+                            .orElse(null);
+                }
 
                 if (sku == null) {
                     continue;

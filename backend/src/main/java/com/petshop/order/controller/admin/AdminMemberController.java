@@ -1,5 +1,7 @@
 package com.petshop.order.controller.admin;
 
+import cn.dev33.satoken.stp.StpUtil;
+import com.petshop.order.common.BusinessException;
 import com.petshop.order.common.PageResult;
 import com.petshop.order.common.R;
 import com.petshop.order.entity.Member;
@@ -24,12 +26,19 @@ public class AdminMemberController {
 
     private final MemberService memberService;
 
+    private void checkManager() {
+        if (!StpUtil.hasRole("BOSS") && !StpUtil.hasRole("MANAGER")) {
+            throw new BusinessException(403, "无权限访问");
+        }
+    }
+
     @GetMapping
     public R<Map<String, Object>> list(
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Long levelId) {
+        checkManager();
         PageResult<Member> pr = memberService.getList(page, size, keyword, levelId);
         List<Map<String, Object>> list = pr.getList().stream().map(this::toListMap).toList();
         Map<String, Object> result = Map.of(
@@ -43,6 +52,7 @@ public class AdminMemberController {
 
     @PostMapping
     public R<Map<String, Object>> create(@Valid @RequestBody MemberRequest req) {
+        checkManager();
         Member member = new Member();
         member.setName(req.getName());
         member.setLevelId(req.getLevelId());
@@ -54,6 +64,7 @@ public class AdminMemberController {
 
     @PutMapping("/{id}")
     public R<Map<String, Object>> update(@PathVariable Long id, @Valid @RequestBody MemberRequest req) {
+        checkManager();
         Member member = new Member();
         member.setName(req.getName());
         member.setLevelId(req.getLevelId());
@@ -65,6 +76,7 @@ public class AdminMemberController {
 
     @DeleteMapping("/{id}")
     public R<Void> delete(@PathVariable Long id) {
+        checkManager();
         memberService.delete(id);
         return R.ok();
     }

@@ -24,7 +24,7 @@ public class AdminOperationLogController {
     @GetMapping
     public R<Map<String, Object>> list(
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) Long userId,
             @RequestParam(required = false) String action,
             @RequestParam(required = false) String startTime,

@@ -18,10 +18,8 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -49,10 +47,17 @@ public class PriceCalculationServiceImpl implements PriceCalculationService {
             }
 
             List<Sku> skus = skuMapper.selectByProductId(input.getProductId());
-            Sku sku = skus.stream()
-                    .filter(s -> s.getId().equals(input.getSkuId()))
-                    .findFirst()
-                    .orElseThrow(() -> new BusinessException("SKU不存在: " + input.getSkuId()));
+            Sku sku;
+            if (input.getSkuId() != null) {
+                sku = skus.stream()
+                        .filter(s -> s.getId().equals(input.getSkuId()))
+                        .findFirst()
+                        .orElseThrow(() -> new BusinessException("SKU不存在"));
+            } else {
+                sku = skus.stream()
+                        .min(Comparator.comparingInt(s -> s.getSort() != null ? s.getSort() : 0))
+                        .orElseThrow(() -> new BusinessException("商品无可用规格"));
+            }
 
             BigDecimal originalPrice = sku.getPrice();
             BigDecimal dealPrice;

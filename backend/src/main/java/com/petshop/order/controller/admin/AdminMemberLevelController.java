@@ -1,5 +1,7 @@
 package com.petshop.order.controller.admin;
 
+import cn.dev33.satoken.stp.StpUtil;
+import com.petshop.order.common.BusinessException;
 import com.petshop.order.common.R;
 import com.petshop.order.entity.MemberLevel;
 import com.petshop.order.service.MemberLevelService;
@@ -24,14 +26,22 @@ public class AdminMemberLevelController {
 
     private final MemberLevelService memberLevelService;
 
+    private void checkManager() {
+        if (!StpUtil.hasRole("BOSS") && !StpUtil.hasRole("MANAGER")) {
+            throw new BusinessException(403, "无权限访问");
+        }
+    }
+
     @GetMapping
     public R<List<Map<String, Object>>> list() {
+        checkManager();
         List<MemberLevel> list = memberLevelService.getList();
         return R.ok(list.stream().map(this::toMap).toList());
     }
 
     @PostMapping
     public R<Map<String, Object>> create(@Validated @RequestBody MemberLevelRequest req) {
+        checkManager();
         MemberLevel level = new MemberLevel();
         level.setName(req.getName());
         level.setDiscountRate(req.getDiscountRate());
@@ -42,6 +52,7 @@ public class AdminMemberLevelController {
 
     @PutMapping("/{id}")
     public R<Map<String, Object>> update(@PathVariable Long id, @Validated @RequestBody MemberLevelRequest req) {
+        checkManager();
         MemberLevel level = new MemberLevel();
         level.setName(req.getName());
         level.setDiscountRate(req.getDiscountRate());
@@ -52,6 +63,7 @@ public class AdminMemberLevelController {
 
     @PutMapping("/{id}/status")
     public R<Void> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        checkManager();
         String status = body.get("status");
         Integer dbStatus = "ENABLED".equals(status) ? 1 : 0;
         memberLevelService.updateStatus(id, dbStatus);
@@ -60,6 +72,7 @@ public class AdminMemberLevelController {
 
     @DeleteMapping("/{id}")
     public R<Void> delete(@PathVariable Long id) {
+        checkManager();
         memberLevelService.delete(id);
         return R.ok();
     }

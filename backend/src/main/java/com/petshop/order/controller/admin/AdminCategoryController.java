@@ -1,5 +1,7 @@
 package com.petshop.order.controller.admin;
 
+import cn.dev33.satoken.stp.StpUtil;
+import com.petshop.order.common.BusinessException;
 import com.petshop.order.common.R;
 import com.petshop.order.entity.Category;
 import com.petshop.order.service.CategoryService;
@@ -19,8 +21,15 @@ public class AdminCategoryController {
 
     private final CategoryService categoryService;
 
+    private void checkManager() {
+        if (!StpUtil.hasRole("BOSS") && !StpUtil.hasRole("MANAGER")) {
+            throw new BusinessException(403, "无权限访问");
+        }
+    }
+
     @GetMapping
     public R<List<Map<String, Object>>> getList(@RequestParam(required = false) String type) {
+        checkManager();
         List<Category> list = categoryService.getList(type);
         List<Map<String, Object>> result = list.stream().map(this::toMap).toList();
         return R.ok(result);
@@ -28,6 +37,7 @@ public class AdminCategoryController {
 
     @PostMapping
     public R<Map<String, Object>> create(@Validated @RequestBody CategoryRequest req) {
+        checkManager();
         Category category = new Category();
         category.setName(req.getName());
         category.setIcon(req.getIcon());
@@ -39,6 +49,7 @@ public class AdminCategoryController {
 
     @PutMapping("/{id}")
     public R<Map<String, Object>> update(@PathVariable Long id, @Validated @RequestBody CategoryUpdateRequest req) {
+        checkManager();
         Category category = new Category();
         category.setName(req.getName());
         category.setIcon(req.getIcon());
@@ -49,6 +60,7 @@ public class AdminCategoryController {
 
     @DeleteMapping("/{id}")
     public R<Void> delete(@PathVariable Long id) {
+        checkManager();
         categoryService.delete(id);
         return R.ok();
     }

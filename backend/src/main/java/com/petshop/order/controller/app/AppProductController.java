@@ -1,16 +1,21 @@
 package com.petshop.order.controller.app;
 
+import cn.dev33.satoken.stp.StpUtil;
 import com.petshop.order.common.R;
-import com.petshop.order.entity.Category;
-import com.petshop.order.entity.Product;
-import com.petshop.order.entity.Sku;
+import com.petshop.order.entity.*;
 import com.petshop.order.mapper.CategoryMapper;
+import com.petshop.order.mapper.MemberLevelMapper;
+import com.petshop.order.mapper.MemberMapper;
+import com.petshop.order.mapper.MemberPhoneMapper;
 import com.petshop.order.mapper.ProductMapper;
 import com.petshop.order.mapper.SkuMapper;
+import com.petshop.order.service.AppAuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -22,6 +27,10 @@ public class AppProductController {
     private final CategoryMapper categoryMapper;
     private final ProductMapper productMapper;
     private final SkuMapper skuMapper;
+    private final AppAuthService appAuthService;
+    private final MemberPhoneMapper memberPhoneMapper;
+    private final MemberMapper memberMapper;
+    private final MemberLevelMapper memberLevelMapper;
 
     @GetMapping("/categories")
     public R<List<Map<String, Object>>> getCategoryList(@RequestParam(required = false) String type) {
@@ -39,7 +48,8 @@ public class AppProductController {
     @GetMapping("/products")
     public R<List<Map<String, Object>>> getProductList(@RequestParam(required = false) String type) {
         List<Product> list = productMapper.selectPageList(null, null, type, "ON_SALE");
-        List<Map<String, Object>> result = list.stream().map(this::toAppMap).toList();
+        BigDecimal discountRate = getMemberDiscountRate();
+        List<Map<String, Object>> result = list.stream().map(p -> toAppMap(p, discountRate)).toList();
         return R.ok(result);
     }
 
@@ -48,7 +58,8 @@ public class AppProductController {
             @PathVariable Long categoryId,
             @RequestParam(required = false) String keyword) {
         List<Product> list = productMapper.selectPageList(keyword, categoryId, null, "ON_SALE");
-        List<Map<String, Object>> result = list.stream().map(this::toAppMap).toList();
+        BigDecimal discountRate = getMemberDiscountRate();
+        List<Map<String, Object>> result = list.stream().map(p -> toAppMap(p, discountRate)).toList();
         return R.ok(result);
     }
 
@@ -59,16 +70,28 @@ public class AppProductController {
             return R.fail("商品不存在");
         }
         List<Sku> skus = skuMapper.selectByProductId(id);
+        BigDecimal discountRate = getMemberDiscountRate();
 
         String price = "0.00";
+        BigDecimal minPriceBd = null;
         if (product.getMinPrice() != null) {
-            price = product.getMinPrice().toPlainString();
+            minPriceBd = product.getMinPrice();
         } else if (!skus.isEmpty()) {
-            price = skus.stream()
+            minPriceBd = skus.stream()
                     .map(Sku::getPrice)
                     .min(BigDecimal::compareTo)
-                    .map(BigDecimal::toPlainString)
-                    .orElse("0.00");
+                    .orElse(BigDecimal.ZERO);
+        }
+        if (minPriceBd != null) {
+            price = minPriceBd.toPlainString();
+        }
+
+        String dealPrice = price;
+        if (!skus.isEmpty()) {
+            Sku cheapest = skus.stream()
+                    .min(Comparator.comparing(Sku::getPrice))
+                    .orElse(skus.get(0));
+            dealPrice = calcDealPrice(cheapest.getPrice(), cheapest.getMemberPrice(), discountRate, product.getType());
         }
 
         Map<String, Object> result = Map.of(
@@ -79,21 +102,75 @@ public class AppProductController {
                 "type", product.getType(),
                 "supportDelivery", product.getSupportDelivery() != null && product.getSupportDelivery() == 1,
                 "price", price,
-                "dealPrice", price,
+                "dealPrice", dealPrice,
                 "skus", skus.stream().map(s -> Map.<String, Object>of(
                         "id", s.getId(),
                         "specName", s.getSpecName(),
                         "price", s.getPrice().toPlainString(),
-                        "dealPrice", s.getPrice().toPlainString(),
+                        "dealPrice", calcDealPrice(s.getPrice(), s.getMemberPrice(), discountRate, product.getType()),
                         "stock", s.getStock()
                 )).toList()
         );
         return R.ok(result);
     }
 
-    private Map<String, Object> toAppMap(Product p) {
+    private BigDecimal getMemberDiscountRate() {
+        if (!StpUtil.isLogin()) {
+            return null;
+        }
+        try {
+            AppUser user = appAuthService.getCurrentUser();
+            if (user == null || user.getPhone() == null || user.getPhone().isEmpty()) {
+                return null;
+            }
+            Long memberId = memberPhoneMapper.selectMemberIdByPhone(user.getPhone());
+            if (memberId == null) {
+                return null;
+            }
+            Member member = memberMapper.selectById(memberId);
+            if (member == null || member.getLevelId() == null) {
+                return null;
+            }
+            MemberLevel level = memberLevelMapper.selectById(member.getLevelId());
+            if (level == null || level.getDiscountRate() == null) {
+                return null;
+            }
+            return level.getDiscountRate();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String calcDealPrice(BigDecimal price, BigDecimal memberPrice, BigDecimal discountRate, String type) {
+        if (discountRate == null) {
+            return price.toPlainString();
+        }
+        BigDecimal result;
+        if ("GOODS".equals(type)) {
+            result = memberPrice != null ? memberPrice : price;
+        } else if ("SERVICE".equals(type)) {
+            result = price.multiply(discountRate).setScale(2, RoundingMode.HALF_UP);
+        } else {
+            result = price;
+        }
+        return result.toPlainString();
+    }
+
+    private Map<String, Object> toAppMap(Product p, BigDecimal discountRate) {
         String price = p.getMinPrice() != null ? p.getMinPrice().toPlainString() : "0.00";
         int skuCount = p.getSkuCount() != null ? p.getSkuCount() : 0;
+
+        String dealPrice = price;
+        if (discountRate != null && p.getMinPrice() != null) {
+            List<Sku> skus = skuMapper.selectByProductId(p.getId());
+            if (!skus.isEmpty()) {
+                Sku cheapest = skus.stream()
+                        .min(Comparator.comparing(Sku::getPrice))
+                        .orElse(skus.get(0));
+                dealPrice = calcDealPrice(cheapest.getPrice(), cheapest.getMemberPrice(), discountRate, p.getType());
+            }
+        }
+
         return Map.of(
                 "id", p.getId(),
                 "name", p.getName(),
@@ -101,7 +178,7 @@ public class AppProductController {
                 "type", p.getType(),
                 "supportDelivery", p.getSupportDelivery() != null && p.getSupportDelivery() == 1,
                 "price", price,
-                "dealPrice", price,
+                "dealPrice", dealPrice,
                 "hasSpec", skuCount > 1
         );
     }
