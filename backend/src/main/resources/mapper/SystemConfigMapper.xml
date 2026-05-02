@@ -30,12 +30,12 @@
         WHERE id = #{id}
     </update>
 
-    <insert id="insert" parameterType="com.petshop.order.entity.SystemConfig" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO system_config (shop_lat, shop_lng, delivery_radius_km, delivery_min_amount,
+    <insert id="insert" parameterType="com.petshop.order.entity.SystemConfig">
+        INSERT INTO system_config (id, shop_lat, shop_lng, delivery_radius_km, delivery_min_amount,
                                    delivery_fee_type, fixed_delivery_fee, order_time_enabled,
                                    order_start_time, order_end_time, qywx_webhook_url_enc,
                                    has_qywx_webhook, updated_by)
-        VALUES (#{shopLat}, #{shopLng}, #{deliveryRadiusKm}, #{deliveryMinAmount},
+        VALUES (#{id}, #{shopLat}, #{shopLng}, #{deliveryRadiusKm}, #{deliveryMinAmount},
                 #{deliveryFeeType}, #{fixedDeliveryFee}, #{orderTimeEnabled},
                 #{orderStartTime}, #{orderEndTime}, #{qywxWebhookUrlEnc},
                 #{hasQywxWebhook}, #{updatedBy})

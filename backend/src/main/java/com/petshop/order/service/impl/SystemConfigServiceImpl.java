@@ -94,8 +94,8 @@ public class SystemConfigServiceImpl implements SystemConfigService {
 
         if (params.containsKey("qywxWebhookUrl")) {
             String webhookUrl = (String) params.get("qywxWebhookUrl");
-            if (webhookUrl == null) {
-                // null = no change
+            if (webhookUrl == null || webhookUrl.contains("key=***")) {
+                // null 或前端回传脱敏值 = 不修改
             } else if (webhookUrl.isEmpty()) {
                 config.setQywxWebhookUrlEnc(null);
                 config.setHasQywxWebhook(0);
