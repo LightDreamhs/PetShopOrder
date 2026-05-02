@@ -67,7 +67,11 @@ public class SystemConfigServiceImpl implements SystemConfigService {
             config.setShopLng(toBigDecimal(params.get("shopLng")));
         }
         if (params.containsKey("deliveryRadiusKm")) {
-            config.setDeliveryRadiusKm(toBigDecimal(params.get("deliveryRadiusKm")));
+            BigDecimal radius = toBigDecimal(params.get("deliveryRadiusKm"));
+            if (radius == null || radius.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new BusinessException("配送半径必须大于 0");
+            }
+            config.setDeliveryRadiusKm(radius);
         }
         if (params.containsKey("deliveryMinAmount")) {
             config.setDeliveryMinAmount(toBigDecimal(params.get("deliveryMinAmount")));
