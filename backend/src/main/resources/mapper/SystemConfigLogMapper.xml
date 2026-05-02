@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.petshop.order.mapper.SystemConfigLogMapper">
+
+    <select id="selectRecentByConfigId" resultType="com.petshop.order.entity.SystemConfigLog">
+        SELECT id, config_id, operator_id, operator_name, summary,
+               before_val, after_val, create_time, update_time
+        FROM system_config_log
+        WHERE config_id = #{configId}
+        ORDER BY create_time DESC
+        LIMIT #{limit}
+    </select>
+
+    <insert id="insert" parameterType="com.petshop.order.entity.SystemConfigLog" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO system_config_log (config_id, operator_id, operator_name, summary, before_val, after_val)
+        VALUES (#{configId}, #{operatorId}, #{operatorName}, #{summary}, #{beforeVal}, #{afterVal})
+    </insert>
+
+</mapper>

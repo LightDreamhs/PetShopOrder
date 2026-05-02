@@ -33,5 +33,9 @@ sa-token:
   is-read-header: false
   is-log: false
 
+app:
+  webhook:
+    aes-key: PetShop2026Order!
+
 file:
   upload-dir: ${UPLOAD_DIR:./uploads}
