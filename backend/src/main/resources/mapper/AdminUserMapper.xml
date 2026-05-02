@@ -20,4 +20,26 @@
         VALUES (#{username}, #{passwordHash}, #{realName}, #{role}, #{status})
     </insert>
 
+    <select id="selectAll" resultType="com.petshop.order.entity.AdminUser">
+        SELECT * FROM admin_user ORDER BY id ASC
+    </select>
+
+    <update id="updateById">
+        UPDATE admin_user
+        SET real_name = #{realName}, role = #{role}
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateStatus">
+        UPDATE admin_user SET status = #{status} WHERE id = #{id}
+    </update>
+
+    <update id="updatePassword">
+        UPDATE admin_user SET password_hash = #{passwordHash} WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM admin_user WHERE id = #{id}
+    </delete>
+
 </mapper>
