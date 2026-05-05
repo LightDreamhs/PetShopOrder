@@ -3,7 +3,7 @@ version: '3.8'
 services:
   mysql:
     image: mysql:8.0
-    container_name: petshop-mysql
+    container_name: petorder-mysql
     ports:
       - "3306:3306"
     environment:

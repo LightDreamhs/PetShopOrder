@@ -5,6 +5,7 @@ import cn.hutool.core.util.IdUtil;
 import com.petshop.order.common.BusinessException;
 import com.petshop.order.service.FileService;
 import org.springframework.beans.factory.annotation.Value;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -15,6 +16,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.Set;
 
+@Slf4j
 @Service
 public class FileServiceImpl implements FileService {
 
@@ -42,14 +44,16 @@ public class FileServiceImpl implements FileService {
         String ext = getExtension(file.getOriginalFilename());
         String filename = IdUtil.fastSimpleUUID() + ext;
 
-        File dir = new File(uploadDir, datePath);
+        File baseDir = new File(uploadDir).getAbsoluteFile();
+        File dir = new File(baseDir, datePath);
         FileUtil.mkdir(dir);
 
         File dest = new File(dir, filename);
         try {
             file.transferTo(dest);
         } catch (IOException | IllegalStateException e) {
-            throw new BusinessException("文件上传失败");
+            log.error("文件写入失败: dest={}, error={}", dest.getAbsolutePath(), e.getMessage(), e);
+            throw new BusinessException("文件上传失败: " + e.getMessage());
         }
 
         String key = datePath + "/" + filename;
