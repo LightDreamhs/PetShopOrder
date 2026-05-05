@@ -1,80 +1,22 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getCategories, createCategory, updateCategory, deleteCategory } from '@/api/category'
+import { getCategories } from '@/api/category'
 import { getProducts, getProduct, createProduct, updateProduct, updateProductStatus, deleteProduct } from '@/api/product'
 import { uploadFile } from '@/api/file'
 import type { Category, ProductListItem, SkuDetail } from '@/types'
 
-// ==================== Tab 控制 ====================
-const activeTab = ref<'products' | 'categories'>('products')
-
-// ==================== 分类管理 ====================
+// ==================== 分类数据 ====================
 const categories = ref<Category[]>([])
-const categoryLoading = ref(false)
-const categoryDialogVisible = ref(false)
-const categoryFormMode = ref<'create' | 'edit'>('create')
-const categoryForm = reactive({ id: 0, name: '', icon: '', type: 'GOODS' as 'GOODS' | 'SERVICE', sort: 0 })
 
 async function fetchCategories() {
-  categoryLoading.value = true
-  try {
-    const res = await getCategories()
-    categories.value = res.data
-  } finally {
-    categoryLoading.value = false
-  }
-}
-
-function openCategoryCreate() {
-  categoryFormMode.value = 'create'
-  categoryForm.id = 0
-  categoryForm.name = ''
-  categoryForm.icon = ''
-  categoryForm.type = 'GOODS'
-  categoryForm.sort = 0
-  categoryDialogVisible.value = true
-}
-
-function openCategoryEdit(row: Category) {
-  categoryFormMode.value = 'edit'
-  categoryForm.id = row.id
-  categoryForm.name = row.name
-  categoryForm.icon = row.icon || ''
-  categoryForm.type = row.type
-  categoryForm.sort = row.sort
-  categoryDialogVisible.value = true
-}
-
-async function handleCategorySubmit() {
-  if (!categoryForm.name) {
-    ElMessage.warning('请输入分类名称')
-    return
-  }
-  try {
-    if (categoryFormMode.value === 'create') {
-      await createCategory({ name: categoryForm.name, type: categoryForm.type, sort: categoryForm.sort })
-      ElMessage.success('分类创建成功')
-    } else {
-      await updateCategory(categoryForm.id, { name: categoryForm.name, sort: categoryForm.sort })
-      ElMessage.success('分类更新成功')
-    }
-    categoryDialogVisible.value = false
-    fetchCategories()
-  } catch {
-    // handled
-  }
-}
-
-async function handleCategoryDelete(row: Category) {
-  try {
-    await ElMessageBox.confirm(`确认删除分类「${row.name}」？`, '确认删除', { type: 'warning' })
-    await deleteCategory(row.id)
-    ElMessage.success('删除成功')
-    fetchCategories()
-  } catch {
-    // cancelled
-  }
+  const res = await getCategories()
+  const goods = res.data.find((c) => c.type === 'GOODS')
+  const service = res.data.find((c) => c.type === 'SERVICE')
+  categories.value = [
+    goods ? { ...goods, name: '商品' } : null,
+    service ? { ...service, name: '服务' } : null,
+  ].filter((c): c is Category => c !== null)
 }
 
 // ==================== 商品列表 ====================
@@ -289,153 +231,115 @@ onMounted(() => {
 
 <template>
   <div class="product-page">
-    <el-tabs v-model="activeTab" class="page-tabs">
-      <!-- ==================== 商品列表 Tab ==================== -->
-      <el-tab-pane label="商品列表" name="products">
-        <!-- 筛选栏 -->
-        <div class="page-card filter-card">
-          <div class="filter-bar">
-            <el-input
-              v-model="productFilters.keyword"
-              placeholder="搜索商品名称"
-              clearable
-              style="width: 200px"
-              @keyup.enter="handleProductSearch"
-              @clear="handleProductSearch"
+    <div class="page-card filter-card">
+      <div class="filter-bar">
+        <el-input
+          v-model="productFilters.keyword"
+          placeholder="搜索商品名称"
+          clearable
+          style="width: 200px"
+          @keyup.enter="handleProductSearch"
+          @clear="handleProductSearch"
+        >
+          <template #prefix><el-icon><Search /></el-icon></template>
+        </el-input>
+
+        <el-select v-model="productFilters.categoryId" placeholder="全部分类" clearable style="width: 140px" @change="handleProductSearch">
+          <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
+        </el-select>
+
+        <el-select v-model="productFilters.type" placeholder="全部类型" clearable style="width: 120px" @change="handleProductSearch">
+          <el-option label="商品" value="GOODS" />
+          <el-option label="服务" value="SERVICE" />
+        </el-select>
+
+        <el-select v-model="productFilters.status" placeholder="全部状态" clearable style="width: 120px" @change="handleProductSearch">
+          <el-option label="上架中" value="ON_SALE" />
+          <el-option label="已下架" value="OFF_SALE" />
+        </el-select>
+
+        <el-button type="primary" @click="handleProductSearch">
+          <el-icon><Search /></el-icon>查询
+        </el-button>
+        <el-button @click="handleProductReset">重置</el-button>
+
+        <div style="flex: 1" />
+        <el-button type="primary" @click="openProductCreate">
+          <el-icon><Plus /></el-icon>新增商品
+        </el-button>
+      </div>
+    </div>
+
+    <!-- 商品表格 -->
+    <div class="page-card table-card">
+      <el-table :data="products" v-loading="productLoading" stripe style="width: 100%">
+        <el-table-column label="封面" width="70" align="center">
+          <template #default="{ row }">
+            <el-avatar v-if="row.coverImg" :src="row.coverImg" :size="40" shape="square" />
+            <el-avatar v-else :size="40" shape="square" style="background: #f5f5f5; color: #ccc">
+              <el-icon :size="20"><Picture /></el-icon>
+            </el-avatar>
+          </template>
+        </el-table-column>
+
+        <el-table-column prop="name" label="商品名称" min-width="160" />
+
+        <el-table-column prop="categoryName" label="分类" width="100" />
+
+        <el-table-column prop="type" label="类型" width="80" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row.type === 'GOODS' ? 'primary' : 'success'" size="small" effect="plain">
+              {{ row.type === 'GOODS' ? '商品' : '服务' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+
+        <el-table-column prop="status" label="状态" width="80" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 'ON_SALE' ? 'success' : 'info'" size="small" effect="dark">
+              {{ row.status === 'ON_SALE' ? '上架' : '下架' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="最低价" width="100" align="right">
+          <template #default="{ row }">
+            <span class="text-orange">¥{{ row.minPrice }}</span>
+          </template>
+        </el-table-column>
+
+        <el-table-column prop="skuCount" label="SKU" width="60" align="center" />
+
+        <el-table-column prop="sort" label="排序" width="60" align="center" />
+
+        <el-table-column prop="createTime" label="创建时间" width="140" />
+
+        <el-table-column label="操作" width="200" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="primary" size="small" @click="openProductEdit(row)">编辑</el-button>
+            <el-button
+              link
+              :type="row.status === 'ON_SALE' ? 'warning' : 'success'"
+              size="small"
+              @click="handleToggleStatus(row)"
             >
-              <template #prefix><el-icon><Search /></el-icon></template>
-            </el-input>
-
-            <el-select v-model="productFilters.categoryId" placeholder="全部分类" clearable style="width: 140px" @change="handleProductSearch">
-              <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
-            </el-select>
-
-            <el-select v-model="productFilters.type" placeholder="全部类型" clearable style="width: 120px" @change="handleProductSearch">
-              <el-option label="商品" value="GOODS" />
-              <el-option label="服务" value="SERVICE" />
-            </el-select>
-
-            <el-select v-model="productFilters.status" placeholder="全部状态" clearable style="width: 120px" @change="handleProductSearch">
-              <el-option label="上架中" value="ON_SALE" />
-              <el-option label="已下架" value="OFF_SALE" />
-            </el-select>
-
-            <el-button type="primary" @click="handleProductSearch">
-              <el-icon><Search /></el-icon>查询
+              {{ row.status === 'ON_SALE' ? '下架' : '上架' }}
             </el-button>
-            <el-button @click="handleProductReset">重置</el-button>
+            <el-button link type="danger" size="small" @click="handleProductDelete(row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
 
-            <div style="flex: 1" />
-            <el-button type="primary" @click="openProductCreate">
-              <el-icon><Plus /></el-icon>新增商品
-            </el-button>
-          </div>
-        </div>
-
-        <!-- 商品表格 -->
-        <div class="page-card table-card">
-          <el-table :data="products" v-loading="productLoading" stripe style="width: 100%">
-            <el-table-column label="封面" width="70" align="center">
-              <template #default="{ row }">
-                <el-avatar v-if="row.coverImg" :src="row.coverImg" :size="40" shape="square" />
-                <el-avatar v-else :size="40" shape="square" style="background: #f5f5f5; color: #ccc">
-                  <el-icon :size="20"><Picture /></el-icon>
-                </el-avatar>
-              </template>
-            </el-table-column>
-
-            <el-table-column prop="name" label="商品名称" min-width="160" />
-
-            <el-table-column prop="categoryName" label="分类" width="100" />
-
-            <el-table-column prop="type" label="类型" width="80" align="center">
-              <template #default="{ row }">
-                <el-tag :type="row.type === 'GOODS' ? 'primary' : 'success'" size="small" effect="plain">
-                  {{ row.type === 'GOODS' ? '商品' : '服务' }}
-                </el-tag>
-              </template>
-            </el-table-column>
-
-            <el-table-column prop="status" label="状态" width="80" align="center">
-              <template #default="{ row }">
-                <el-tag :type="row.status === 'ON_SALE' ? 'success' : 'info'" size="small" effect="dark">
-                  {{ row.status === 'ON_SALE' ? '上架' : '下架' }}
-                </el-tag>
-              </template>
-            </el-table-column>
-
-            <el-table-column label="最低价" width="100" align="right">
-              <template #default="{ row }">
-                <span class="text-orange">¥{{ row.minPrice }}</span>
-              </template>
-            </el-table-column>
-
-            <el-table-column prop="skuCount" label="SKU" width="60" align="center" />
-
-            <el-table-column prop="sort" label="排序" width="60" align="center" />
-
-            <el-table-column prop="createTime" label="创建时间" width="140" />
-
-            <el-table-column label="操作" width="200" fixed="right">
-              <template #default="{ row }">
-                <el-button link type="primary" size="small" @click="openProductEdit(row)">编辑</el-button>
-                <el-button
-                  link
-                  :type="row.status === 'ON_SALE' ? 'warning' : 'success'"
-                  size="small"
-                  @click="handleToggleStatus(row)"
-                >
-                  {{ row.status === 'ON_SALE' ? '下架' : '上架' }}
-                </el-button>
-                <el-button link type="danger" size="small" @click="handleProductDelete(row)">删除</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-
-          <el-pagination
-            v-model:current-page="productFilters.page"
-            v-model:page-size="productFilters.size"
-            :total="productTotal"
-            :page-sizes="[10, 20, 50]"
-            layout="total, sizes, prev, pager, next"
-            @current-change="() => fetchProducts()"
-            @size-change="() => { productFilters.page = 1; fetchProducts() }"
-          />
-        </div>
-      </el-tab-pane>
-
-      <!-- ==================== 分类管理 Tab ==================== -->
-      <el-tab-pane label="分类管理" name="categories">
-        <div class="page-card table-card">
-          <div style="margin-bottom: 16px">
-            <el-button type="primary" @click="openCategoryCreate">
-              <el-icon><Plus /></el-icon>新增分类
-            </el-button>
-          </div>
-
-          <el-table :data="categories" v-loading="categoryLoading" stripe style="width: 100%">
-            <el-table-column prop="name" label="分类名称" min-width="140" />
-            <el-table-column prop="type" label="类型" width="100" align="center">
-              <template #default="{ row }">
-                <el-tag :type="row.type === 'GOODS' ? 'primary' : 'success'" size="small" effect="plain">
-                  {{ row.type === 'GOODS' ? '商品' : '服务' }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="sort" label="排序" width="80" align="center" />
-            <el-table-column prop="productCount" label="商品数量" width="100" align="center" />
-            <el-table-column label="操作" width="160">
-              <template #default="{ row }">
-                <el-button link type="primary" size="small" @click="openCategoryEdit(row)">编辑</el-button>
-                <el-button link type="danger" size="small" @click="handleCategoryDelete(row)">删除</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-        </div>
-      </el-tab-pane>
-    </el-tabs>
-
-    <!-- ==================== 商品编辑弹窗 ==================== -->
+      <el-pagination
+        v-model:current-page="productFilters.page"
+        v-model:page-size="productFilters.size"
+        :total="productTotal"
+        :page-sizes="[10, 20, 50]"
+        layout="total, sizes, prev, pager, next"
+        @current-change="() => fetchProducts()"
+        @size-change="() => { productFilters.page = 1; fetchProducts() }"
+      />
+    </div>
     <el-dialog
       v-model="productDialogVisible"
       :title="productFormMode === 'create' ? '新增商品' : '编辑商品'"
@@ -494,22 +398,36 @@ onMounted(() => {
               </el-button>
               <span class="sku-count">共 {{ productForm.skus.length }} 个规格</span>
             </div>
+            <div class="sku-guide">
+              <span>规格名：如「500g」「单次洗澡」</span>
+              <span>原价/会员价：填写元，支持小数（如 99.00）</span>
+              <span v-if="productForm.type === 'GOODS'">库存：可售数量，服务无需填写</span>
+              <span>排序：数字越小越靠前</span>
+            </div>
+            <div class="sku-columns">
+              <span style="width: 160px">规格名</span>
+              <span style="width: 100px">原价(元)</span>
+              <span v-if="productForm.type === 'GOODS'" style="width: 100px">会员价(元)</span>
+              <span v-if="productForm.type === 'GOODS'" style="width: 120px">库存</span>
+              <span style="width: 100px">排序</span>
+              <span style="width: 24px"></span>
+            </div>
 
             <div class="sku-list">
               <div v-for="(sku, index) in productForm.skus" :key="index" class="sku-row">
-                <el-input v-model="sku.specName" placeholder="规格名" style="width: 160px" />
-                <el-input v-model="sku.price" placeholder="原价" style="width: 100px" />
+                <el-input v-model="sku.specName" placeholder="如：500g / 单次" style="width: 160px" />
+                <el-input v-model="sku.price" placeholder="如：99.00" style="width: 100px" />
                 <el-input
                   v-if="productForm.type === 'GOODS'"
                   v-model="sku.memberPrice"
-                  placeholder="会员价"
+                  placeholder="如：89.00"
                   style="width: 100px"
                 />
                 <el-input-number
                   v-if="productForm.type === 'GOODS'"
                   v-model="sku.stock"
                   :min="0"
-                  placeholder="库存"
+                  placeholder="如：100"
                   style="width: 120px"
                   controls-position="right"
                 />
@@ -530,34 +448,6 @@ onMounted(() => {
         </el-button>
       </template>
     </el-dialog>
-
-    <!-- ==================== 分类编辑弹窗 ==================== -->
-    <el-dialog
-      v-model="categoryDialogVisible"
-      :title="categoryFormMode === 'create' ? '新增分类' : '编辑分类'"
-      width="420px"
-      destroy-on-close
-    >
-      <el-form label-width="80px">
-        <el-form-item label="分类名称" required>
-          <el-input v-model="categoryForm.name" placeholder="请输入分类名称" />
-        </el-form-item>
-        <el-form-item v-if="categoryFormMode === 'create'" label="分类类型" required>
-          <el-radio-group v-model="categoryForm.type">
-            <el-radio value="GOODS">商品</el-radio>
-            <el-radio value="SERVICE">服务</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="排序">
-          <el-input-number v-model="categoryForm.sort" :min="0" :max="999" />
-        </el-form-item>
-      </el-form>
-
-      <template #footer>
-        <el-button @click="categoryDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleCategorySubmit">确定</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
@@ -566,20 +456,6 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-
-.page-tabs {
-  :deep(.el-tabs__header) {
-    margin: 0;
-    padding: 0 20px;
-    background: #fff;
-    border-radius: 12px 12px 0 0;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-  }
-
-  :deep(.el-tabs__content) {
-    padding: 0;
-  }
 }
 
 .filter-card {
@@ -616,6 +492,25 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.sku-guide {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #999;
+}
+
+.sku-columns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  padding: 0 12px;
+  font-size: 12px;
+  color: #666;
 }
 
 .sku-row {
