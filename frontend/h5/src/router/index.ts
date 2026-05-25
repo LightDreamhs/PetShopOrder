@@ -60,6 +60,11 @@ router.beforeEach(async (to, _from, next) => {
     const { useAuthStore } = await import('@/stores/auth')
     const authStore = useAuthStore()
     await authStore.checkAuth()
+    if (authStore.isLoggedIn) {
+      const { useMemberStore } = await import('@/stores/member')
+      const memberStore = useMemberStore()
+      await memberStore.fetchProfile()
+    }
     authChecked = true
   }
 
