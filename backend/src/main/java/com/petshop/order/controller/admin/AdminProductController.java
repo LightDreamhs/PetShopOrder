@@ -40,11 +40,10 @@ public class AdminProductController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String status) {
         checkManager();
-        PageResult<Product> pr = productService.getList(page, size, keyword, categoryId, type, status);
+        PageResult<Product> pr = productService.getList(page, size, keyword, type, status);
         List<Map<String, Object>> list = pr.getList().stream().map(this::toListMap).toList();
         Map<String, Object> result = Map.of(
                 "list", list,
@@ -94,7 +93,6 @@ public class AdminProductController {
 
     private Product toEntity(ProductRequest req) {
         Product p = new Product();
-        p.setCategoryId(req.getCategoryId());
         p.setName(req.getName());
         p.setDescription(req.getDescription());
         p.setCoverImg(req.getCoverImg());
@@ -122,7 +120,6 @@ public class AdminProductController {
         m.put("id", p.getId());
         m.put("name", p.getName());
         m.put("coverImg", p.getCoverImg() != null ? p.getCoverImg() : "");
-        m.put("categoryName", p.getCategoryName() != null ? p.getCategoryName() : "");
         m.put("type", p.getType());
         m.put("status", p.getStatus());
         m.put("supportDelivery", p.getSupportDelivery() != null && p.getSupportDelivery() == 1);
@@ -136,8 +133,6 @@ public class AdminProductController {
     private Map<String, Object> toDetailMap(Product p) {
         Map<String, Object> m = new java.util.LinkedHashMap<>();
         m.put("id", p.getId());
-        m.put("categoryId", p.getCategoryId());
-        m.put("categoryName", p.getCategoryName() != null ? p.getCategoryName() : "");
         m.put("name", p.getName());
         m.put("description", p.getDescription() != null ? p.getDescription() : "");
         m.put("coverImg", p.getCoverImg() != null ? p.getCoverImg() : "");
@@ -162,8 +157,6 @@ public class AdminProductController {
 
     @Data
     public static class ProductRequest {
-        @NotNull
-        private Long categoryId;
         @NotBlank
         private String name;
         private String description;

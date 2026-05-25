@@ -1,23 +1,9 @@
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getCategories } from '@/api/category'
 import { getProducts, getProduct, createProduct, updateProduct, updateProductStatus, deleteProduct } from '@/api/product'
 import { uploadFile } from '@/api/file'
-import type { Category, ProductListItem, SkuDetail } from '@/types'
-
-// ==================== 分类数据 ====================
-const categories = ref<Category[]>([])
-
-async function fetchCategories() {
-  const res = await getCategories()
-  const goods = res.data.find((c) => c.type === 'GOODS')
-  const service = res.data.find((c) => c.type === 'SERVICE')
-  categories.value = [
-    goods ? { ...goods, name: '商品' } : null,
-    service ? { ...service, name: '服务' } : null,
-  ].filter((c): c is Category => c !== null)
-}
+import type { ProductListItem, SkuDetail } from '@/types'
 
 // ==================== 商品列表 ====================
 const products = ref<ProductListItem[]>([])
@@ -26,7 +12,6 @@ const productLoading = ref(false)
 
 const productFilters = reactive({
   keyword: '',
-  categoryId: undefined as number | undefined,
   type: undefined as string | undefined,
   status: undefined as string | undefined,
   page: 1,
@@ -38,7 +23,6 @@ async function fetchProducts() {
   try {
     const params: any = { page: productFilters.page, size: productFilters.size }
     if (productFilters.keyword) params.keyword = productFilters.keyword
-    if (productFilters.categoryId) params.categoryId = productFilters.categoryId
     if (productFilters.type) params.type = productFilters.type
     if (productFilters.status) params.status = productFilters.status
     const res = await getProducts(params)
@@ -56,7 +40,6 @@ function handleProductSearch() {
 
 function handleProductReset() {
   productFilters.keyword = ''
-  productFilters.categoryId = undefined
   productFilters.type = undefined
   productFilters.status = undefined
   productFilters.page = 1
@@ -69,7 +52,6 @@ const productFormMode = ref<'create' | 'edit'>('create')
 const productFormLoading = ref(false)
 const productForm = reactive({
   id: 0,
-  categoryId: undefined as number | undefined,
   name: '',
   description: '',
   coverImg: '',
@@ -79,13 +61,7 @@ const productForm = reactive({
   skus: [] as SkuDetail[],
 })
 
-const selectedCategoryType = computed(() => {
-  const cat = categories.value.find((c) => c.id === productForm.categoryId)
-  return cat?.type || 'GOODS'
-})
-
-watch(() => productForm.categoryId, () => {
-  productForm.type = selectedCategoryType.value
+watch(() => productForm.type, () => {
   if (productForm.type === 'SERVICE') {
     productForm.supportDelivery = false
   }
@@ -122,7 +98,6 @@ function removeSkuRow(index: number) {
 function openProductCreate() {
   productFormMode.value = 'create'
   productForm.id = 0
-  productForm.categoryId = undefined
   productForm.name = ''
   productForm.description = ''
   productForm.coverImg = ''
@@ -140,7 +115,6 @@ async function openProductEdit(row: ProductListItem) {
     const res = await getProduct(row.id)
     const p = res.data
     productForm.id = p.id
-    productForm.categoryId = p.categoryId
     productForm.name = p.name
     productForm.description = p.description || ''
     productForm.coverImg = p.coverImg || ''
@@ -156,7 +130,7 @@ async function openProductEdit(row: ProductListItem) {
 
 async function handleProductSubmit() {
   if (!productForm.name) { ElMessage.warning('请输入商品名称'); return }
-  if (!productForm.categoryId) { ElMessage.warning('请选择分类'); return }
+  if (!productForm.type) { ElMessage.warning('请选择类型'); return }
   if (productForm.skus.length === 0) { ElMessage.warning('请至少添加一个规格'); return }
   for (const sku of productForm.skus) {
     if (!sku.specName) { ElMessage.warning('请填写规格名称'); return }
@@ -165,7 +139,6 @@ async function handleProductSubmit() {
   productFormLoading.value = true
   try {
     const data: any = {
-      categoryId: productForm.categoryId,
       name: productForm.name,
       description: productForm.description || undefined,
       coverImg: productForm.coverImg || undefined,
@@ -188,7 +161,6 @@ async function handleProductSubmit() {
     }
     productDialogVisible.value = false
     fetchProducts()
-    fetchCategories()
   } catch {
     // handled
   } finally {
@@ -215,14 +187,12 @@ async function handleProductDelete(row: ProductListItem) {
     await deleteProduct(row.id)
     ElMessage.success('删除成功')
     fetchProducts()
-    fetchCategories()
   } catch {
     // cancelled
   }
 }
 
 onMounted(() => {
-  fetchCategories()
   fetchProducts()
 })
 </script>
@@ -242,12 +212,8 @@ onMounted(() => {
           <template #prefix><el-icon><Search /></el-icon></template>
         </el-input>
 
-        <el-select v-model="productFilters.categoryId" placeholder="全部分类" clearable style="width: 140px" @change="handleProductSearch">
-          <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
-        </el-select>
-
         <el-select v-model="productFilters.type" placeholder="全部类型" clearable style="width: 120px" @change="handleProductSearch">
-          <el-option label="商品" value="GOODS" />
+          <el-option label="用品" value="GOODS" />
           <el-option label="服务" value="SERVICE" />
         </el-select>
 
@@ -282,12 +248,10 @@ onMounted(() => {
 
         <el-table-column prop="name" label="商品名称" min-width="160" />
 
-        <el-table-column prop="categoryName" label="分类" width="100" />
-
         <el-table-column prop="type" label="类型" width="80" align="center">
           <template #default="{ row }">
             <el-tag :type="row.type === 'GOODS' ? 'primary' : 'success'" size="small" effect="plain">
-              {{ row.type === 'GOODS' ? '商品' : '服务' }}
+              {{ row.type === 'GOODS' ? '用品' : '服务' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -350,15 +314,11 @@ onMounted(() => {
           <el-input v-model="productForm.name" placeholder="请输入商品名称" />
         </el-form-item>
 
-        <el-form-item label="所属分类" required>
-          <el-select v-model="productForm.categoryId" placeholder="请选择分类" style="width: 100%">
-            <el-option-group label="商品分类">
-              <el-option v-for="c in categories.filter(c => c.type === 'GOODS')" :key="c.id" :label="c.name" :value="c.id" />
-            </el-option-group>
-            <el-option-group label="服务分类">
-              <el-option v-for="c in categories.filter(c => c.type === 'SERVICE')" :key="c.id" :label="c.name" :value="c.id" />
-            </el-option-group>
-          </el-select>
+        <el-form-item label="类型" required>
+          <el-radio-group v-model="productForm.type">
+            <el-radio value="GOODS">用品</el-radio>
+            <el-radio value="SERVICE">服务</el-radio>
+          </el-radio-group>
         </el-form-item>
 
         <el-form-item label="商品描述">

@@ -5,7 +5,6 @@ export function getProducts(params: {
   page?: number
   size?: number
   keyword?: string
-  categoryId?: number
   type?: string
   status?: string
 }) {

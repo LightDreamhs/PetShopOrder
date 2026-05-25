@@ -1,6 +1,5 @@
 import { http, HttpResponse, delay } from 'msw'
 import { products, toListItem, getProductNextId, getSkuNextId } from '../data/products'
-import { categories } from '../data/categories'
 
 export const productHandlers = [
   http.get('/api/admin/products', async ({ request }) => {
@@ -11,13 +10,11 @@ export const productHandlers = [
     const keyword = url.searchParams.get('keyword')?.toLowerCase() || ''
     const type = url.searchParams.get('type')
     const status = url.searchParams.get('status')
-    const categoryId = url.searchParams.get('categoryId')
 
     let filtered = products
     if (keyword) filtered = filtered.filter((p) => p.name.toLowerCase().includes(keyword))
     if (type) filtered = filtered.filter((p) => p.type === type)
     if (status) filtered = filtered.filter((p) => p.status === status)
-    if (categoryId) filtered = filtered.filter((p) => p.categoryId === Number(categoryId))
 
     const start = (page - 1) * size
     const list = filtered.slice(start, start + size).map(toListItem)
@@ -42,11 +39,8 @@ export const productHandlers = [
   http.post('/api/admin/products', async ({ request }) => {
     await delay(300)
     const body = (await request.json()) as any
-    const cat = categories.find((c) => c.id === body.categoryId)
     const newProduct = {
       id: getProductNextId(),
-      categoryId: body.categoryId,
-      categoryName: cat?.name || '',
       name: body.name,
       description: body.description || null,
       coverImg: body.coverImg || null,
@@ -58,7 +52,6 @@ export const productHandlers = [
       skus: (body.skus || []).map((s: any) => ({ ...s, id: getSkuNextId() })),
     }
     products.push(newProduct)
-    if (cat) cat.productCount++
     return HttpResponse.json({ code: 200, message: 'success', data: newProduct })
   }),
 
@@ -73,6 +66,7 @@ export const productHandlers = [
     if (body.name !== undefined) p.name = body.name
     if (body.description !== undefined) p.description = body.description
     if (body.coverImg !== undefined) p.coverImg = body.coverImg
+    if (body.type !== undefined) p.type = body.type
     if (body.supportDelivery !== undefined) p.supportDelivery = body.supportDelivery
     if (body.sort !== undefined) p.sort = body.sort
     if (body.skus) {
@@ -103,9 +97,7 @@ export const productHandlers = [
     if (idx === -1) {
       return HttpResponse.json({ code: 400, message: '商品不存在', data: null })
     }
-    const [removed] = products.splice(idx, 1)
-    const cat = categories.find((c) => c.id === removed.categoryId)
-    if (cat) cat.productCount = Math.max(0, cat.productCount - 1)
+    products.splice(idx, 1)
     return HttpResponse.json({ code: 200, message: 'success', data: null })
   }),
 ]

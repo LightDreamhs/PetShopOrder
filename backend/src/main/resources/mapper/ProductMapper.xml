@@ -5,7 +5,6 @@
 
     <resultMap id="productResultMap" type="com.petshop.order.entity.Product">
         <id property="id" column="id"/>
-        <result property="categoryId" column="category_id"/>
         <result property="name" column="name"/>
         <result property="description" column="description"/>
         <result property="coverImg" column="cover_img"/>
@@ -15,7 +14,6 @@
         <result property="sort" column="sort"/>
         <result property="createTime" column="create_time"/>
         <result property="updateTime" column="update_time"/>
-        <result property="categoryName" column="category_name"/>
         <result property="skuCount" column="sku_count"/>
         <result property="minPrice" column="min_price"/>
     </resultMap>
@@ -36,17 +34,12 @@
 
     <select id="selectPageList" resultMap="productResultMap">
         SELECT p.*,
-               c.name AS category_name,
                (SELECT COUNT(*) FROM sku WHERE product_id = p.id) AS sku_count,
                (SELECT MIN(price) FROM sku WHERE product_id = p.id) AS min_price
         FROM product p
-        LEFT JOIN category c ON p.category_id = c.id
         <where>
             <if test="keyword != null and keyword != ''">
                 AND p.name LIKE CONCAT('%', #{keyword}, '%')
-            </if>
-            <if test="categoryId != null">
-                AND p.category_id = #{categoryId}
             </if>
             <if test="type != null and type != ''">
                 AND p.type = #{type}
@@ -60,7 +53,6 @@
 
     <select id="selectById" resultMap="productDetailResultMap">
         SELECT p.*,
-               c.name AS category_name,
                s.id AS sku_id,
                s.product_id AS sku_product_id,
                s.spec_name AS sku_spec_name,
@@ -71,21 +63,19 @@
                s.create_time AS sku_create_time,
                s.update_time AS sku_update_time
         FROM product p
-        LEFT JOIN category c ON p.category_id = c.id
         LEFT JOIN sku s ON p.id = s.product_id
         WHERE p.id = #{id}
         ORDER BY s.sort ASC, s.id ASC
     </select>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO product (category_id, name, description, cover_img, type, status, support_delivery, sort)
-        VALUES (#{categoryId}, #{name}, #{description}, #{coverImg}, #{type}, #{status}, #{supportDelivery}, #{sort})
+        INSERT INTO product (name, description, cover_img, type, status, support_delivery, sort)
+        VALUES (#{name}, #{description}, #{coverImg}, #{type}, #{status}, #{supportDelivery}, #{sort})
     </insert>
 
     <update id="updateById">
         UPDATE product
-        SET category_id = #{categoryId},
-            name = #{name},
+        SET name = #{name},
             description = #{description},
             cover_img = #{coverImg},
             type = #{type},

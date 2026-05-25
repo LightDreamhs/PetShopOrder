@@ -26,8 +26,7 @@
     <!-- 主体：分类侧边栏 + 商品列表 -->
     <div class="home-body">
       <CategorySidebar
-        v-model="activeTypeId"
-        :categories="sidebarCategories"
+        v-model="activeType"
       />
       <div class="product-list-wrap">
         <van-loading v-if="loading" class="loading-center" />
@@ -71,13 +70,7 @@ const router = useRouter()
 const cartStore = useCartStore()
 const memberStore = useMemberStore()
 
-const sidebarCategories = [
-  { id: 1, name: '商品', type: 'GOODS' as const, icon: null, sort: 0 },
-  { id: 2, name: '服务', type: 'SERVICE' as const, icon: null, sort: 0 },
-]
-const typeMap: Record<number, 'GOODS' | 'SERVICE'> = { 1: 'GOODS', 2: 'SERVICE' }
-
-const activeTypeId = ref(1)
+const activeType = ref<'GOODS' | 'SERVICE'>('GOODS')
 const allProducts = ref<Product[]>([])
 const keyword = ref('')
 const loading = ref(false)
@@ -85,7 +78,7 @@ const loading = ref(false)
 const filteredProducts = computed(() => {
   const kw = keyword.value.trim().toLowerCase()
   if (kw) return allProducts.value.filter((p) => p.name.toLowerCase().includes(kw))
-  return allProducts.value.filter((p) => p.type === typeMap[activeTypeId.value])
+  return allProducts.value.filter((p) => p.type === activeType.value)
 })
 
 loading.value = true

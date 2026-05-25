@@ -5,7 +5,7 @@ import com.petshop.order.entity.Product;
 
 public interface ProductService {
 
-    PageResult<Product> getList(int page, int size, String keyword, Long categoryId, String type, String status);
+    PageResult<Product> getList(int page, int size, String keyword, String type, String status);
 
     Product getDetail(Long id);
 

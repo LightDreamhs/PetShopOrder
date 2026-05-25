@@ -10,7 +10,6 @@ import java.util.List;
 public interface ProductMapper {
 
     List<Product> selectPageList(@Param("keyword") String keyword,
-                                 @Param("categoryId") Long categoryId,
                                  @Param("type") String type,
                                  @Param("status") String status);
 

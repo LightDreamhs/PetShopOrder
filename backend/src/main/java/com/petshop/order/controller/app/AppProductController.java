@@ -3,7 +3,6 @@ package com.petshop.order.controller.app;
 import cn.dev33.satoken.stp.StpUtil;
 import com.petshop.order.common.R;
 import com.petshop.order.entity.*;
-import com.petshop.order.mapper.CategoryMapper;
 import com.petshop.order.mapper.MemberLevelMapper;
 import com.petshop.order.mapper.MemberMapper;
 import com.petshop.order.mapper.MemberPhoneMapper;
@@ -24,7 +23,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AppProductController {
 
-    private final CategoryMapper categoryMapper;
     private final ProductMapper productMapper;
     private final SkuMapper skuMapper;
     private final AppAuthService appAuthService;
@@ -32,32 +30,9 @@ public class AppProductController {
     private final MemberMapper memberMapper;
     private final MemberLevelMapper memberLevelMapper;
 
-    @GetMapping("/categories")
-    public R<List<Map<String, Object>>> getCategoryList(@RequestParam(required = false) String type) {
-        List<Category> list = categoryMapper.selectList(type);
-        List<Map<String, Object>> result = list.stream().map(c -> Map.<String, Object>of(
-                "id", c.getId(),
-                "name", c.getName(),
-                "icon", c.getIcon() != null ? c.getIcon() : "",
-                "type", c.getType(),
-                "sort", c.getSort()
-        )).toList();
-        return R.ok(result);
-    }
-
     @GetMapping("/products")
     public R<List<Map<String, Object>>> getProductList(@RequestParam(required = false) String type) {
-        List<Product> list = productMapper.selectPageList(null, null, type, "ON_SALE");
-        BigDecimal discountRate = getMemberDiscountRate();
-        List<Map<String, Object>> result = list.stream().map(p -> toAppMap(p, discountRate)).toList();
-        return R.ok(result);
-    }
-
-    @GetMapping("/categories/{categoryId}/products")
-    public R<List<Map<String, Object>>> getProductsByCategory(
-            @PathVariable Long categoryId,
-            @RequestParam(required = false) String keyword) {
-        List<Product> list = productMapper.selectPageList(keyword, categoryId, null, "ON_SALE");
+        List<Product> list = productMapper.selectPageList(null, type, "ON_SALE");
         BigDecimal discountRate = getMemberDiscountRate();
         List<Map<String, Object>> result = list.stream().map(p -> toAppMap(p, discountRate)).toList();
         return R.ok(result);

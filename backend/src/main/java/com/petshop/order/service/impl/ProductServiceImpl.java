@@ -23,9 +23,9 @@ public class ProductServiceImpl implements ProductService {
     private final SkuMapper skuMapper;
 
     @Override
-    public PageResult<Product> getList(int page, int size, String keyword, Long categoryId, String type, String status) {
+    public PageResult<Product> getList(int page, int size, String keyword, String type, String status) {
         PageHelper.startPage(page, size);
-        List<Product> list = productMapper.selectPageList(keyword, categoryId, type, status);
+        List<Product> list = productMapper.selectPageList(keyword, type, status);
         PageInfo<Product> pageInfo = new PageInfo<>(list);
         return new PageResult<>(pageInfo.getList(), pageInfo.getTotal(), page, size);
     }

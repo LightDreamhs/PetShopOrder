@@ -13,15 +13,6 @@ export interface Paginated<T> {
   size: number
 }
 
-// 分类
-export interface Category {
-  id: number
-  name: string
-  icon: string | null
-  type: 'GOODS' | 'SERVICE'
-  sort: number
-}
-
 // 商品列表项
 export interface Product {
   id: number

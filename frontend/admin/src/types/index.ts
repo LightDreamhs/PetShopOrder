@@ -26,29 +26,11 @@ export interface AdminProfile {
   roleLabel: string
 }
 
-// ========== 分类 ==========
-export interface Category {
-  id: number
-  name: string
-  icon: string | null
-  type: 'GOODS' | 'SERVICE'
-  sort: number
-  productCount: number
-}
-
-export interface CategoryForm {
-  name: string
-  icon?: string
-  type: 'GOODS' | 'SERVICE'
-  sort?: number
-}
-
 // ========== 商品 ==========
 export interface ProductListItem {
   id: number
   name: string
   coverImg: string | null
-  categoryName: string
   type: 'GOODS' | 'SERVICE'
   status: 'ON_SALE' | 'OFF_SALE'
   supportDelivery: boolean
@@ -68,8 +50,6 @@ export interface SkuDetail {
 
 export interface ProductDetail {
   id: number
-  categoryId: number
-  categoryName: string
   name: string
   description: string | null
   coverImg: string | null
@@ -82,7 +62,6 @@ export interface ProductDetail {
 }
 
 export interface ProductForm {
-  categoryId: number
   name: string
   description?: string
   coverImg?: string

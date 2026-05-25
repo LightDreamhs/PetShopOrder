@@ -6,8 +6,6 @@ let nextSkuId = 20
 export const products: ProductDetail[] = [
   {
     id: 1,
-    categoryId: 1,
-    categoryName: '狗粮',
     name: '皇家金毛成犬粮',
     description: '专为金毛寻回犬设计的成犬粮',
     coverImg: null,
@@ -24,8 +22,6 @@ export const products: ProductDetail[] = [
   },
   {
     id: 2,
-    categoryId: 1,
-    categoryName: '狗粮',
     name: '伯纳天纯小型犬粮',
     description: '适合小型犬的天然粮',
     coverImg: null,
@@ -41,8 +37,6 @@ export const products: ProductDetail[] = [
   },
   {
     id: 3,
-    categoryId: 2,
-    categoryName: '猫粮',
     name: '渴望六种鱼猫粮',
     description: '高蛋白无谷猫粮',
     coverImg: null,
@@ -58,8 +52,6 @@ export const products: ProductDetail[] = [
   },
   {
     id: 4,
-    categoryId: 3,
-    categoryName: '洗护美容',
     name: '小型犬洗澡',
     description: '包含洗澡+吹干+基础梳理',
     coverImg: null,
@@ -76,8 +68,6 @@ export const products: ProductDetail[] = [
   },
   {
     id: 5,
-    categoryId: 3,
-    categoryName: '洗护美容',
     name: '宠物美容造型',
     description: '洗澡+修剪+造型设计',
     coverImg: null,
@@ -94,8 +84,6 @@ export const products: ProductDetail[] = [
   },
   {
     id: 6,
-    categoryId: 4,
-    categoryName: '寄养',
     name: '宠物日托',
     description: '含喂食、遛弯、基础护理',
     coverImg: null,
@@ -127,7 +115,6 @@ export function toListItem(p: ProductDetail): ProductListItem {
     id: p.id,
     name: p.name,
     coverImg: p.coverImg,
-    categoryName: p.categoryName,
     type: p.type,
     status: p.status,
     supportDelivery: p.supportDelivery,

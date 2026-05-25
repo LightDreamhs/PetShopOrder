@@ -1,5 +1,4 @@
 import { http, HttpResponse, delay } from 'msw'
-import { categories } from '../data/categories'
 import { products } from '../data/products'
 
 export const productHandlers = [
@@ -9,32 +8,6 @@ export const productHandlers = [
     const type = url.searchParams.get('type') as 'GOODS' | 'SERVICE' | null
     const list = products
       .filter((p) => !type || p.type === type)
-      .map((p) => ({
-        id: p.id,
-        name: p.name,
-        coverImg: p.coverImg,
-        type: p.type,
-        supportDelivery: p.supportDelivery,
-        price: p.skus.reduce((min, s) => (parseFloat(s.price) < parseFloat(min) ? s.price : min), p.skus[0].price),
-        dealPrice: p.skus.reduce((min, s) => (parseFloat(s.dealPrice) < parseFloat(min) ? s.dealPrice : min), p.skus[0].dealPrice),
-        hasSpec: p.skus.length > 1,
-      }))
-    return HttpResponse.json({ code: 200, message: 'success', data: list })
-  }),
-
-  http.get('/api/app/categories', async ({ request }) => {
-    await delay(200)
-    const url = new URL(request.url)
-    const type = url.searchParams.get('type') as 'GOODS' | 'SERVICE' | null
-    const list = type ? categories.filter((c) => c.type === type) : categories
-    return HttpResponse.json({ code: 200, message: 'success', data: list })
-  }),
-
-  http.get('/api/app/categories/:categoryId/products', async ({ params }) => {
-    await delay(300)
-    const categoryId = Number(params.categoryId)
-    const list = products
-      .filter((p) => p.categoryId === categoryId)
       .map((p) => ({
         id: p.id,
         name: p.name,

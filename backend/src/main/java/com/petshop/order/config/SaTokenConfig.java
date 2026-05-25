@@ -19,9 +19,7 @@ public class SaTokenConfig implements WebMvcConfigurer {
                         "/api/app/auth/sms-code",
                         "/api/app/auth/login",
                         "/api/app/auth/check",
-                        "/api/app/categories",
                         "/api/app/products",
-                        "/api/app/categories/*/products",
                         "/api/admin/auth/login"
                 );
     }

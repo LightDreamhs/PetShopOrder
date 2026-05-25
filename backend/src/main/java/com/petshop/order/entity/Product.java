@@ -11,7 +11,6 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = true)
 public class Product extends BaseEntity {
 
-    private Long categoryId;
     private String name;
     private String description;
     private String coverImg;
@@ -19,8 +18,6 @@ public class Product extends BaseEntity {
     private String status;
     private Integer supportDelivery;
     private Integer sort;
-
-    private String categoryName;
     private Integer skuCount;
     private BigDecimal minPrice;
     private List<Sku> skus;

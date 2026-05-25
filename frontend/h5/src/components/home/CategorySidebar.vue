@@ -1,28 +1,30 @@
 <template>
   <div class="category-sidebar">
     <div
-      v-for="cat in categories"
-      :key="cat.id"
+      v-for="tab in tabs"
+      :key="tab.type"
       class="category-item"
-      :class="{ active: modelValue === cat.id }"
-      @click="$emit('update:modelValue', cat.id)"
+      :class="{ active: modelValue === tab.type }"
+      @click="$emit('update:modelValue', tab.type)"
     >
-      <span class="category-name">{{ cat.name }}</span>
+      <span class="category-name">{{ tab.name }}</span>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { Category } from '@/types'
-
 defineProps<{
-  categories: Category[]
-  modelValue: number
+  modelValue: 'GOODS' | 'SERVICE'
 }>()
 
 defineEmits<{
-  'update:modelValue': [id: number]
+  'update:modelValue': [type: 'GOODS' | 'SERVICE']
 }>()
+
+const tabs = [
+  { name: '用品', type: 'GOODS' as const },
+  { name: '服务', type: 'SERVICE' as const },
+]
 </script>
 
 <style scoped lang="scss">

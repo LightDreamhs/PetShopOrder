@@ -10,21 +10,9 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- 商品体系
 -- ============================================
 
--- 商品分类
-CREATE TABLE IF NOT EXISTS category (
-    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
-    name        VARCHAR(32)  NOT NULL,
-    icon        VARCHAR(255) NULL,
-    type        VARCHAR(16)  NOT NULL COMMENT 'GOODS / SERVICE',
-    sort        INT          NOT NULL DEFAULT 0,
-    create_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    update_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='商品分类';
-
 -- 商品/服务（统一表，type 区分）
 CREATE TABLE IF NOT EXISTS product (
     id               BIGINT AUTO_INCREMENT PRIMARY KEY,
-    category_id      BIGINT       NOT NULL,
     name             VARCHAR(128) NOT NULL,
     description      TEXT         NULL,
     cover_img        VARCHAR(255) NULL,
@@ -34,7 +22,6 @@ CREATE TABLE IF NOT EXISTS product (
     sort             INT          NOT NULL DEFAULT 0,
     create_time      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_time      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_product_category (category_id),
     INDEX idx_product_type_status (type, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='商品/服务';
 
@@ -245,29 +232,20 @@ INSERT INTO system_config_delivery_tier (config_id, min_distance_km, max_distanc
 (1, 2.00, 4.00, 5.00, 2),
 (1, 4.00, 6.00, 8.00, 3);
 
--- 商品分类
-INSERT INTO category (id, name, type, sort) VALUES
-(1, '狗粮',     'GOODS',   1),
-(2, '猫粮',     'GOODS',   2),
-(3, '零食',     'GOODS',   3),
-(4, '用品',     'GOODS',   4),
-(5, '洗护服务', 'SERVICE', 1),
-(6, '美容服务', 'SERVICE', 2);
-
 -- 商品 + SKU
-INSERT INTO product (id, category_id, name, type, status, support_delivery, sort) VALUES
-(1,  1, '皇家金毛成犬粮',     'GOODS',   'ON_SALE', 1, 1),
-(2,  1, '伯纳天纯中大型犬粮', 'GOODS',   'ON_SALE', 1, 2),
-(3,  2, '皇家英短成猫粮',     'GOODS',   'ON_SALE', 1, 1),
-(4,  2, '渴望鸡肉猫粮',       'GOODS',   'ON_SALE', 1, 2),
-(5,  3, '疯狂小狗鸡肉干',     'GOODS',   'ON_SALE', 1, 1),
-(6,  3, '猫条零食',           'GOODS',   'ON_SALE', 1, 2),
-(7,  4, '宠物尿垫',           'GOODS',   'ON_SALE', 1, 1),
-(8,  4, '宠物牵引绳',         'GOODS',   'ON_SALE', 1, 2),
-(9,  5, '洗澡服务',           'SERVICE', 'ON_SALE', 0, 1),
-(10, 5, '药浴服务',           'SERVICE', 'ON_SALE', 0, 2),
-(11, 6, '美容修剪',           'SERVICE', 'ON_SALE', 0, 1),
-(12, 6, '猫洗澡+修剪',        'SERVICE', 'ON_SALE', 0, 2);
+INSERT INTO product (id, name, type, status, support_delivery, sort) VALUES
+(1,  '皇家金毛成犬粮',     'GOODS',   'ON_SALE', 1, 1),
+(2,  '伯纳天纯中大型犬粮', 'GOODS',   'ON_SALE', 1, 2),
+(3,  '皇家英短成猫粮',     'GOODS',   'ON_SALE', 1, 1),
+(4,  '渴望鸡肉猫粮',       'GOODS',   'ON_SALE', 1, 2),
+(5,  '疯狂小狗鸡肉干',     'GOODS',   'ON_SALE', 1, 1),
+(6,  '猫条零食',           'GOODS',   'ON_SALE', 1, 2),
+(7,  '宠物尿垫',           'GOODS',   'ON_SALE', 1, 1),
+(8,  '宠物牵引绳',         'GOODS',   'ON_SALE', 1, 2),
+(9,  '洗澡服务',           'SERVICE', 'ON_SALE', 0, 1),
+(10, '药浴服务',           'SERVICE', 'ON_SALE', 0, 2),
+(11, '美容修剪',           'SERVICE', 'ON_SALE', 0, 1),
+(12, '猫洗澡+修剪',        'SERVICE', 'ON_SALE', 0, 2);
 
 INSERT INTO sku (product_id, spec_name, price, member_price, stock, sort) VALUES
 -- 狗粮
