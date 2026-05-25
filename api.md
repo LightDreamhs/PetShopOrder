@@ -234,7 +234,6 @@
 | specName | String | 规格名称，如 `"5kg"` / `"中型犬（10-25kg）"` |
 | price | String | 原价 |
 | dealPrice | String | 当前用户成交价（已根据会员等级计算） |
-| stock | Integer | 库存（SERVICE 类型为 -1） |
 
 **业务规则**：
 - 仅返回在售商品（`status = ON_SALE`）
@@ -358,7 +357,6 @@
 - 金额精度：单价 HALF_UP 四舍五入到分后再乘数量
 - 配送校验：可配送用品原价合计 ≥ 起送金额
 - 运费按系统配置策略计算（FREE / FIXED / TIERED）
-- 库存扣减（GOODS 类型），并发防超卖
 - 下单成功后异步推企微通知
 
 ---
@@ -630,7 +628,6 @@
 | specName | String | 是 | 规格名称 |
 | price | String | 是 | 原价 |
 | memberPrice | String | 否 | 会员价（GOODS 可选，SERVICE 忽略） |
-| stock | Integer | 条件必填 | 库存（GOODS 必填，SERVICE 可不传） |
 | sort | Integer | 否 | 排序值 |
 
 **响应 data**：新增的完整商品对象（含 ID、SKU 列表）
@@ -668,7 +665,6 @@
 | specName | String | 规格名称 |
 | price | String | 原价 |
 | memberPrice | String \| null | 会员价 |
-| stock | Integer | 库存 |
 | sort | Integer | 排序值 |
 
 ---

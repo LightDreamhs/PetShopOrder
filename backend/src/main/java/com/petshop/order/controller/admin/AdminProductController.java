@@ -112,7 +112,7 @@ public class AdminProductController {
         sku.setSpecName(s.getSpecName());
         sku.setPrice(s.getPrice());
         sku.setMemberPrice(s.getMemberPrice());
-        sku.setStock(s.getStock() != null ? s.getStock() : 0);
+        sku.setStock(-1);
         sku.setSort(s.getSort() != null ? s.getSort() : 0);
         return sku;
     }
@@ -156,7 +156,6 @@ public class AdminProductController {
                 "specName", s.getSpecName(),
                 "price", s.getPrice().toPlainString(),
                 "memberPrice", s.getMemberPrice() != null ? s.getMemberPrice().toPlainString() : "",
-                "stock", s.getStock(),
                 "sort", s.getSort()
         );
     }
@@ -184,7 +183,6 @@ public class AdminProductController {
         @NotNull
         private BigDecimal price;
         private BigDecimal memberPrice;
-        private Integer stock;
         private Integer sort;
     }
 

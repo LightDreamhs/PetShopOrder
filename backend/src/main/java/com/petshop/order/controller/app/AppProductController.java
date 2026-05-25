@@ -107,8 +107,7 @@ public class AppProductController {
                         "id", s.getId(),
                         "specName", s.getSpecName(),
                         "price", s.getPrice().toPlainString(),
-                        "dealPrice", calcDealPrice(s.getPrice(), s.getMemberPrice(), discountRate, product.getType()),
-                        "stock", s.getStock()
+                        "dealPrice", calcDealPrice(s.getPrice(), s.getMemberPrice(), discountRate, product.getType())
                 )).toList()
         );
         return R.ok(result);

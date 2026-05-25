@@ -12,7 +12,6 @@ import com.petshop.order.mapper.MemberPhoneMapper;
 import com.petshop.order.mapper.OrderItemMapper;
 import com.petshop.order.mapper.OrdersMapper;
 import com.petshop.order.mapper.ProductMapper;
-import com.petshop.order.mapper.SkuMapper;
 import com.petshop.order.service.AppAuthService;
 import com.petshop.order.service.DeliveryService;
 import com.petshop.order.service.NotificationService;
@@ -38,7 +37,6 @@ public class OrderServiceImpl implements OrderService {
 
     private final OrdersMapper ordersMapper;
     private final OrderItemMapper orderItemMapper;
-    private final SkuMapper skuMapper;
     private final AppAuthService appAuthService;
     private final PriceCalculationService priceCalculationService;
     private final DeliveryService deliveryService;
@@ -155,15 +153,6 @@ public class OrderServiceImpl implements OrderService {
         }
 
         BigDecimal totalAmount = goodsAmount.add(serviceAmount).add(deliveryFee);
-
-        for (CalculatedItemResult ci : calculatedItems) {
-            if ("GOODS".equals(ci.getType()) && ci.getSkuId() != null) {
-                int rows = skuMapper.deductStock(ci.getSkuId(), ci.getQuantity());
-                if (rows == 0) {
-                    throw new BusinessException("库存不足: " + ci.getProductName());
-                }
-            }
-        }
 
         Orders order = new Orders();
         order.setOrderNo(orderNo);

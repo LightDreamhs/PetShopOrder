@@ -63,7 +63,6 @@ export interface SkuDetail {
   specName: string
   price: string
   memberPrice: string | null
-  stock: number
   sort: number
 }
 

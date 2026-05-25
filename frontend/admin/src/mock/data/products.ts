@@ -17,9 +17,9 @@ export const products: ProductDetail[] = [
     sort: 1,
     createTime: '2026-04-15 10:30',
     skus: [
-      { id: 1, specName: '5kg', price: '189.00', memberPrice: '168.00', stock: 50, sort: 1 },
-      { id: 2, specName: '10kg', price: '329.00', memberPrice: '295.00', stock: 30, sort: 2 },
-      { id: 3, specName: '15kg', price: '459.00', memberPrice: '412.00', stock: 20, sort: 3 },
+      { id: 1, specName: '5kg', price: '189.00', memberPrice: '168.00', sort: 1 },
+      { id: 2, specName: '10kg', price: '329.00', memberPrice: '295.00', sort: 2 },
+      { id: 3, specName: '15kg', price: '459.00', memberPrice: '412.00', sort: 3 },
     ],
   },
   {
@@ -35,8 +35,8 @@ export const products: ProductDetail[] = [
     sort: 2,
     createTime: '2026-04-16 14:20',
     skus: [
-      { id: 4, specName: '3kg', price: '128.00', memberPrice: '115.00', stock: 60, sort: 1 },
-      { id: 5, specName: '8kg', price: '258.00', memberPrice: '232.00', stock: 40, sort: 2 },
+      { id: 4, specName: '3kg', price: '128.00', memberPrice: '115.00', sort: 1 },
+      { id: 5, specName: '8kg', price: '258.00', memberPrice: '232.00', sort: 2 },
     ],
   },
   {
@@ -52,8 +52,8 @@ export const products: ProductDetail[] = [
     sort: 1,
     createTime: '2026-04-17 09:00',
     skus: [
-      { id: 6, specName: '1.8kg', price: '199.00', memberPrice: '179.00', stock: 25, sort: 1 },
-      { id: 7, specName: '5.4kg', price: '489.00', memberPrice: '440.00', stock: 15, sort: 2 },
+      { id: 6, specName: '1.8kg', price: '199.00', memberPrice: '179.00', sort: 1 },
+      { id: 7, specName: '5.4kg', price: '489.00', memberPrice: '440.00', sort: 2 },
     ],
   },
   {
@@ -69,9 +69,9 @@ export const products: ProductDetail[] = [
     sort: 1,
     createTime: '2026-04-18 11:00',
     skus: [
-      { id: 8, specName: '小型犬（5kg以下）', price: '50.00', memberPrice: null, stock: -1, sort: 1 },
-      { id: 9, specName: '中型犬（5-15kg）', price: '80.00', memberPrice: null, stock: -1, sort: 2 },
-      { id: 10, specName: '大型犬（15kg以上）', price: '120.00', memberPrice: null, stock: -1, sort: 3 },
+      { id: 8, specName: '小型犬（5kg以下）', price: '50.00', memberPrice: null, sort: 1 },
+      { id: 9, specName: '中型犬（5-15kg）', price: '80.00', memberPrice: null, sort: 2 },
+      { id: 10, specName: '大型犬（15kg以上）', price: '120.00', memberPrice: null, sort: 3 },
     ],
   },
   {
@@ -87,9 +87,9 @@ export const products: ProductDetail[] = [
     sort: 2,
     createTime: '2026-04-18 11:30',
     skus: [
-      { id: 11, specName: '贵宾造型', price: '150.00', memberPrice: null, stock: -1, sort: 1 },
-      { id: 12, specName: '比熊造型', price: '150.00', memberPrice: null, stock: -1, sort: 2 },
-      { id: 13, specName: '博美造型', price: '120.00', memberPrice: null, stock: -1, sort: 3 },
+      { id: 11, specName: '贵宾造型', price: '150.00', memberPrice: null, sort: 1 },
+      { id: 12, specName: '比熊造型', price: '150.00', memberPrice: null, sort: 2 },
+      { id: 13, specName: '博美造型', price: '120.00', memberPrice: null, sort: 3 },
     ],
   },
   {
@@ -105,10 +105,10 @@ export const products: ProductDetail[] = [
     sort: 1,
     createTime: '2026-04-20 16:00',
     skus: [
-      { id: 14, specName: '小型犬', price: '60.00', memberPrice: null, stock: -1, sort: 1 },
-      { id: 15, specName: '中型犬', price: '80.00', memberPrice: null, stock: -1, sort: 2 },
-      { id: 16, specName: '大型犬', price: '100.00', memberPrice: null, stock: -1, sort: 3 },
-      { id: 17, specName: '猫', price: '50.00', memberPrice: null, stock: -1, sort: 4 },
+      { id: 14, specName: '小型犬', price: '60.00', memberPrice: null, sort: 1 },
+      { id: 15, specName: '中型犬', price: '80.00', memberPrice: null, sort: 2 },
+      { id: 16, specName: '大型犬', price: '100.00', memberPrice: null, sort: 3 },
+      { id: 17, specName: '猫', price: '50.00', memberPrice: null, sort: 4 },
     ],
   },
 ]

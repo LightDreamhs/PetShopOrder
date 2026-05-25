@@ -111,7 +111,6 @@ function addSkuRow() {
     specName: '',
     price: '0.00',
     memberPrice: null,
-    stock: 0,
     sort: productForm.skus.length + 1,
   })
 }
@@ -177,7 +176,6 @@ async function handleProductSubmit() {
         specName: s.specName,
         price: s.price,
         memberPrice: productForm.type === 'GOODS' ? s.memberPrice : null,
-        stock: productForm.type === 'GOODS' ? s.stock : -1,
         sort: s.sort,
       })),
     }
@@ -401,14 +399,12 @@ onMounted(() => {
             <div class="sku-guide">
               <span>规格名：如「500g」「单次洗澡」</span>
               <span>原价/会员价：填写元，支持小数（如 99.00）</span>
-              <span v-if="productForm.type === 'GOODS'">库存：可售数量，服务无需填写</span>
               <span>排序：数字越小越靠前</span>
             </div>
             <div class="sku-columns">
               <span style="width: 160px">规格名</span>
               <span style="width: 100px">原价(元)</span>
               <span v-if="productForm.type === 'GOODS'" style="width: 100px">会员价(元)</span>
-              <span v-if="productForm.type === 'GOODS'" style="width: 120px">库存</span>
               <span style="width: 100px">排序</span>
               <span style="width: 24px"></span>
             </div>
@@ -422,14 +418,6 @@ onMounted(() => {
                   v-model="sku.memberPrice"
                   placeholder="如：89.00"
                   style="width: 100px"
-                />
-                <el-input-number
-                  v-if="productForm.type === 'GOODS'"
-                  v-model="sku.stock"
-                  :min="0"
-                  placeholder="如：100"
-                  style="width: 120px"
-                  controls-position="right"
                 />
                 <el-input-number v-model="sku.sort" :min="0" :max="999" style="width: 100px" controls-position="right" />
                 <el-button link type="danger" @click="removeSkuRow(index)">

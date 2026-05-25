@@ -1,7 +1,8 @@
 <template>
   <div class="product-card">
     <div class="product-img">
-      <div class="img-placeholder">
+      <img v-if="product.coverImg" :src="product.coverImg" alt="" class="img-real" />
+      <div v-else class="img-placeholder">
         {{ product.type === 'SERVICE' ? '✂️' : '🦴' }}
       </div>
     </div>
@@ -80,6 +81,13 @@ const cartQty = computed(() => cartStore.getItemQty(props.product.id, null))
   flex-shrink: 0;
   width: 76px;
   height: 76px;
+}
+
+.img-real {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: $radius-sm;
 }
 
 .img-placeholder {

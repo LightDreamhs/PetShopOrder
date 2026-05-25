@@ -40,7 +40,6 @@ export interface SkuPrice {
   specName: string
   price: string
   dealPrice: string
-  stock: number
 }
 
 // 商品详情
