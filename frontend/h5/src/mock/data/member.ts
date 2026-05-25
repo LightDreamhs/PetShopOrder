@@ -2,9 +2,9 @@ export const memberProfile = {
   isMember: true,
   memberLevel: {
     name: '2000档会员',
-    discountRate: '0.85',
+    discountRate: '0.80',
   },
-  serviceDiscountText: '8.5折',
+  serviceDiscountText: '8折',
 }
 
 export const nonMemberProfile = {

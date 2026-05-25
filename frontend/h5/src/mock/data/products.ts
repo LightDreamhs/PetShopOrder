@@ -97,33 +97,33 @@ export const products = [
     id: 13, name: '洗澡服务', type: 'SERVICE' as const,
     coverImg: null, supportDelivery: false,
     skus: [
-      { id: 501, specName: '小型犬（<10kg）', price: '79.00', dealPrice: '67.15' },
-      { id: 502, specName: '中型犬（10-25kg）', price: '99.00', dealPrice: '84.15' },
-      { id: 503, specName: '大型犬（>25kg）', price: '129.00', dealPrice: '109.65' },
+      { id: 501, specName: '小型犬（<10kg）', price: '79.00', dealPrice: '63.20' },
+      { id: 502, specName: '中型犬（10-25kg）', price: '99.00', dealPrice: '79.20' },
+      { id: 503, specName: '大型犬（>25kg）', price: '129.00', dealPrice: '103.20' },
     ],
   },
   {
     id: 14, name: '药浴服务', type: 'SERVICE' as const,
     coverImg: null, supportDelivery: false,
     skus: [
-      { id: 504, specName: '小型犬', price: '119.00', dealPrice: '101.15' },
-      { id: 505, specName: '中大型犬', price: '159.00', dealPrice: '135.15' },
+      { id: 504, specName: '小型犬', price: '119.00', dealPrice: '95.20' },
+      { id: 505, specName: '中大型犬', price: '159.00', dealPrice: '127.20' },
     ],
   },
   {
     id: 15, name: '美容修剪', type: 'SERVICE' as const,
     coverImg: null, supportDelivery: false,
     skus: [
-      { id: 601, specName: '基础护理', price: '139.00', dealPrice: '118.15' },
-      { id: 602, specName: '全套精修', price: '199.00', dealPrice: '169.15' },
+      { id: 601, specName: '基础护理', price: '139.00', dealPrice: '111.20' },
+      { id: 602, specName: '全套精修', price: '199.00', dealPrice: '159.20' },
     ],
   },
   {
     id: 16, name: '猫洗澡+修剪', type: 'SERVICE' as const,
     coverImg: null, supportDelivery: false,
     skus: [
-      { id: 603, specName: '短毛猫', price: '129.00', dealPrice: '109.65' },
-      { id: 604, specName: '长毛猫', price: '169.00', dealPrice: '143.65' },
+      { id: 603, specName: '短毛猫', price: '129.00', dealPrice: '103.20' },
+      { id: 604, specName: '长毛猫', price: '169.00', dealPrice: '135.20' },
     ],
   },
 ]
