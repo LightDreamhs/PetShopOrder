@@ -4,15 +4,23 @@
     <van-sticky>
       <div class="home-header">
         <div class="header-left">
-          <h1 class="header-title">🐾 贰掌柜宠物店</h1>
-          <span v-if="memberStore.isMember" class="member-badge">
+          <div class="header-title-row">
+            <h1 class="header-title">🐾 贰掌柜宠物店</h1>
+          </div>
+          <span v-if="memberStore.isMember" class="member-badge" :class="memberBadgeClass">
             <van-icon name="crown-o" size="10" />
             {{ memberStore.memberLevelName }}
           </span>
         </div>
-        <div class="header-right" @click="router.push('/orders')">
-          <van-icon name="orders-o" size="20" />
-          <span>订单</span>
+        <div class="header-actions">
+          <div class="header-action-btn" @click="router.push('/orders')">
+            <van-icon name="orders-o" size="20" />
+            <span>订单</span>
+          </div>
+          <div class="header-action-btn" @click="handleLogout">
+            <van-icon name="revoke" size="20" />
+            <span>退出</span>
+          </div>
         </div>
       </div>
       <van-search
@@ -58,6 +66,7 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cart'
+import { useAuthStore } from '@/stores/auth'
 import { useMemberStore } from '@/stores/member'
 import { getProductsByType, getProductDetail } from '@/api/product'
 import type { Product, ProductDetail } from '@/types'
@@ -68,7 +77,16 @@ import SkuSelectorPopup from '@/components/product/SkuSelectorPopup.vue'
 
 const router = useRouter()
 const cartStore = useCartStore()
+const authStore = useAuthStore()
 const memberStore = useMemberStore()
+
+const memberBadgeClass = computed(() => {
+  const name = memberStore.memberLevelName || ''
+  if (name.includes('5000')) return 'badge-diamond'
+  if (name.includes('2000')) return 'badge-gold'
+  if (name.includes('1000')) return 'badge-silver'
+  return 'badge-bronze'
+})
 
 const activeType = ref<'GOODS' | 'SERVICE'>('GOODS')
 const allProducts = ref<Product[]>([])
@@ -90,6 +108,11 @@ getProductsByType().then((list) => {
 
 const specPickerVisible = ref(false)
 const selectedProduct = ref<ProductDetail | null>(null)
+
+function handleLogout() {
+  authStore.logout()
+  router.replace('/login')
+}
 
 async function openSpecPicker(product: Product) {
   try {
@@ -140,6 +163,12 @@ function handleDirectQty(product: Product, delta: number) {
 
 .header-left {
   display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.header-title-row {
+  display: flex;
   align-items: center;
   gap: 8px;
 }
@@ -154,14 +183,33 @@ function handleDirectQty(product: Product, delta: number) {
 .member-badge {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   font-size: 10px;
-  background: linear-gradient(135deg, #2c2c2c, #444);
-  color: #ffd700;
-  padding: 3px 8px;
+  padding: 2px 10px;
   border-radius: 10px;
   font-weight: 600;
   letter-spacing: 0.3px;
+  width: fit-content;
+}
+
+.badge-diamond {
+  background: linear-gradient(135deg, #1a1a2e, #4a4a6a);
+  color: #e8d5f5;
+}
+
+.badge-gold {
+  background: linear-gradient(135deg, #b8860b, #daa520);
+  color: #fff;
+}
+
+.badge-silver {
+  background: linear-gradient(135deg, #6b7b8d, #a8b8c8);
+  color: #fff;
+}
+
+.badge-bronze {
+  background: linear-gradient(135deg, #8b5e3c, #c4854a);
+  color: #fff;
 }
 
 .home-search {
@@ -170,17 +218,25 @@ function handleDirectQty(product: Product, delta: number) {
   }
 }
 
-.header-right {
+.header-actions {
   display: flex;
-  flex-direction: column;
+  gap: 12px;
+}
+
+.header-action-btn {
+  display: flex;
   align-items: center;
-  gap: 1px;
+  gap: 3px;
   cursor: pointer;
   color: $text-secondary;
-  font-size: 10px;
-  min-width: 32px;
-  min-height: 32px;
-  justify-content: center;
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 14px;
+  background: #f5f5f5;
+
+  &:active {
+    background: #ebebeb;
+  }
 }
 
 .home-body {
