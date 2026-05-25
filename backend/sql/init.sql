@@ -232,12 +232,86 @@ CREATE TABLE IF NOT EXISTS system_config_log (
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ============================================
--- 初始数据
+-- 初始数据（联调用）
 -- ============================================
 
--- 默认 BOSS 账号：由应用启动时自动初始化（admin / admin123）
--- 此处仅预留，实际 INSERT 由 DataInitializer 完成
+-- 系统配置（单行，ID=1）
+INSERT INTO system_config (id, shop_lat, shop_lng, delivery_radius_km, delivery_min_amount, delivery_fee_type, fixed_delivery_fee, order_time_enabled, order_start_time, order_end_time)
+VALUES (1, 31.2304000, 121.4737000, 6.00, 30.00, 'TIERED', 0.00, 1, '09:00:00', '21:00:00');
 
--- 默认系统配置（单行，ID=1）
-INSERT INTO system_config (id, shop_lat, shop_lng, delivery_radius_km, delivery_min_amount, delivery_fee_type, fixed_delivery_fee, order_time_enabled)
-VALUES (1, NULL, NULL, 5.00, 20.00, 'FREE', 0.00, 0);
+-- 分段运费
+INSERT INTO system_config_delivery_tier (config_id, min_distance_km, max_distance_km, fee, sort) VALUES
+(1, 0.00, 2.00, 3.00, 1),
+(1, 2.00, 4.00, 5.00, 2),
+(1, 4.00, 6.00, 8.00, 3);
+
+-- 商品分类
+INSERT INTO category (id, name, type, sort) VALUES
+(1, '狗粮',     'GOODS',   1),
+(2, '猫粮',     'GOODS',   2),
+(3, '零食',     'GOODS',   3),
+(4, '用品',     'GOODS',   4),
+(5, '洗护服务', 'SERVICE', 1),
+(6, '美容服务', 'SERVICE', 2);
+
+-- 商品 + SKU
+INSERT INTO product (id, category_id, name, type, status, support_delivery, sort) VALUES
+(1,  1, '皇家金毛成犬粮',     'GOODS',   'ON_SALE', 1, 1),
+(2,  1, '伯纳天纯中大型犬粮', 'GOODS',   'ON_SALE', 1, 2),
+(3,  2, '皇家英短成猫粮',     'GOODS',   'ON_SALE', 1, 1),
+(4,  2, '渴望鸡肉猫粮',       'GOODS',   'ON_SALE', 1, 2),
+(5,  3, '疯狂小狗鸡肉干',     'GOODS',   'ON_SALE', 1, 1),
+(6,  3, '猫条零食',           'GOODS',   'ON_SALE', 1, 2),
+(7,  4, '宠物尿垫',           'GOODS',   'ON_SALE', 1, 1),
+(8,  4, '宠物牵引绳',         'GOODS',   'ON_SALE', 1, 2),
+(9,  5, '洗澡服务',           'SERVICE', 'ON_SALE', 0, 1),
+(10, 5, '药浴服务',           'SERVICE', 'ON_SALE', 0, 2),
+(11, 6, '美容修剪',           'SERVICE', 'ON_SALE', 0, 1),
+(12, 6, '猫洗澡+修剪',        'SERVICE', 'ON_SALE', 0, 2);
+
+INSERT INTO sku (product_id, spec_name, price, member_price, stock, sort) VALUES
+-- 狗粮
+(1,  '15kg',  '368.00', '298.00', -1, 1),
+(1,  '3kg',   '89.00',  '72.00',  -1, 2),
+(2,  '10kg',  '199.00', '168.00', -1, 1),
+-- 猫粮
+(3,  '10kg',  '329.00', '269.00', -1, 1),
+(3,  '2kg',   '79.00',  '65.00',  -1, 2),
+(4,  '5.4kg', '469.00', '399.00', -1, 1),
+(4,  '1.8kg', '169.00', '145.00', -1, 2),
+-- 零食
+(5,  '500g',  '39.90',  '32.90',  -1, 1),
+(6,  '15支装', '25.00',  '19.90',  -1, 1),
+(6,  '30支装', '45.00',  '36.00',  -1, 2),
+-- 用品
+(7,  '60×45cm 50片', '35.00', '28.00', -1, 1),
+(7,  '60×60cm 30片', '32.00', '26.00', -1, 2),
+(8,  'S号（小型犬）', '29.00', '24.00', -1, 1),
+(8,  'M号（中型犬）', '35.00', '28.00', -1, 2),
+(8,  'L号（大型犬）', '42.00', '35.00', -1, 3),
+-- 洗护
+(9,  '小型犬（<10kg）',  '79.00',  NULL, -1, 1),
+(9,  '中型犬（10-25kg）', '99.00', NULL, -1, 2),
+(9,  '大型犬（>25kg）',  '129.00', NULL, -1, 3),
+(10, '小型犬',   '119.00', NULL, -1, 1),
+(10, '中大型犬', '159.00', NULL, -1, 2),
+-- 美容
+(11, '基础护理', '139.00', NULL, -1, 1),
+(11, '全套精修', '199.00', NULL, -1, 2),
+(12, '短毛猫',   '129.00', NULL, -1, 1),
+(12, '长毛猫',   '169.00', NULL, -1, 2);
+
+-- 会员等级
+INSERT INTO member_level (id, name, discount_rate, sort, status) VALUES
+(1, '金卡会员', 0.9000, 10, 1),
+(2, '白金会员', 0.8500, 20, 1);
+
+-- 会员 + 手机号映射
+INSERT INTO member (id, name, level_id) VALUES
+(1, '张三', 1),
+(2, '李四', 2);
+
+INSERT INTO member_phone (member_id, phone) VALUES
+(1, '13800001111'),
+(1, '13800002222'),
+(2, '13900003333');
