@@ -13,12 +13,6 @@ async function bootstrap() {
   app.use(pinia)
   app.use(router)
 
-  // Mock 数据：开发环境按需加载
-  if (import.meta.env.VITE_USE_MOCK === 'true') {
-    const { setupMock } = await import('./mock')
-    await setupMock()
-  }
-
   app.mount('#app')
 }
 

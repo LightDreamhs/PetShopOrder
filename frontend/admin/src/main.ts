@@ -24,13 +24,6 @@ async function bootstrap() {
     app.component(key, component)
   }
 
-  // Mock
-  if (import.meta.env.VITE_USE_MOCK === 'true') {
-    const { worker } = await import('./mock')
-    await worker.start({ onUnhandledRequest: 'bypass' })
-    console.log('[MSW] Mock Service Worker 已启动')
-  }
-
   app.mount('#app')
 }
 
