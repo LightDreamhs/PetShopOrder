@@ -2,6 +2,7 @@ package com.petshop.order.service.impl;
 
 import cn.hutool.crypto.SecureUtil;
 import cn.hutool.crypto.symmetric.AES;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.petshop.order.entity.OrderItem;
 import com.petshop.order.entity.Orders;
 import com.petshop.order.entity.SystemConfig;
@@ -10,15 +11,19 @@ import com.petshop.order.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
+import org.springframework.http.RequestEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeFormatter;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
+
+import com.fasterxml.jackson.databind.JsonNode;
 
 @Slf4j
 @Service
@@ -26,11 +31,14 @@ import java.util.stream.Collectors;
 public class NotificationServiceImpl implements NotificationService {
 
     private final SystemConfigMapper systemConfigMapper;
+    private final ObjectMapper objectMapper;
 
     @Value("${app.webhook.aes-key:PetShop2026Order!}")
     private String aesKey;
 
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private static final int MAX_RETRIES = 2;
+    private static final long[] RETRY_DELAYS_MS = {3000L, 6000L};
 
     @Async
     @Override
@@ -60,6 +68,102 @@ public class NotificationServiceImpl implements NotificationService {
                     .collect(Collectors.joining(", "));
             String timeStr = order.getCreateTime() != null ? order.getCreateTime().format(FMT) : "";
 
+            String jsonBody;
+            if (isFeishu(webhookUrl)) {
+                jsonBody = buildFeishuCard(order, maskedPhone, memberInfo, deliveryInfo, goodsSummary, timeStr);
+            } else {
+                jsonBody = buildQywxMarkdown(order, maskedPhone, memberInfo, deliveryInfo, goodsSummary, timeStr);
+            }
+            if (jsonBody == null) {
+                return;
+            }
+
+            RestTemplate restTemplate = new RestTemplate();
+            for (int attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+                try {
+                    RequestEntity<String> request = RequestEntity
+                            .post(new URI(webhookUrl))
+                            .contentType(new MediaType("application", "json", StandardCharsets.UTF_8))
+                            .body(jsonBody);
+                    String response = restTemplate.exchange(request, String.class).getBody();
+                    if (isSendSuccess(response, webhookUrl)) {
+                        return;
+                    }
+                    log.warn("Webhook 返回失败, orderNo={}, attempt={}, response={}", order.getOrderNo(), attempt + 1, response);
+                } catch (Exception sendEx) {
+                    log.warn("Webhook 发送异常, orderNo={}, attempt={}", order.getOrderNo(), attempt + 1, sendEx.getMessage());
+                }
+                if (attempt < MAX_RETRIES) {
+                    Thread.sleep(RETRY_DELAYS_MS[attempt]);
+                }
+            }
+            log.error("Webhook 发送最终失败（已重试{}次）, orderNo={}", MAX_RETRIES, order.getOrderNo());
+        } catch (Exception e) {
+            log.error("发送新订单通知失败, orderNo={}", order.getOrderNo(), e);
+        }
+    }
+
+    private boolean isFeishu(String url) {
+        return url.contains("open.feishu.cn");
+    }
+
+    private boolean isSendSuccess(String response, String webhookUrl) {
+        try {
+            JsonNode node = objectMapper.readTree(response);
+            if (isFeishu(webhookUrl)) {
+                return node.has("StatusCode") && node.get("StatusCode").asInt(-1) == 0;
+            }
+            return node.has("errcode") && node.get("errcode").asInt(-1) == 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private String buildFeishuCard(Orders order, String maskedPhone, String memberInfo,
+                                    String deliveryInfo, String goodsSummary, String timeStr) {
+        try {
+            Map<String, Object> header = new LinkedHashMap<>();
+            Map<String, Object> title = new LinkedHashMap<>();
+            title.put("tag", "plain_text");
+            title.put("content", "新订单通知");
+            header.put("title", title);
+            header.put("template", "turquoise");
+
+            StringBuilder md = new StringBuilder();
+            md.append("**订单号**: ").append(order.getOrderNo()).append("\n");
+            md.append("**客户**: ").append(maskedPhone).append("\n");
+            md.append("**会员**: ").append(memberInfo).append("\n");
+            md.append("**金额**: ¥").append(order.getTotalAmount().toPlainString()).append("\n");
+            md.append("**配送**: ").append(deliveryInfo).append("\n");
+            md.append("**商品**: ").append(goodsSummary).append("\n");
+            md.append("**时间**: ").append(timeStr);
+
+            Map<String, Object> text = new LinkedHashMap<>();
+            text.put("tag", "lark_md");
+            text.put("content", md.toString());
+
+            Map<String, Object> element = new LinkedHashMap<>();
+            element.put("tag", "div");
+            element.put("text", text);
+
+            Map<String, Object> card = new LinkedHashMap<>();
+            card.put("header", header);
+            card.put("elements", Collections.singletonList(element));
+
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("msg_type", "interactive");
+            body.put("card", card);
+
+            return objectMapper.writeValueAsString(body);
+        } catch (Exception e) {
+            log.error("构建飞书消息失败", e);
+            return null;
+        }
+    }
+
+    private String buildQywxMarkdown(Orders order, String maskedPhone, String memberInfo,
+                                      String deliveryInfo, String goodsSummary, String timeStr) {
+        try {
             String content = "### 新订单通知\n"
                     + "**订单号**: " + order.getOrderNo() + "\n"
                     + "**客户**: " + maskedPhone + "\n"
@@ -75,10 +179,10 @@ public class NotificationServiceImpl implements NotificationService {
             body.put("msgtype", "markdown");
             body.put("markdown", markdown);
 
-            RestTemplate restTemplate = new RestTemplate();
-            restTemplate.postForObject(webhookUrl, body, String.class);
+            return objectMapper.writeValueAsString(body);
         } catch (Exception e) {
-            log.error("发送新订单通知失败, orderNo={}", order.getOrderNo(), e);
+            log.error("构建企微消息失败", e);
+            return null;
         }
     }
 
