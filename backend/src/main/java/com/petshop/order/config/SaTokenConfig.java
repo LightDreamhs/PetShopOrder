@@ -20,6 +20,7 @@ public class SaTokenConfig implements WebMvcConfigurer {
                         "/api/app/auth/login",
                         "/api/app/auth/check",
                         "/api/app/products",
+                        "/api/app/system-config/public",
                         "/api/admin/auth/login"
                 );
     }

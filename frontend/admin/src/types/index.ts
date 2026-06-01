@@ -184,6 +184,7 @@ export interface SystemConfig {
   orderStartTime: string
   orderEndTime: string
   qywxWebhookUrl: string | null
+  paymentQrUrl: string | null
   updatedBy: string
   updatedAt: string
 }
@@ -205,6 +206,7 @@ export interface UpdateSystemConfigRequest {
   orderStartTime: string
   orderEndTime: string
   qywxWebhookUrl?: string
+  paymentQrUrl?: string
 }
 
 // ========== 账号管理 ==========

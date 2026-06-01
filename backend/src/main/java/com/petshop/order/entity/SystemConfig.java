@@ -22,5 +22,6 @@ public class SystemConfig extends BaseEntity {
     private LocalTime orderEndTime;
     private byte[] qywxWebhookUrlEnc;
     private Integer hasQywxWebhook;
+    private String paymentQrUrl;
     private Long updatedBy;
 }

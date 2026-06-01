@@ -183,6 +183,7 @@ CREATE TABLE IF NOT EXISTS system_config (
     order_end_time       TIME           NULL COMMENT '预留：接单结束时间',
     qywx_webhook_url_enc VARBINARY(1024) NULL COMMENT '企微 Webhook URL 加密存储',
     has_qywx_webhook     TINYINT        NOT NULL DEFAULT 0 COMMENT '是否已配置 Webhook',
+    payment_qr_url       VARCHAR(255)   NULL COMMENT '收款二维码图片地址',
     updated_by           BIGINT         NULL COMMENT 'admin_user.id',
     create_time          DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_time          DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP

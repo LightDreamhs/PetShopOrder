@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { onBeforeRouteLeave } from 'vue-router'
 import { getSystemConfig, testQywxWebhook, updateSystemConfig } from '@/api/system-config'
+import { uploadFile } from '@/api/file'
 import type {
   DeliveryFeeTierRule,
   DeliveryFeeType,
@@ -16,6 +17,7 @@ const loaded = ref(false)
 const loadFailed = ref(false)
 const saving = ref(false)
 const testingWebhook = ref(false)
+const uploadingQr = ref(false)
 const changeLogs = ref<SystemConfigChangeLog[]>([])
 const initialSnapshot = ref('')
 const webhookEdited = ref(false)
@@ -32,6 +34,7 @@ const form = reactive<UpdateSystemConfigRequest>({
   orderStartTime: '09:00',
   orderEndTime: '21:00',
   qywxWebhookUrl: '',
+  paymentQrUrl: '',
 })
 
 const feeTypeOptions: Array<{ label: string; value: DeliveryFeeType }> = [
@@ -65,11 +68,12 @@ function applyConfig(config: SystemConfig) {
   form.orderStartTime = config.orderStartTime
   form.orderEndTime = config.orderEndTime
   webhookRawValue.value = (config.qywxWebhookUrl || '').trim()
-  webhookMaskedFromServer.value = webhookRawValue.value.includes('key=***')
+  webhookMaskedFromServer.value = webhookRawValue.value.includes('key=***') || webhookRawValue.value.includes('hook/***')
   form.qywxWebhookUrl = webhookRawValue.value
     ? (webhookMaskedFromServer.value ? webhookRawValue.value : maskWebhookUrl(webhookRawValue.value))
     : ''
   webhookEdited.value = false
+  form.paymentQrUrl = config.paymentQrUrl || ''
 }
 
 function normalizeMoney(value: string) {
@@ -98,11 +102,16 @@ function getErrorMessage(error: unknown, fallback: string) {
 }
 
 function maskWebhookUrl(url: string) {
+  if (url.includes('open.feishu.cn')) {
+    return url.replace(/hook\/[0-9a-f-]+/i, 'hook/***')
+  }
   return url.replace(/([?&]key=)[^&]+/i, '$1***')
 }
 
-function isValidQywxWebhookUrl(url: string) {
-  return /^https:\/\/qyapi\.weixin\.qq\.com\/cgi-bin\/webhook\/send\?key=[A-Za-z0-9_-]+$/i.test(url)
+function isValidWebhookUrl(url: string) {
+  if (/^https:\/\/open\.feishu\.cn\/open-apis\/bot\/v2\/hook\/[0-9a-f-]+$/i.test(url)) return true
+  if (/^https:\/\/qyapi\.weixin\.qq\.com\/cgi-bin\/webhook\/send\?key=[A-Za-z0-9_-]+$/i.test(url)) return true
+  return false
 }
 
 function resolveWebhookForSave(): string | undefined {
@@ -157,6 +166,7 @@ function buildSnapshot() {
     orderStartTime: form.orderStartTime,
     orderEndTime: form.orderEndTime,
     qywxWebhookUrl: form.qywxWebhookUrl?.trim() || '',
+    paymentQrUrl: form.paymentQrUrl || '',
     webhookEdited: webhookEdited.value,
   })
 }
@@ -228,8 +238,8 @@ function validateForm() {
   }
 
   const webhookValue = resolveWebhookForSave()
-  if (webhookValue && !isValidQywxWebhookUrl(webhookValue)) {
-    ElMessage.warning('Webhook 地址仅支持企业微信机器人地址（https://qyapi.weixin.qq.com/...）')
+  if (webhookValue && !isValidWebhookUrl(webhookValue)) {
+    ElMessage.warning('Webhook 地址仅支持飞书（open.feishu.cn）或企业微信（qyapi.weixin.qq.com）机器人地址')
     return false
   }
 
@@ -292,6 +302,7 @@ async function handleSave() {
     if (webhookValue !== undefined) {
       payload.qywxWebhookUrl = webhookValue
     }
+    payload.paymentQrUrl = form.paymentQrUrl || ''
 
     const res = await updateSystemConfig(payload)
     applyConfig(res.data)
@@ -312,11 +323,11 @@ async function handleTestWebhook() {
       ElMessage.warning('当前仅有脱敏地址，请重新输入完整 Webhook 后再测试')
       return
     }
-    ElMessage.warning('请先填写企微 Webhook 地址')
+    ElMessage.warning('请先填写群机器人 Webhook 地址')
     return
   }
-  if (!isValidQywxWebhookUrl(webhookValue)) {
-    ElMessage.warning('Webhook 地址仅支持企业微信机器人地址（https://qyapi.weixin.qq.com/...）')
+  if (!isValidWebhookUrl(webhookValue)) {
+    ElMessage.warning('Webhook 地址仅支持飞书（open.feishu.cn）或企业微信（qyapi.weixin.qq.com）机器人地址')
     return
   }
   testingWebhook.value = true
@@ -328,6 +339,23 @@ async function handleTestWebhook() {
   } finally {
     testingWebhook.value = false
   }
+}
+
+async function handleQrUpload(options: { file: File }) {
+  uploadingQr.value = true
+  try {
+    const res = await uploadFile(options.file)
+    form.paymentQrUrl = res.data.url
+    ElMessage.success('收款码上传成功')
+  } catch {
+    ElMessage.error('上传失败')
+  } finally {
+    uploadingQr.value = false
+  }
+}
+
+function handleQrRemove() {
+  form.paymentQrUrl = ''
 }
 
 onBeforeRouteLeave(async () => {
@@ -443,17 +471,35 @@ onMounted(() => {
         </el-form-item>
 
         <h4 class="section-title">通知配置</h4>
-        <el-form-item label="企微 Webhook">
+        <el-form-item label="群机器人 Webhook">
           <div class="webhook-row">
             <el-input
               v-model="form.qywxWebhookUrl"
-              placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=***"
+              placeholder="支持飞书或企业微信机器人 Webhook 地址"
               @input="handleWebhookInput"
             />
             <el-button :loading="testingWebhook" :disabled="!form.qywxWebhookUrl" @click="handleTestWebhook">发送测试</el-button>
           </div>
         </el-form-item>
-      </el-form>
+
+        <h4 class="section-title">收款设置</h4>
+        <el-form-item label="收款二维码">
+          <div class="qr-upload-area">
+            <div v-if="form.paymentQrUrl" class="qr-preview">
+              <el-image :src="form.paymentQrUrl" fit="contain" style="width: 160px; height: 160px; border: 1px solid #eee; border-radius: 4px" />
+              <el-button link type="danger" @click="handleQrRemove">删除</el-button>
+            </div>
+            <el-upload
+              v-else
+              :show-file-list="false"
+              accept="image/*"
+              :http-request="handleQrUpload"
+            >
+              <el-button :loading="uploadingQr">上传收款码</el-button>
+            </el-upload>
+            <p class="qr-tip">顾客下单成功后将展示此收款码，支持随时更换</p>
+          </div>
+        </el-form-item>
     </div>
 
     <div v-if="loaded" class="page-card">
@@ -529,5 +575,23 @@ onMounted(() => {
   width: 100%;
   display: flex;
   gap: 10px;
+}
+
+.qr-upload-area {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.qr-preview {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.qr-tip {
+  color: #909399;
+  font-size: 12px;
+  margin: 0;
 }
 </style>

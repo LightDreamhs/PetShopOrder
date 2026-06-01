@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.net.InetAddress;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -111,6 +112,10 @@ public class SystemConfigServiceImpl implements SystemConfigService {
             }
         }
 
+        if (params.containsKey("paymentQrUrl")) {
+            config.setPaymentQrUrl((String) params.get("paymentQrUrl"));
+        }
+
         config.setUpdatedBy(operator.getId());
         systemConfigMapper.updateById(config);
 
@@ -152,8 +157,26 @@ public class SystemConfigServiceImpl implements SystemConfigService {
     public Map<String, Object> testWebhook(String webhookUrl) {
         validateWebhookUrl(webhookUrl);
         try {
-            String body = "{\"msgtype\":\"text\",\"text\":{\"content\":\"PetShop 系统配置 Webhook 测试消息\"}}";
-            String response = HttpUtil.post(webhookUrl, body);
+            String body;
+            if (webhookUrl.contains("open.feishu.cn")) {
+                Map<String, Object> content = new LinkedHashMap<>();
+                content.put("text", "PetShop 系统配置 Webhook 测试消息");
+                Map<String, Object> bodyMap = new LinkedHashMap<>();
+                bodyMap.put("msg_type", "text");
+                bodyMap.put("content", content);
+                body = objectMapper.writeValueAsString(bodyMap);
+            } else {
+                Map<String, Object> text = new LinkedHashMap<>();
+                text.put("content", "PetShop 系统配置 Webhook 测试消息");
+                Map<String, Object> bodyMap = new LinkedHashMap<>();
+                bodyMap.put("msgtype", "text");
+                bodyMap.put("text", text);
+                body = objectMapper.writeValueAsString(bodyMap);
+            }
+            String response = cn.hutool.http.HttpRequest.post(webhookUrl)
+                    .body(body, "application/json;charset=UTF-8")
+                    .execute()
+                    .body();
             return Map.of("success", true, "response", response);
         } catch (Exception e) {
             throw new BusinessException("Webhook 测试发送失败: " + e.getMessage());
@@ -243,6 +266,7 @@ public class SystemConfigServiceImpl implements SystemConfigService {
         }
         m.put("qywxWebhookUrl", maskedWebhook);
         m.put("hasQywxWebhook", config.getHasQywxWebhook() != null && config.getHasQywxWebhook() == 1);
+        m.put("paymentQrUrl", config.getPaymentQrUrl());
 
         String updatedByName = null;
         if (config.getUpdatedBy() != null) {
@@ -262,6 +286,11 @@ public class SystemConfigServiceImpl implements SystemConfigService {
         return m;
     }
 
+    private static final Set<String> ALLOWED_WEBHOOK_HOSTS = Set.of(
+            "qyapi.weixin.qq.com",
+            "open.feishu.cn"
+    );
+
     private void validateWebhookUrl(String url) {
         try {
             URI uri = new URI(url);
@@ -269,8 +298,8 @@ public class SystemConfigServiceImpl implements SystemConfigService {
                 throw new BusinessException("非法的 Webhook 地址: 必须使用 HTTPS");
             }
             String host = uri.getHost();
-            if (host == null || !"qyapi.weixin.qq.com".equals(host)) {
-                throw new BusinessException("非法的 Webhook 地址: 仅允许 qyapi.weixin.qq.com");
+            if (host == null || !ALLOWED_WEBHOOK_HOSTS.contains(host)) {
+                throw new BusinessException("非法的 Webhook 地址: 仅允许 " + String.join("、", ALLOWED_WEBHOOK_HOSTS));
             }
             InetAddress address = InetAddress.getByName(host);
             if (address.isLoopbackAddress()
@@ -297,6 +326,9 @@ public class SystemConfigServiceImpl implements SystemConfigService {
 
     private String maskWebhookKey(String url) {
         if (url == null) return null;
+        if (url.contains("open.feishu.cn")) {
+            return url.replaceAll("hook/[0-9a-f-]+", "hook/***");
+        }
         return url.replaceAll("key=[^&]+", "key=***");
     }
 
@@ -350,6 +382,7 @@ public class SystemConfigServiceImpl implements SystemConfigService {
         if (params.containsKey("orderTimeEnabled") || params.containsKey("orderStartTime") || params.containsKey("orderEndTime"))
             changes.add("修改接单时间");
         if (params.containsKey("qywxWebhookUrl")) changes.add("修改企业微信通知");
+        if (params.containsKey("paymentQrUrl")) changes.add("修改收款二维码");
         if (changes.isEmpty()) changes.add("更新系统配置");
         return String.join("、", changes);
     }
