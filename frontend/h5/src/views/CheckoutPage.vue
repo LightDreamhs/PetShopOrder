@@ -104,8 +104,6 @@ import type { CartCalculateResult } from '@/types'
 import AddressPicker from '@/components/checkout/AddressPicker.vue'
 import PriceBreakdown from '@/components/checkout/PriceBreakdown.vue'
 
-const MIN_DELIVERY_AMOUNT = 20
-
 const router = useRouter()
 const cartStore = useCartStore()
 const memberStore = useMemberStore()
@@ -119,14 +117,15 @@ const calculateResult = ref<CartCalculateResult | null>(null)
 const submitting = ref(false)
 
 const deliveryEnabled = computed(() => {
-  return parseFloat(cartStore.goodsOriginalTotal) >= MIN_DELIVERY_AMOUNT
+  return calculateResult.value?.deliveryCheck.reachedMinAmount ?? false
 })
 
 const deliveryHint = computed(() => {
   if (!cartStore.hasGoods) return ''
-  if (!deliveryEnabled.value) {
-    const gap = (MIN_DELIVERY_AMOUNT - parseFloat(cartStore.goodsOriginalTotal)).toFixed(2)
-    return `用品原价还差 ¥${gap} 起送`
+  const check = calculateResult.value?.deliveryCheck
+  if (!check) return ''
+  if (!check.reachedMinAmount) {
+    return `用品原价还差 ¥${check.gap} 起送`
   }
   return needDelivery.value ? '3公里内免运费，超出需电话确认' : '已满足起送条件'
 })

@@ -4,6 +4,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { onBeforeRouteLeave } from 'vue-router'
 import { getSystemConfig, testQywxWebhook, updateSystemConfig } from '@/api/system-config'
 import { uploadFile } from '@/api/file'
+import MapLocationPicker from '@/components/MapLocationPicker.vue'
 import type {
   DeliveryFeeTierRule,
   DeliveryFeeType,
@@ -22,9 +23,13 @@ const changeLogs = ref<SystemConfigChangeLog[]>([])
 const initialSnapshot = ref('')
 const webhookEdited = ref(false)
 const webhookRawValue = ref('')
+const showShopMapPicker = ref(false)
+const shopAddressText = ref('')
 const webhookMaskedFromServer = ref(false)
 
 const form = reactive<UpdateSystemConfigRequest>({
+  shopLat: null,
+  shopLng: null,
   deliveryRadiusKm: 5,
   deliveryMinAmount: '20.00',
   deliveryFeeType: 'TIERED',
@@ -57,6 +62,9 @@ function createTierRule(): DeliveryFeeTierRule {
 }
 
 function applyConfig(config: SystemConfig) {
+  form.shopLat = config.shopLat
+  form.shopLng = config.shopLng
+  shopAddressText.value = ''
   form.deliveryRadiusKm = config.deliveryRadiusKm
   form.deliveryMinAmount = config.deliveryMinAmount
   form.deliveryFeeType = config.deliveryFeeType
@@ -157,6 +165,8 @@ function buildSnapshot() {
     .sort((a, b) => a.minDistanceKm - b.minDistanceKm)
 
   return JSON.stringify({
+    shopLat: form.shopLat,
+    shopLng: form.shopLng,
     deliveryRadiusKm: normalizeDistance(form.deliveryRadiusKm),
     deliveryMinAmount: normalizeMoney(form.deliveryMinAmount),
     deliveryFeeType: form.deliveryFeeType,
@@ -282,6 +292,8 @@ async function handleSave() {
   saving.value = true
   try {
     const payload: UpdateSystemConfigRequest = {
+      shopLat: form.shopLat || undefined,
+      shopLng: form.shopLng || undefined,
       deliveryRadiusKm: form.deliveryRadiusKm,
       deliveryMinAmount: normalizeMoney(form.deliveryMinAmount),
       deliveryFeeType: form.deliveryFeeType,
@@ -358,6 +370,12 @@ function handleQrRemove() {
   form.paymentQrUrl = ''
 }
 
+function handleShopLocationConfirm(data: { lat: string; lng: string; address: string }) {
+  form.shopLat = data.lat
+  form.shopLng = data.lng
+  shopAddressText.value = data.address
+}
+
 onBeforeRouteLeave(async () => {
   if (!isDirty.value) return true
   try {
@@ -398,6 +416,25 @@ onMounted(() => {
 
       <el-form label-width="140px" class="config-form">
         <h4 class="section-title">配送规则</h4>
+        <el-form-item label="店铺位置">
+          <div class="shop-location-row">
+            <el-input
+              :model-value="shopAddressText || (form.shopLat ? `${form.shopLat}, ${form.shopLng}` : '')"
+              placeholder="未设置，请选择店铺位置"
+              readonly
+              style="flex: 1"
+            />
+            <el-button @click="showShopMapPicker = true">地图选点</el-button>
+          </div>
+          <p class="shop-location-tip">用于计算配送距离，请设置为店铺实际位置</p>
+        </el-form-item>
+        <MapLocationPicker
+          v-model="showShopMapPicker"
+          :lat="form.shopLat"
+          :lng="form.shopLng"
+          @confirm="handleShopLocationConfirm"
+        />
+
         <el-form-item label="配送半径（km）">
           <el-input-number v-model="form.deliveryRadiusKm" :min="1" :max="30" :precision="1" :step="0.5" />
         </el-form-item>
@@ -500,6 +537,7 @@ onMounted(() => {
             <p class="qr-tip">顾客下单成功后将展示此收款码，支持随时更换</p>
           </div>
         </el-form-item>
+      </el-form>
     </div>
 
     <div v-if="loaded" class="page-card">
@@ -593,5 +631,17 @@ onMounted(() => {
   color: #909399;
   font-size: 12px;
   margin: 0;
+}
+
+.shop-location-row {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.shop-location-tip {
+  color: #909399;
+  font-size: 12px;
+  margin: 4px 0 0;
 }
 </style>

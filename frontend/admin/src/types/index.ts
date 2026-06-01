@@ -175,6 +175,8 @@ export interface DeliveryFeeTierRule {
 
 export interface SystemConfig {
   id: number
+  shopLat: string | null
+  shopLng: string | null
   deliveryRadiusKm: number
   deliveryMinAmount: string
   deliveryFeeType: DeliveryFeeType
@@ -197,6 +199,8 @@ export interface SystemConfigChangeLog {
 }
 
 export interface UpdateSystemConfigRequest {
+  shopLat?: string
+  shopLng?: string
   deliveryRadiusKm: number
   deliveryMinAmount: string
   deliveryFeeType: DeliveryFeeType
