@@ -109,8 +109,10 @@ getProductsByType().then((list) => {
 const specPickerVisible = ref(false)
 const selectedProduct = ref<ProductDetail | null>(null)
 
-function handleLogout() {
-  authStore.logout()
+async function handleLogout() {
+  await authStore.logout()
+  const { resetAuthCheck } = await import('@/router')
+  resetAuthCheck()
   router.replace('/login')
 }
 

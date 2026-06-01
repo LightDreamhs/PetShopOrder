@@ -53,6 +53,10 @@ const router = createRouter({
 
 let authChecked = false
 
+export function resetAuthCheck() {
+  authChecked = false
+}
+
 router.beforeEach(async (to, _from, next) => {
   document.title = (to.meta.title as string) || '贰掌柜宠物店'
 
