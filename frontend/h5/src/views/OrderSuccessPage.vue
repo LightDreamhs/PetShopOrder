@@ -12,7 +12,11 @@
           <span class="info-label">待付金额</span>
           <span class="info-amount">¥{{ order.totalAmount }}</span>
         </div>
-        <div class="pay-hint">请与店主通过其他方式完成付款</div>
+        <div v-if="paymentQrUrl" class="pay-qr-section">
+          <p class="pay-qr-title">请扫码完成付款</p>
+          <img :src="paymentQrUrl" class="pay-qr-img" alt="收款码" />
+        </div>
+        <div v-else class="pay-hint">请与店主通过其他方式完成付款</div>
         <div v-if="order.deliveryDistanceText" class="info-row">
           <span class="info-label">配送距离</span>
           <span class="info-value">{{ order.deliveryDistanceText }}</span>
@@ -33,9 +37,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useOrderStore } from '@/stores/order'
+import { getPublicConfig } from '@/api/config'
 
 const router = useRouter()
 const orderStore = useOrderStore()
@@ -43,6 +48,17 @@ const order = computed(() => orderStore.lastOrder)
 const isOverRange = computed(() => {
   if (!order.value) return false
   return order.value.deliveryDistanceMeter !== null && order.value.deliveryDistanceMeter > 3000
+})
+
+const paymentQrUrl = ref('')
+
+onMounted(async () => {
+  try {
+    const res = await getPublicConfig()
+    paymentQrUrl.value = res.data.paymentQrUrl || ''
+  } catch {
+    // 获取失败时保持兜底文字
+  }
 })
 </script>
 
@@ -102,6 +118,27 @@ const isOverRange = computed(() => {
   font-size: 18px;
   font-weight: 700;
   color: $primary;
+}
+
+.pay-qr-section {
+  text-align: center;
+  margin-top: 12px;
+  padding: 16px 0;
+}
+
+.pay-qr-title {
+  font-size: 14px;
+  color: $text;
+  font-weight: 500;
+  margin: 0 0 12px;
+}
+
+.pay-qr-img {
+  width: 200px;
+  height: 200px;
+  object-fit: contain;
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
 }
 
 .pay-hint {
