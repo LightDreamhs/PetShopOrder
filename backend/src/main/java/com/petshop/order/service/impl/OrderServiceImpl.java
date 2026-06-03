@@ -300,6 +300,11 @@ public class OrderServiceImpl implements OrderService {
         ordersMapper.updateProcessed(orderId, processed ? 1 : 0);
     }
 
+    @Override
+    public int getNewOrderCount(String since) {
+        return ordersMapper.countNewOrders(since);
+    }
+
     private Map<String, Object> buildDetailMap(Orders order, boolean isAdmin) {
         List<OrderItem> items = orderItemMapper.selectByOrderId(order.getId());
 

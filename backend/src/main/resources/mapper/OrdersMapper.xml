@@ -66,4 +66,8 @@
         UPDATE orders SET processed = #{processed} WHERE id = #{id}
     </update>
 
+    <select id="countNewOrders" resultType="int">
+        SELECT COUNT(*) FROM orders WHERE create_time > #{since}
+    </select>
+
 </mapper>

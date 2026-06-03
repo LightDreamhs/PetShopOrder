@@ -20,3 +20,10 @@ export function getOrder(id: number) {
 export function updateOrderProcessed(id: number, processed: boolean) {
   return request.put(`/api/admin/orders/${id}/processed`, { processed })
 }
+
+export function getNewOrderCount(since: string) {
+  return request.get<any, { code: number; data: { count: number } }>(
+    '/api/admin/orders/new-count',
+    { params: { since } },
+  )
+}

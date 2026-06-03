@@ -20,4 +20,6 @@ public interface OrderService {
     Map<String, Object> getAdminOrderDetail(Long orderId);
 
     void updateProcessed(Long orderId, boolean processed);
+
+    int getNewOrderCount(String since);
 }

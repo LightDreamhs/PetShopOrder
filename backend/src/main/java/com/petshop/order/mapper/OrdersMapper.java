@@ -22,4 +22,6 @@ public interface OrdersMapper {
                                      @Param("endTime") String endTime);
 
     int updateProcessed(@Param("id") Long id, @Param("processed") Integer processed);
+
+    int countNewOrders(@Param("since") String since);
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { getOrders, getOrder, updateOrderProcessed } from '@/api/order'
+import { ref, reactive, onMounted, onBeforeUnmount } from 'vue'
+import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
+import { getOrders, getOrder, updateOrderProcessed, getNewOrderCount } from '@/api/order'
 import type { OrderListItem, OrderDetail } from '@/types'
 
 const loading = ref(false)
@@ -20,6 +20,67 @@ const filters = reactive({
 const detailVisible = ref(false)
 const detailLoading = ref(false)
 const currentDetail = ref<OrderDetail | null>(null)
+
+// 新订单轮询
+const POLL_INTERVAL = 15_000
+let pollTimer: ReturnType<typeof setInterval> | null = null
+let lastCheckTime = ''
+
+function formatNow(): string {
+  const now = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ` +
+    `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`
+}
+
+async function pollNewOrders() {
+  if (!lastCheckTime) return
+  try {
+    const res = await getNewOrderCount(lastCheckTime)
+    if (res.data.count > 0) {
+      lastCheckTime = formatNow()
+      fetchOrders()
+      ElNotification({
+        title: '新订单通知',
+        message: '有新订单来了',
+        type: 'warning',
+        duration: 5000,
+        position: 'bottom-right',
+        onClick: () => {
+          if (filters.page !== 1) {
+            filters.page = 1
+            fetchOrders()
+          }
+        },
+      })
+    } else {
+      lastCheckTime = formatNow()
+    }
+  } catch {
+    // 静默失败，不干扰用户
+  }
+}
+
+function startPolling() {
+  stopPolling()
+  pollTimer = setInterval(pollNewOrders, POLL_INTERVAL)
+}
+
+function stopPolling() {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
+  }
+}
+
+function handleVisibilityChange() {
+  if (document.hidden) {
+    stopPolling()
+  } else {
+    pollNewOrders()
+    startPolling()
+  }
+}
 
 async function fetchOrders() {
   loading.value = true
@@ -111,6 +172,14 @@ function formatAmount(val: string) {
 
 onMounted(() => {
   fetchOrders()
+  lastCheckTime = formatNow()
+  startPolling()
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+})
+
+onBeforeUnmount(() => {
+  stopPolling()
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
 })
 </script>
 

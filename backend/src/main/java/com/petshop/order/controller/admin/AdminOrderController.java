@@ -6,6 +6,7 @@ import com.petshop.order.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestController
@@ -39,5 +40,13 @@ public class AdminOrderController {
         Boolean processed = (Boolean) body.get("processed");
         orderService.updateProcessed(id, processed != null && processed);
         return R.ok();
+    }
+
+    @GetMapping("/new-count")
+    public R<Map<String, Object>> getNewOrderCount(@RequestParam String since) {
+        int count = orderService.getNewOrderCount(since);
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("count", count);
+        return R.ok(data);
     }
 }
