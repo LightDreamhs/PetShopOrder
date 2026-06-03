@@ -199,8 +199,8 @@ export interface SystemConfigChangeLog {
 }
 
 export interface UpdateSystemConfigRequest {
-  shopLat?: string
-  shopLng?: string
+  shopLat: string | null
+  shopLng: string | null
   deliveryRadiusKm: number
   deliveryMinAmount: string
   deliveryFeeType: DeliveryFeeType

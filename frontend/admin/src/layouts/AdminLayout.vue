@@ -18,6 +18,7 @@ const route = useRoute()
 const authStore = useAuthStore()
 
 const isCollapsed = ref(false)
+const menuKey = ref(0)
 const activeMenu = computed(() => {
   const path = route.path
   if (path.startsWith('/orders')) return '/orders'
@@ -41,8 +42,11 @@ const menuItems = computed(() => {
   )
 })
 
-function handleMenuSelect(path: string) {
-  router.push(path)
+async function handleMenuSelect(path: string) {
+  if (path === route.path) return
+  await router.push(path)
+  // 导航完成后（无论成功还是被守卫取消），强制 el-menu 重新渲染以同步高亮
+  menuKey.value++
 }
 
 async function handleLogout() {
@@ -73,6 +77,7 @@ async function handleLogout() {
       </div>
 
       <el-menu
+        :key="menuKey"
         :default-active="activeMenu"
         :collapse="isCollapsed"
         :collapse-transition="true"

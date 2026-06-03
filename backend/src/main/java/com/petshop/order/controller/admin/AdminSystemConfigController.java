@@ -59,6 +59,10 @@ public class AdminSystemConfigController {
             params.put("qywxWebhookUrl", req.getQywxWebhookUrl());
         }
 
+        if (req.getPaymentQrUrl() != null) {
+            params.put("paymentQrUrl", req.getPaymentQrUrl());
+        }
+
         if (req.getTieredDeliveryFeeRules() != null) {
             List<Map<String, Object>> rules = new ArrayList<>();
             for (TierRule tierRule : req.getTieredDeliveryFeeRules()) {
@@ -87,6 +91,7 @@ public class AdminSystemConfigController {
         private String orderStartTime;
         private String orderEndTime;
         private String qywxWebhookUrl;
+        private String paymentQrUrl;
     }
 
     @Data

@@ -62,8 +62,8 @@ function createTierRule(): DeliveryFeeTierRule {
 }
 
 function applyConfig(config: SystemConfig) {
-  form.shopLat = config.shopLat
-  form.shopLng = config.shopLng
+  form.shopLat = config.shopLat != null ? String(config.shopLat) : null
+  form.shopLng = config.shopLng != null ? String(config.shopLng) : null
   shopAddressText.value = ''
   form.deliveryRadiusKm = config.deliveryRadiusKm
   form.deliveryMinAmount = config.deliveryMinAmount
@@ -292,8 +292,8 @@ async function handleSave() {
   saving.value = true
   try {
     const payload: UpdateSystemConfigRequest = {
-      shopLat: form.shopLat || undefined,
-      shopLng: form.shopLng || undefined,
+      shopLat: form.shopLat || null,
+      shopLng: form.shopLng || null,
       deliveryRadiusKm: form.deliveryRadiusKm,
       deliveryMinAmount: normalizeMoney(form.deliveryMinAmount),
       deliveryFeeType: form.deliveryFeeType,
@@ -450,7 +450,7 @@ onMounted(() => {
             <el-radio-button
               v-for="item in feeTypeOptions"
               :key="item.value"
-              :label="item.value"
+              :value="item.value"
             >
               {{ item.label }}
             </el-radio-button>

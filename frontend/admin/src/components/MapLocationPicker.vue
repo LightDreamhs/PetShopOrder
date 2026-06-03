@@ -1,25 +1,17 @@
 <template>
-  <el-dialog v-model="visible" title="选择店铺位置" width="700px" @open="onOpen">
+  <el-dialog v-model="visible" title="选择店铺位置" width="700px" @opened="onOpen">
     <div class="map-dialog-body">
-      <div class="map-search-row">
+      <!-- 搜索栏 -->
+      <div class="search-bar">
         <el-input
           v-model="keyword"
           placeholder="搜索地点"
           clearable
-          @input="onSearchInput"
+          :prefix-icon="Search"
         />
       </div>
-      <div v-if="searchResults.length > 0" class="search-results">
-        <div
-          v-for="(item, idx) in searchResults"
-          :key="idx"
-          class="search-item"
-          @click="selectSearchResult(item)"
-        >
-          <div class="search-item-title">{{ item.title }}</div>
-          <div class="search-item-addr">{{ item.address }}</div>
-        </div>
-      </div>
+
+      <!-- 地图区域 -->
       <div class="map-container">
         <div ref="mapRef" class="map-el" />
         <div class="map-pin">
@@ -29,23 +21,49 @@
           </svg>
         </div>
       </div>
-      <div class="map-footer">
-        <el-icon><Location /></el-icon>
-        <span class="footer-text">{{ currentAddress || '拖动地图选择位置' }}</span>
+
+      <!-- POI 列表 / 搜索结果 -->
+      <div class="poi-list">
+        <div v-if="poiList.length === 0" class="poi-empty">
+          <span>拖动地图或搜索以选择位置</span>
+        </div>
+        <div
+          v-for="(item, idx) in poiList"
+          :key="idx"
+          class="poi-item"
+          :class="{ active: selectedIdx === idx }"
+          @click="selectPoi(idx)"
+        >
+          <div class="poi-info">
+            <div class="poi-title">{{ item.title }}</div>
+            <div class="poi-addr">{{ item.address }}</div>
+          </div>
+          <div class="poi-radio">
+            <el-icon v-if="selectedIdx === idx" class="radio-checked"><CircleCheckFilled /></el-icon>
+            <span v-else class="radio-empty" />
+          </div>
+        </div>
       </div>
     </div>
     <template #footer>
       <el-button @click="visible = false">取消</el-button>
-      <el-button type="primary" @click="confirmLocation">确认</el-button>
+      <el-button type="primary" @click="confirmLocation">确认选点</el-button>
     </template>
   </el-dialog>
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Location } from '@element-plus/icons-vue'
+import { Search, CircleCheckFilled } from '@element-plus/icons-vue'
 import { loadTMapSDK } from '@/utils/map'
+
+interface PoiItem {
+  title: string
+  address: string
+  lat: number
+  lng: number
+}
 
 const props = defineProps<{
   lat: string | null
@@ -63,29 +81,36 @@ const keyword = ref('')
 const currentAddress = ref('')
 const currentLat = ref(39.908823)
 const currentLng = ref(116.397470)
-const searchResults = ref<{ title: string; address: string; lat: number; lng: number }[]>([])
+const poiList = ref<PoiItem[]>([])
+const selectedIdx = ref(0)
 
 let map: any = null
 let geocoder: any = null
-let suggestionService: any = null
+let searchService: any = null
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 let searchTimer: ReturnType<typeof setTimeout> | null = null
+let isSearching = false
 
 async function onOpen() {
   try {
     await loadTMapSDK()
     await nextTick()
     initMap()
-  } catch {
-    ElMessage.error('地图加载失败')
+  } catch (e: any) {
+    ElMessage.error(`${e?.message || '地图加载失败'}`)
     visible.value = false
   }
 }
 
 function initMap() {
   if (!mapRef.value) return
-
   const TMap = (window as any).TMap
+  if (!TMap?.Map) {
+    ElMessage.error('地图组件未就绪')
+    visible.value = false
+    return
+  }
+
   const lat = props.lat ? parseFloat(props.lat) : 39.908823
   const lng = props.lng ? parseFloat(props.lng) : 116.397470
   currentLat.value = lat
@@ -93,7 +118,7 @@ function initMap() {
 
   if (map) {
     map.setCenter(new TMap.LatLng(lat, lng))
-    reverseGeocode(lat, lng)
+    fetchNearbyPois(lat, lng)
     return
   }
 
@@ -103,77 +128,128 @@ function initMap() {
   })
 
   geocoder = new TMap.service.Geocoder()
-  suggestionService = new TMap.service.Suggestion()
+  searchService = new TMap.service.Search({
+    pageSize: 20,
+  })
 
-  map.on('map_move_end', () => {
+  map.on('moveend', () => {
+    if (isSearching) return
     const center = map.getCenter()
     currentLat.value = center.lat
     currentLng.value = center.lng
-    reverseGeocode(center.lat, center.lng)
+    fetchNearbyPois(center.lat, center.lng)
   })
 
-  reverseGeocode(lat, lng)
+  fetchNearbyPois(lat, lng)
 }
 
-function reverseGeocode(lat: number, lng: number) {
+function fetchNearbyPois(lat: number, lng: number) {
   if (debounceTimer) clearTimeout(debounceTimer)
   debounceTimer = setTimeout(async () => {
     try {
       const TMap = (window as any).TMap
-      const result = await geocoder.getAddress({ location: new TMap.LatLng(lat, lng) })
+      const result = await geocoder.getAddress({
+        location: new TMap.LatLng(lat, lng),
+        getPoi: true,
+      })
       if (result.status === 0 && result.result) {
         currentAddress.value = result.result.address
+        // 将逆地址解析结果作为第一项（代表地图中心）
+        const pois: PoiItem[] = [{
+          title: result.result.address || '当前位置',
+          address: result.result.formatted_addresses?.recommend || result.result.address || '',
+          lat,
+          lng,
+        }]
+        // 追加附近 POI
+        if (result.result.pois && result.result.pois.length > 0) {
+          for (const poi of result.result.pois) {
+            pois.push({
+              title: poi.title,
+              address: poi.address,
+              lat: poi.location.lat,
+              lng: poi.location.lng,
+            })
+          }
+        }
+        poiList.value = pois
+        selectedIdx.value = 0
       }
     } catch {
       currentAddress.value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`
+      poiList.value = []
     }
   }, 300)
 }
 
-function onSearchInput(val: string) {
+// 监听搜索关键词
+watch(keyword, (val) => {
   if (searchTimer) clearTimeout(searchTimer)
-  searchResults.value = []
-  if (!val.trim()) return
+  if (!val || !val.trim()) {
+    clearSearch()
+    return
+  }
 
+  isSearching = true
   searchTimer = setTimeout(async () => {
+    if (!searchService) {
+      console.error('[MapPicker] searchService 未初始化')
+      return
+    }
     try {
-      const result = await suggestionService.search({
+      const result = await searchService.searchRegion({
         keyword: val.trim(),
-        page_size: 10,
+        cityName: '全国',
+        pageIndex: 1,
       })
-      if (result.status === 0 && result.data && result.data.length > 0) {
-        searchResults.value = result.data.map((item: any) => ({
+      console.log('[MapPicker] search result:', result)
+      if (result.data && result.data.length > 0) {
+        poiList.value = result.data.map((item: any) => ({
           title: item.title,
           address: item.address,
           lat: item.location.lat,
           lng: item.location.lng,
         }))
+        selectedIdx.value = 0
+        const first = poiList.value[0]
+        const TMap = (window as any).TMap
+        map.setCenter(new TMap.LatLng(first.lat, first.lng))
+      } else {
+        poiList.value = []
       }
-    } catch {
-      // ignore
+    } catch (e) {
+      console.error('[MapPicker] search error:', e)
+      poiList.value = []
     }
   }, 400)
+})
+
+function clearSearch() {
+  keyword.value = ''
+  isSearching = false
+  fetchNearbyPois(currentLat.value, currentLng.value)
 }
 
-function selectSearchResult(item: { title: string; address: string; lat: number; lng: number }) {
+function selectPoi(idx: number) {
+  selectedIdx.value = idx
+  const poi = poiList.value[idx]
+  currentAddress.value = poi.title
+  currentLat.value = poi.lat
+  currentLng.value = poi.lng
   const TMap = (window as any).TMap
-  map.setCenter(new TMap.LatLng(item.lat, item.lng))
-  currentAddress.value = item.title
-  currentLat.value = item.lat
-  currentLng.value = item.lng
-  searchResults.value = []
-  keyword.value = ''
+  map.setCenter(new TMap.LatLng(poi.lat, poi.lng))
 }
 
 function confirmLocation() {
-  if (!currentAddress.value) {
+  const poi = poiList.value[selectedIdx.value]
+  if (!poi) {
     ElMessage.warning('请先选择位置')
     return
   }
   emit('confirm', {
-    lat: currentLat.value.toString(),
-    lng: currentLng.value.toString(),
-    address: currentAddress.value,
+    lat: poi.lat.toString(),
+    lng: poi.lng.toString(),
+    address: poi.title,
   })
   visible.value = false
 }
@@ -183,51 +259,22 @@ function confirmLocation() {
 .map-dialog-body {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
+  max-height: 70vh;
 }
 
-.map-search-row {
+.search-bar {
   flex-shrink: 0;
-}
-
-.search-results {
-  max-height: 200px;
-  overflow-y: auto;
-  border: 1px solid #ebeef5;
-  border-radius: 4px;
-}
-
-.search-item {
-  padding: 8px 12px;
-  cursor: pointer;
-  border-bottom: 1px solid #f5f5f5;
-
-  &:last-child {
-    border-bottom: none;
-  }
-
-  &:hover {
-    background: #f5f7fa;
-  }
-}
-
-.search-item-title {
-  font-size: 14px;
-  color: #303133;
-}
-
-.search-item-addr {
-  font-size: 12px;
-  color: #909399;
-  margin-top: 2px;
+  padding-bottom: 8px;
 }
 
 .map-container {
-  height: 400px;
+  height: 280px;
   position: relative;
   border: 1px solid #ebeef5;
-  border-radius: 4px;
+  border-radius: 8px;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .map-el {
@@ -245,18 +292,81 @@ function confirmLocation() {
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 
-.map-footer {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 0 0;
-  color: #606266;
+.poi-list {
+  flex: 1;
+  overflow-y: auto;
+  margin-top: 8px;
+  min-height: 120px;
+  max-height: 260px;
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+}
+
+.poi-empty {
+  padding: 24px;
+  text-align: center;
+  color: #909399;
   font-size: 13px;
 }
 
-.footer-text {
+.poi-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f5f5f5;
+  gap: 10px;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background: #f5f7fa;
+  }
+
+  &.active {
+    background: #ecf5ff;
+  }
+}
+
+.poi-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.poi-title {
+  font-size: 14px;
+  color: #303133;
+  font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.poi-addr {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.poi-radio {
+  flex-shrink: 0;
+}
+
+.radio-checked {
+  color: #409eff;
+  font-size: 20px;
+}
+
+.radio-empty {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #c0c4cc;
+  border-radius: 50%;
 }
 </style>

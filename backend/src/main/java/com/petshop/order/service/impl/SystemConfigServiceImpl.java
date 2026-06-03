@@ -2,7 +2,6 @@ package com.petshop.order.service.impl;
 
 import cn.hutool.crypto.SecureUtil;
 import cn.hutool.crypto.symmetric.AES;
-import cn.hutool.http.HttpUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.petshop.order.common.BusinessException;
 import com.petshop.order.entity.AdminUser;
@@ -22,6 +21,7 @@ import java.math.BigDecimal;
 import java.net.InetAddress;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -41,6 +41,18 @@ public class SystemConfigServiceImpl implements SystemConfigService {
 
     @Value("${app.webhook.aes-key:PetShop2026Order!}")
     private String aesKey;
+
+    /**
+     * 将任意长度的密钥字符串通过 SHA-256 派生为 32 字节的 AES-256 密钥
+     */
+    private byte[] deriveAesKey() {
+        try {
+            MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
+            return sha256.digest(aesKey.getBytes(StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            throw new RuntimeException("AES 密钥派生失败", e);
+        }
+    }
 
     @Override
     public Map<String, Object> getConfig() {
@@ -106,7 +118,7 @@ public class SystemConfigServiceImpl implements SystemConfigService {
                 config.setHasQywxWebhook(0);
             } else {
                 validateWebhookUrl(webhookUrl);
-                AES aes = SecureUtil.aes(aesKey.getBytes());
+                AES aes = SecureUtil.aes(deriveAesKey());
                 config.setQywxWebhookUrlEnc(aes.encrypt(webhookUrl));
                 config.setHasQywxWebhook(1);
             }
@@ -257,7 +269,7 @@ public class SystemConfigServiceImpl implements SystemConfigService {
         String maskedWebhook = null;
         if (config.getHasQywxWebhook() != null && config.getHasQywxWebhook() == 1 && config.getQywxWebhookUrlEnc() != null) {
             try {
-                AES aes = SecureUtil.aes(aesKey.getBytes());
+                AES aes = SecureUtil.aes(deriveAesKey());
                 String decrypted = aes.decryptStr(config.getQywxWebhookUrlEnc());
                 maskedWebhook = maskWebhookKey(decrypted);
             } catch (Exception e) {

@@ -7,7 +7,7 @@
         SELECT id, shop_lat, shop_lng, delivery_radius_km, delivery_min_amount,
                delivery_fee_type, fixed_delivery_fee, order_time_enabled,
                order_start_time, order_end_time, qywx_webhook_url_enc,
-               has_qywx_webhook, updated_by, create_time, update_time
+               has_qywx_webhook, payment_qr_url, updated_by, create_time, update_time
         FROM system_config WHERE id = #{id}
     </select>
 
@@ -25,6 +25,7 @@
             order_end_time = #{orderEndTime},
             qywx_webhook_url_enc = #{qywxWebhookUrlEnc},
             <if test="hasQywxWebhook != null">has_qywx_webhook = #{hasQywxWebhook},</if>
+            payment_qr_url = #{paymentQrUrl},
             <if test="updatedBy != null">updated_by = #{updatedBy},</if>
         </set>
         WHERE id = #{id}
@@ -34,11 +35,11 @@
         INSERT INTO system_config (id, shop_lat, shop_lng, delivery_radius_km, delivery_min_amount,
                                    delivery_fee_type, fixed_delivery_fee, order_time_enabled,
                                    order_start_time, order_end_time, qywx_webhook_url_enc,
-                                   has_qywx_webhook, updated_by)
+                                   has_qywx_webhook, payment_qr_url, updated_by)
         VALUES (#{id}, #{shopLat}, #{shopLng}, #{deliveryRadiusKm}, #{deliveryMinAmount},
                 #{deliveryFeeType}, #{fixedDeliveryFee}, #{orderTimeEnabled},
                 #{orderStartTime}, #{orderEndTime}, #{qywxWebhookUrlEnc},
-                #{hasQywxWebhook}, #{updatedBy})
+                #{hasQywxWebhook}, #{paymentQrUrl}, #{updatedBy})
     </insert>
 
 </mapper>

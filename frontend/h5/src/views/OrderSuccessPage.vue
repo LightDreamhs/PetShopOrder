@@ -9,7 +9,7 @@
           <span class="info-value">{{ order.orderNo }}</span>
         </div>
         <div class="info-row">
-          <span class="info-label">待付金额</span>
+          <span class="info-label">应付金额</span>
           <span class="info-amount">¥{{ order.totalAmount }}</span>
         </div>
         <div v-if="paymentQrUrl" class="pay-qr-section">
@@ -134,8 +134,8 @@ onMounted(async () => {
 }
 
 .pay-qr-img {
-  width: 200px;
-  height: 200px;
+  width: 260px;
+  height: 260px;
   object-fit: contain;
   border-radius: 8px;
   border: 1px solid #f0f0f0;

@@ -19,6 +19,8 @@ import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -36,6 +38,15 @@ public class NotificationServiceImpl implements NotificationService {
     @Value("${app.webhook.aes-key:PetShop2026Order!}")
     private String aesKey;
 
+    private byte[] deriveAesKey() {
+        try {
+            MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
+            return sha256.digest(aesKey.getBytes(StandardCharsets.UTF_8));
+        } catch (Exception e) {
+            throw new RuntimeException("AES 密钥派生失败", e);
+        }
+    }
+
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final int MAX_RETRIES = 2;
     private static final long[] RETRY_DELAYS_MS = {3000L, 6000L};
@@ -52,27 +63,40 @@ public class NotificationServiceImpl implements NotificationService {
                 return;
             }
 
-            AES aes = SecureUtil.aes(aesKey.getBytes());
+            AES aes = SecureUtil.aes(deriveAesKey());
             String webhookUrl = aes.decryptStr(config.getQywxWebhookUrlEnc());
             if (webhookUrl == null || webhookUrl.isEmpty()) {
                 return;
             }
 
-            String maskedPhone = maskPhone(order.getCustomerPhoneSnapshot());
+            String phone = order.getCustomerPhoneSnapshot();
+            String customerName = order.getCustomerName();
             String memberInfo = order.getMemberLevelSnapshot() != null ? order.getMemberLevelSnapshot() : "非会员";
             String deliveryInfo = order.getNeedDelivery() == 1
                     ? "是 (" + formatDistance(order.getDeliveryDistance()) + ")"
                     : "否";
-            String goodsSummary = items.stream()
-                    .map(item -> item.getProductName() + (item.getSkuName() != null ? " " + item.getSkuName() : "") + " x" + item.getQuantity())
-                    .collect(Collectors.joining(", "));
-            String timeStr = order.getCreateTime() != null ? order.getCreateTime().format(FMT) : "";
+            String deliveryAddress = order.getDeliveryAddress();
+            String remark = order.getRemark();
+
+            // 商品列表：每行一个，加粗显示
+            String goodsList = items.stream()
+                    .map(item -> "　**" + item.getProductName()
+                            + (item.getSkuName() != null ? " " + item.getSkuName() : "")
+                            + "** x" + item.getQuantity())
+                    .collect(Collectors.joining("\n"));
+
+            // 时间：优先用数据库值，为空则取当前时间
+            String timeStr = order.getCreateTime() != null
+                    ? order.getCreateTime().format(FMT)
+                    : LocalDateTime.now().format(FMT);
 
             String jsonBody;
             if (isFeishu(webhookUrl)) {
-                jsonBody = buildFeishuCard(order, maskedPhone, memberInfo, deliveryInfo, goodsSummary, timeStr);
+                jsonBody = buildFeishuCard(order, phone, customerName, memberInfo,
+                        deliveryInfo, deliveryAddress, goodsList, remark, timeStr);
             } else {
-                jsonBody = buildQywxMarkdown(order, maskedPhone, memberInfo, deliveryInfo, goodsSummary, timeStr);
+                jsonBody = buildQywxMarkdown(order, phone, customerName, memberInfo,
+                        deliveryInfo, deliveryAddress, goodsList, remark, timeStr);
             }
             if (jsonBody == null) {
                 return;
@@ -119,24 +143,33 @@ public class NotificationServiceImpl implements NotificationService {
         }
     }
 
-    private String buildFeishuCard(Orders order, String maskedPhone, String memberInfo,
-                                    String deliveryInfo, String goodsSummary, String timeStr) {
+    private String buildFeishuCard(Orders order, String phone, String customerName,
+                                    String memberInfo, String deliveryInfo,
+                                    String deliveryAddress, String goodsList,
+                                    String remark, String timeStr) {
         try {
             Map<String, Object> header = new LinkedHashMap<>();
             Map<String, Object> title = new LinkedHashMap<>();
             title.put("tag", "plain_text");
-            title.put("content", "新订单通知");
+            title.put("content", "🎉 新订单通知");
             header.put("title", title);
             header.put("template", "turquoise");
 
             StringBuilder md = new StringBuilder();
             md.append("**订单号**: ").append(order.getOrderNo()).append("\n");
-            md.append("**客户**: ").append(maskedPhone).append("\n");
+            md.append("**联系人**: ").append(customerName != null ? customerName : "未填写").append("\n");
+            md.append("**电话**: ").append(phone != null ? phone : "未知").append("\n");
             md.append("**会员**: ").append(memberInfo).append("\n");
             md.append("**金额**: ¥").append(order.getTotalAmount().toPlainString()).append("\n");
-            md.append("**配送**: ").append(deliveryInfo).append("\n");
-            md.append("**商品**: ").append(goodsSummary).append("\n");
+            md.append("**配送**: ").append(deliveryInfo);
+            if (order.getNeedDelivery() == 1 && deliveryAddress != null && !deliveryAddress.isEmpty()) {
+                md.append("\n**地址**: ").append(deliveryAddress);
+            }
+            md.append("\n**商品**:\n").append(goodsList).append("\n");
             md.append("**时间**: ").append(timeStr);
+            if (remark != null && !remark.isEmpty()) {
+                md.append("\n**备注**: ").append(remark);
+            }
 
             Map<String, Object> text = new LinkedHashMap<>();
             text.put("tag", "lark_md");
@@ -161,20 +194,30 @@ public class NotificationServiceImpl implements NotificationService {
         }
     }
 
-    private String buildQywxMarkdown(Orders order, String maskedPhone, String memberInfo,
-                                      String deliveryInfo, String goodsSummary, String timeStr) {
+    private String buildQywxMarkdown(Orders order, String phone, String customerName,
+                                      String memberInfo, String deliveryInfo,
+                                      String deliveryAddress, String goodsList,
+                                      String remark, String timeStr) {
         try {
-            String content = "### 新订单通知\n"
-                    + "**订单号**: " + order.getOrderNo() + "\n"
-                    + "**客户**: " + maskedPhone + "\n"
-                    + "**会员**: " + memberInfo + "\n"
-                    + "**金额**: ¥" + order.getTotalAmount().toPlainString() + "\n"
-                    + "**配送**: " + deliveryInfo + "\n"
-                    + "**商品**: " + goodsSummary + "\n"
-                    + "**时间**: " + timeStr;
+            StringBuilder content = new StringBuilder();
+            content.append("### 🎉 新订单通知\n");
+            content.append("**订单号**: ").append(order.getOrderNo()).append("\n");
+            content.append("**联系人**: ").append(customerName != null ? customerName : "未填写").append("\n");
+            content.append("**电话**: ").append(phone != null ? phone : "未知").append("\n");
+            content.append("**会员**: ").append(memberInfo).append("\n");
+            content.append("**金额**: ¥").append(order.getTotalAmount().toPlainString()).append("\n");
+            content.append("**配送**: ").append(deliveryInfo);
+            if (order.getNeedDelivery() == 1 && deliveryAddress != null && !deliveryAddress.isEmpty()) {
+                content.append("\n**地址**: ").append(deliveryAddress);
+            }
+            content.append("\n**商品**:\n").append(goodsList).append("\n");
+            content.append("**时间**: ").append(timeStr);
+            if (remark != null && !remark.isEmpty()) {
+                content.append("\n**备注**: ").append(remark);
+            }
 
             Map<String, Object> markdown = new LinkedHashMap<>();
-            markdown.put("content", content);
+            markdown.put("content", content.toString());
             Map<String, Object> body = new LinkedHashMap<>();
             body.put("msgtype", "markdown");
             body.put("markdown", markdown);
@@ -184,13 +227,6 @@ public class NotificationServiceImpl implements NotificationService {
             log.error("构建企微消息失败", e);
             return null;
         }
-    }
-
-    private String maskPhone(String phone) {
-        if (phone == null || phone.length() < 7) {
-            return phone;
-        }
-        return phone.substring(0, 3) + "****" + phone.substring(phone.length() - 4);
     }
 
     private String formatDistance(Integer meter) {
