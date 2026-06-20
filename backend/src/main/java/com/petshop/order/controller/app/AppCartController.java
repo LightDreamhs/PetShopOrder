@@ -105,16 +105,12 @@ public class AppCartController {
         String goodsAmount = (String) priceResult.get("goodsAmount");
         String serviceAmount = (String) priceResult.get("serviceAmount");
 
-        Map<String, Object> deliveryCheck = null;
+        Map<String, Object> deliveryCheck = deliveryService.checkDelivery(deliveryItems, deliveryLat, deliveryLng);
         String deliveryFee = "0.00";
-
-        if (deliveryLat != null && !deliveryLat.isEmpty() && deliveryLng != null && !deliveryLng.isEmpty()) {
-            deliveryCheck = deliveryService.checkDelivery(deliveryItems, deliveryLat, deliveryLng);
-            Boolean canDeliver = (Boolean) deliveryCheck.get("canDeliver");
-            if (Boolean.TRUE.equals(canDeliver)) {
-                Object feeObj = deliveryCheck.get("deliveryFee");
-                deliveryFee = feeObj != null ? feeObj.toString() : "0.00";
-            }
+        Boolean canDeliver = (Boolean) deliveryCheck.get("canDeliver");
+        if (Boolean.TRUE.equals(canDeliver)) {
+            Object feeObj = deliveryCheck.get("deliveryFee");
+            deliveryFee = feeObj != null ? feeObj.toString() : "0.00";
         }
 
         BigDecimal total = new BigDecimal(goodsAmount)
