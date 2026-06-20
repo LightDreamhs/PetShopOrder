@@ -68,6 +68,13 @@
             {{ lb }}
           </van-tag>
         </div>
+        <van-field
+          v-model="detailInput"
+          class="detail-field"
+          label="门牌号"
+          placeholder="楼栋/门牌号，如：3栋502室"
+          clearable
+        />
         <van-button type="primary" block round @click="confirmAddress">
           选择此地点
         </van-button>
@@ -99,7 +106,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   'update:show': [v: boolean]
-  confirm: [data: { address: string; lat: string; lng: string; saved?: boolean }]
+  confirm: [data: { address: string; detail: string; lat: string; lng: string; saved?: boolean }]
 }>()
 
 const addressStore = useAddressStore()
@@ -113,6 +120,7 @@ const poiList = ref<PoiItem[]>([])
 const selectedIdx = ref(0)
 const saveToCommon = ref(true)
 const selectedLabel = ref<AddressLabel>('')
+const detailInput = ref('')
 
 let map: any = null
 let geocoder: any = null
@@ -126,6 +134,7 @@ watch(() => props.show, async (v) => {
   if (!v) return
   keyword.value = ''
   selectedLabel.value = ''
+  detailInput.value = ''
   try {
     await loadTMapSDK()
     await nextTick()
@@ -278,8 +287,10 @@ async function confirmAddress() {
     return
   }
 
+  const detail = detailInput.value.trim()
   const payload = {
     address: poi.title,
+    detail,
     lat: poi.lat.toString(),
     lng: poi.lng.toString(),
   }
@@ -290,7 +301,7 @@ async function confirmAddress() {
       await addressStore.add({
         label: selectedLabel.value || null,
         address: poi.title,
-        detail: null,
+        detail: detail || null,
         lat: poi.lat.toString(),
         lng: poi.lng.toString(),
       })
@@ -446,5 +457,16 @@ async function confirmAddress() {
 
 .label-tag {
   cursor: pointer;
+}
+
+.detail-field {
+  margin-bottom: 12px;
+
+  :deep(.van-field__label) {
+    width: auto;
+    margin-right: 8px;
+    font-size: 13px;
+    color: $text-secondary;
+  }
 }
 </style>

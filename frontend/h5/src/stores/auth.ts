@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import * as authApi from '@/api/auth'
 import { useMemberStore } from './member'
+import { dropCheckout } from './keepAlive'
 
 export const useAuthStore = defineStore('auth', () => {
   const isLoggedIn = ref(false)
@@ -37,6 +38,8 @@ export const useAuthStore = defineStore('auth', () => {
       phone.value = null
       const memberStore = useMemberStore()
       memberStore.clear()
+      // 登出后清空结算页缓存，避免换账号看到上个账号的草稿
+      dropCheckout()
     }
   }
 

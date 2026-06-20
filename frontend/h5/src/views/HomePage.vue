@@ -13,9 +13,30 @@
           </span>
         </div>
         <div class="header-actions">
-          <div class="header-action-btn" @click="router.push('/orders')">
-            <van-icon name="orders-o" size="20" />
-            <span>订单</span>
+          <!-- 我的：下拉菜单 -->
+          <div ref="mineWrapper" class="header-action-btn mine-wrapper">
+            <div class="mine-trigger" @click="toggleMineMenu">
+              <van-icon name="manager-o" size="20" />
+              <span>我的</span>
+              <van-icon
+                name="arrow-down"
+                size="12"
+                class="mine-arrow"
+                :class="{ 'is-open': showMineMenu }"
+              />
+            </div>
+            <transition name="mine-fade">
+              <div v-if="showMineMenu" class="mine-dropdown">
+                <div class="mine-item" @click="goOrders">
+                  <van-icon name="orders-o" size="18" />
+                  <span>我的订单</span>
+                </div>
+                <div class="mine-item" @click="goAddresses">
+                  <van-icon name="location-o" size="18" />
+                  <span>我的地址</span>
+                </div>
+              </div>
+            </transition>
           </div>
           <div class="header-action-btn" @click="handleLogout">
             <van-icon name="revoke" size="20" />
@@ -63,7 +84,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cart'
 import { useAuthStore } from '@/stores/auth'
@@ -108,6 +129,38 @@ getProductsByType().then((list) => {
 
 const specPickerVisible = ref(false)
 const selectedProduct = ref<ProductDetail | null>(null)
+
+// 「我的」下拉菜单
+const showMineMenu = ref(false)
+const mineWrapper = ref<HTMLElement | null>(null)
+
+function toggleMineMenu() {
+  showMineMenu.value = !showMineMenu.value
+}
+
+function closeMineMenu(e: MouseEvent) {
+  if (mineWrapper.value && !mineWrapper.value.contains(e.target as Node)) {
+    showMineMenu.value = false
+  }
+}
+
+function goOrders() {
+  showMineMenu.value = false
+  router.push('/orders')
+}
+
+function goAddresses() {
+  showMineMenu.value = false
+  router.push('/address/manage')
+}
+
+onMounted(() => {
+  document.addEventListener('click', closeMineMenu)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', closeMineMenu)
+})
 
 async function handleLogout() {
   await authStore.logout()
@@ -239,6 +292,77 @@ function handleDirectQty(product: Product, delta: number) {
   &:active {
     background: #ebebeb;
   }
+}
+
+.mine-wrapper {
+  position: relative;
+  padding: 0;
+  background: transparent;
+}
+
+.mine-trigger {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 10px;
+  border-radius: 14px;
+  background: #f5f5f5;
+  cursor: pointer;
+
+  &:active {
+    background: #ebebeb;
+  }
+}
+
+.mine-arrow {
+  transition: transform 0.2s;
+
+  &.is-open {
+    transform: rotate(180deg);
+  }
+}
+
+.mine-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 140px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  z-index: 100;
+}
+
+.mine-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px;
+  font-size: 14px;
+  color: $text;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid #f5f5f5;
+  }
+
+  &:active {
+    background: #f7f8fa;
+  }
+}
+
+// 下拉淡入动画
+.mine-fade-enter-active,
+.mine-fade-leave-active {
+  transition: opacity 0.18s, transform 0.18s;
+}
+
+.mine-fade-enter-from,
+.mine-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
 }
 
 .home-body {

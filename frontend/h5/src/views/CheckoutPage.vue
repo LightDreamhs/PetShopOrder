@@ -126,7 +126,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast, showDialog } from 'vant'
 import { useCartStore } from '@/stores/cart'
@@ -138,6 +138,10 @@ import { createOrder } from '@/api/order'
 import type { CartCalculateResult, UserAddress } from '@/types'
 import AddressPicker from '@/components/checkout/AddressPicker.vue'
 import PriceBreakdown from '@/components/checkout/PriceBreakdown.vue'
+import { dropCheckout, ensureCheckoutCached } from '@/stores/keepAlive'
+
+// 组件名：配合 App.vue 的 keep-alive include="Checkout" 缓存结算页
+defineOptions({ name: 'Checkout' })
 
 const router = useRouter()
 const cartStore = useCartStore()
@@ -148,7 +152,7 @@ const addressStore = useAddressStore()
 const customerName = ref('')
 const remark = ref('')
 const needDelivery = ref(false)
-const deliveryAddress = ref<{ address: string; lat: string; lng: string } | null>(null)
+const deliveryAddress = ref<{ address: string; detail: string; lat: string; lng: string } | null>(null)
 const selectedAddressId = ref<number | null>(null)
 const showPicker = ref(false)
 const calculateResult = ref<CartCalculateResult | null>(null)
@@ -196,8 +200,13 @@ watch([needDelivery, deliveryAddress], () => {
   recalculate()
 })
 
-function handleAddressConfirm(data: { address: string; lat: string; lng: string; saved?: boolean }) {
-  deliveryAddress.value = { address: data.address, lat: data.lat, lng: data.lng }
+function handleAddressConfirm(data: { address: string; detail?: string; lat: string; lng: string; saved?: boolean }) {
+  deliveryAddress.value = {
+    address: data.address,
+    detail: data.detail || '',
+    lat: data.lat,
+    lng: data.lng,
+  }
   // 若已保存为新地址，默认选中它
   if (data.saved && addressStore.list.length > 0) {
     const matched = addressStore.list.find(
@@ -211,7 +220,12 @@ function selectSavedAddress(id: number) {
   const addr = addressStore.getById(id)
   if (!addr) return
   selectedAddressId.value = id
-  deliveryAddress.value = { address: addr.address, lat: addr.lat, lng: addr.lng }
+  deliveryAddress.value = {
+    address: addr.address,
+    detail: addr.detail || '',
+    lat: addr.lat,
+    lng: addr.lng,
+  }
 }
 
 function openAddressManage() {
@@ -237,6 +251,45 @@ onMounted(() => {
   addressStore.fetchList().catch(() => {})
 })
 
+// 被 keep-alive 缓存，从地址管理页等子路由返回时重新拉取地址，
+// 同步已选地址（可能被编辑门牌号/删除/设默认）
+onActivated(async () => {
+  // 下单成功后被 dropCheckout 移除过，重新进入时恢复缓存
+  ensureCheckoutCached()
+  if (!needDelivery.value) return
+  try {
+    await addressStore.fetchList()
+  } catch {
+    return
+  }
+  if (addressStore.list.length === 0) {
+    // 地址被清空了
+    selectedAddressId.value = null
+    deliveryAddress.value = null
+    return
+  }
+  const selected = selectedAddressId.value
+    ? addressStore.getById(selectedAddressId.value)
+    : null
+  if (selected) {
+    // 已选地址仍在，刷新其 detail（可能被编辑过）
+    selectSavedAddress(selected.id)
+  } else {
+    // 已选地址被删除，回退到默认地址
+    const def = addressStore.list.find((a) => a.isDefault) || addressStore.list[0]
+    selectSavedAddress(def.id)
+  }
+})
+
+/** 重置结算页草稿（下单成功后调用） */
+function resetDraft() {
+  customerName.value = ''
+  remark.value = ''
+  needDelivery.value = false
+  deliveryAddress.value = null
+  selectedAddressId.value = null
+}
+
 async function handleSubmit() {
   if (cartStore.items.length === 0) {
     showToast('购物车为空')
@@ -249,6 +302,10 @@ async function handleSubmit() {
 
   submitting.value = true
   try {
+    // 拼接完整地址：POI 名称 + 楼号门牌（如「幸福小区 3栋502」）
+    const fullAddress = deliveryAddress.value
+      ? [deliveryAddress.value.address, deliveryAddress.value.detail].filter(Boolean).join(' ')
+      : undefined
     const result = await createOrder({
       items: cartStore.items.map((i) => ({
         productId: i.productId,
@@ -260,10 +317,13 @@ async function handleSubmit() {
       needDelivery: needDelivery.value,
       deliveryLat: deliveryAddress.value?.lat,
       deliveryLng: deliveryAddress.value?.lng,
-      deliveryAddress: deliveryAddress.value?.address,
+      deliveryAddress: fullAddress,
     })
     orderStore.setLastOrder(result)
     cartStore.clearCart()
+    // 下单成功后清空结算页缓存与本地草稿，下次进入是全新页面
+    resetDraft()
+    dropCheckout()
     router.replace('/order/success')
   } catch {
     // handled

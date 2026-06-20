@@ -11,6 +11,7 @@ services:
       MYSQL_DATABASE: petshop_order
       MYSQL_CHARACTER_SET_SERVER: utf8mb4
       MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
+      TZ: Asia/Shanghai
     volumes:
       - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
       - mysql_data:/var/lib/mysql
@@ -20,6 +21,7 @@ services:
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
       --init-connect='SET NAMES utf8mb4'
+      --default-time-zone=+08:00
 
 volumes:
   mysql_data:

@@ -1,6 +1,6 @@
 # PetShopOrder 开发进度
 
-> 更新时间：2026-06-03
+> 更新时间：2026-06-21
 
 ## 项目概况
 
@@ -85,6 +85,22 @@
 | Webhook 通知发送失败 | `NotificationServiceImpl` 也用了原始 `aesKey.getBytes()` | 统一改为 `deriveAesKey()` |
 | 通知消息时间不显示 | `order.createTime` 在 insert 后 Java 对象中为 null（数据库 DEFAULT 填充） | 为 null 时用 `LocalDateTime.now()` 兜底 |
 | 通知消息缺少信息 | 无联系人、备注、地址；电话脱敏；商品不换行 | 电话不脱敏、商品逐行加粗、新增联系人/备注/配送地址 |
+
+## 前后端联调期间优化（2026-06-21）
+
+联调测试中发现并修复的问题与体验优化。
+
+| 类别 | 改动 | 涉及文件 | 说明 |
+|------|------|---------|------|
+| 功能补全 | 收货地址补全 detail（楼号/门牌号）字段 | `AddressPicker.vue` `CheckoutPage.vue` `AddressManagePage.vue` | 后端/DB 早已有 `detail` 字段，但前端无输入入口。地图选点加「门牌号」输入框；地址管理页加「编辑门牌号」入口；结算页地址分行展示，**下单时拼接成「POI名称 门牌号」存入订单快照**，订单详情/Admin/Webhook 自动带完整地址 |
+| Bug 修复 | 结算页跳地址管理后返回，配送开关/备注/联系人状态丢失 | `App.vue`（新增）`stores/keepAlive.ts` `CheckoutPage.vue` `stores/auth.ts` | 原 `App.vue` 为裸 `router-view` 无 keep-alive，结算页跳路由即被销毁。改用 `keep-alive include="Checkout"` 仅缓存结算页；`onActivated` 返回时重拉地址并同步已选地址（detail/删除/默认）；下单成功 `resetDraft()+dropCheckout()` 清草稿与缓存；登出也清缓存防换账号残留 |
+| Bug 修复 | Admin 新订单轮询通知不弹（时区错配）⭐ | `backend/docker-compose.yml` | **根因**：MySQL 容器默认 UTC 时区，订单 `create_time` 按 UTC 落库（慢 8 小时）；前端 `formatNow()` 用浏览器北京时间做 `since`。比较 `create_time > since` 恒为假 → count=0 → 永不弹通知。docker-compose 加 `TZ=Asia/Shanghai` + `--default-time-zone=+08:00`，重启容器后 `NOW()` 为北京时间，与新订单写入时区一致。注：历史测试单 create_time 为 UTC 脏数据，仅影响旧单，新单正常 |
+| UI 优化 | 地址管理页卡片增强 + 删除确认框重做 | `AddressManagePage.vue` | 默认地址金色高亮卡片+「默认地址」橙标；定位图标；操作按钮分主次；删除从 Vant 默认白板弹窗改为**底部弹出确认条**，显示完整地址（POI+门牌分两行）+ 红色危险按钮 |
+| UI 优化 | 首页右上角「订单」按钮 →「我的」下拉菜单 | `HomePage.vue` | 「订单」按钮替换为「我的」下拉：含「我的订单」「我的地址」（地址管理页）两项，箭头旋转动画，点外部自动收起 |
+
+> 注：`vue-tsc` 报 `AddressPicker.vue:62` 的 `van-tag :type` 类型错误为改动前已存在问题，与本次改动无关，不影响 dev 运行。
+>
+> 产品决策：H5 顾客端「我的订单」不显示订单处理状态（商家内部状态，Admin 端可见即可），类型定义无 `processed` 字段，保持 C 端简洁。
 
 ## 已知问题 & 待开发
 
