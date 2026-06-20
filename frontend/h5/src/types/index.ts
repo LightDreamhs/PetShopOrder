@@ -186,3 +186,25 @@ export interface AuthCheck {
   loggedIn: boolean
   phone: string | null
 }
+
+// ========== 收货地址 ==========
+export type AddressLabel = '家' | '公司' | '学校' | '其他' | ''
+
+export interface UserAddress {
+  id: number
+  label: AddressLabel | null
+  address: string
+  detail: string | null
+  lat: string
+  lng: string
+  isDefault: boolean
+  createTime: string
+}
+
+export interface AddressRequest {
+  label: AddressLabel | null
+  address: string
+  detail: string | null
+  lat: string
+  lng: string
+}

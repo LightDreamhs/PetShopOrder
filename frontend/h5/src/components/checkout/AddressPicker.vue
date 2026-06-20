@@ -1,28 +1,20 @@
 <template>
-  <van-cell
-    title="配送地址"
-    is-link
-    :value="displayAddress || '选择配送地址'"
-    @click="openPicker"
-  />
-
   <van-popup
-    v-model:show="showPicker"
+    :show="show"
     position="right"
     :style="{ width: '100%', height: '100%' }"
     :overlay="false"
+    @update:show="(v: boolean) => emit('update:show', v)"
   >
     <div class="map-picker">
       <!-- 顶部搜索栏 -->
       <div class="map-header">
-        <van-icon name="arrow-left" size="20" @click="showPicker = false" />
+        <van-icon name="arrow-left" size="20" @click="emit('update:show', false)" />
         <van-search
           v-model="keyword"
           placeholder="搜索地点"
           shape="round"
           class="map-search"
-          @update:model-value="onSearchInput"
-          @clear="clearSearch"
         />
       </div>
 
@@ -35,7 +27,6 @@
             <circle cx="14" cy="14" r="6" fill="#fff"/>
           </svg>
         </div>
-        <!-- 定位按钮 -->
         <div class="locate-btn" @click="locateUser">
           <van-icon name="aim" size="22" />
         </div>
@@ -63,6 +54,20 @@
 
       <!-- 底部确认栏 -->
       <div class="map-footer safe-area-bottom">
+        <div v-if="enableSave" class="save-row">
+          <van-checkbox v-model="saveToCommon" shape="square" icon-size="16">保存为常用地址</van-checkbox>
+          <van-tag
+            v-for="lb in labelOptions"
+            :key="lb"
+            :type="selectedLabel === lb ? 'danger' : 'plain'"
+            size="medium"
+            round
+            class="label-tag"
+            @click="selectedLabel = selectedLabel === lb ? '' : lb"
+          >
+            {{ lb }}
+          </van-tag>
+        </div>
         <van-button type="primary" block round @click="confirmAddress">
           选择此地点
         </van-button>
@@ -72,9 +77,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, watch } from 'vue'
+import { ref, nextTick, watch } from 'vue'
 import { showToast } from 'vant'
 import { loadTMapSDK } from '@/utils/map'
+import { useAddressStore } from '@/stores/address'
+import type { AddressLabel } from '@/types'
 
 interface PoiItem {
   title: string
@@ -83,21 +90,29 @@ interface PoiItem {
   lng: number
 }
 
+const props = withDefaults(defineProps<{
+  show: boolean
+  enableSave?: boolean
+}>(), {
+  enableSave: true,
+})
+
 const emit = defineEmits<{
-  confirm: [data: { address: string; lat: string; lng: string }]
+  'update:show': [v: boolean]
+  confirm: [data: { address: string; lat: string; lng: string; saved?: boolean }]
 }>()
 
-const showPicker = ref(false)
+const addressStore = useAddressStore()
+const labelOptions: AddressLabel[] = ['家', '公司', '学校', '其他']
+
 const mapRef = ref<HTMLElement>()
 const keyword = ref('')
-const currentAddress = ref('')
 const currentLat = ref(0)
 const currentLng = ref(0)
 const poiList = ref<PoiItem[]>([])
 const selectedIdx = ref(0)
-
-const savedAddress = ref('')
-const displayAddress = computed(() => savedAddress.value)
+const saveToCommon = ref(true)
+const selectedLabel = ref<AddressLabel>('')
 
 let map: any = null
 let geocoder: any = null
@@ -106,17 +121,20 @@ let debounceTimer: ReturnType<typeof setTimeout> | null = null
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 let isSearching = false
 
-async function openPicker() {
-  showPicker.value = true
+// 打开时初始化地图
+watch(() => props.show, async (v) => {
+  if (!v) return
+  keyword.value = ''
+  selectedLabel.value = ''
   try {
     await loadTMapSDK()
     await nextTick()
     initMap()
   } catch {
     showToast('地图加载失败，请检查网络')
-    showPicker.value = false
+    emit('update:show', false)
   }
-}
+})
 
 function initMap() {
   if (!mapRef.value) return
@@ -136,9 +154,7 @@ function initMap() {
   map = new TMap.Map(mapRef.value, { center, zoom: 15 })
 
   geocoder = new TMap.service.Geocoder()
-  searchService = new TMap.service.Search({
-    pageSize: 20,
-  })
+  searchService = new TMap.service.Search({ pageSize: 20 })
 
   map.on('moveend', () => {
     if (isSearching) return
@@ -161,7 +177,6 @@ function fetchNearbyPois(lat: number, lng: number) {
         getPoi: true,
       })
       if (result.status === 0 && result.result) {
-        currentAddress.value = result.result.address
         const pois: PoiItem[] = [{
           title: result.result.address || '当前位置',
           address: result.result.formatted_addresses?.recommend || result.result.address || '',
@@ -182,13 +197,11 @@ function fetchNearbyPois(lat: number, lng: number) {
         selectedIdx.value = 0
       }
     } catch {
-      currentAddress.value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`
       poiList.value = []
     }
   }, 300)
 }
 
-// 监听搜索关键词
 watch(keyword, (val) => {
   if (searchTimer) clearTimeout(searchTimer)
   if (!val || !val.trim()) {
@@ -198,18 +211,13 @@ watch(keyword, (val) => {
 
   isSearching = true
   searchTimer = setTimeout(async () => {
-    if (!searchService) {
-      console.error('[AddressPicker] searchService 未初始化')
-      return
-    }
+    if (!searchService) return
     try {
-      const TMap = (window as any).TMap
       const result = await searchService.searchRegion({
         keyword: val.trim(),
         cityName: '全国',
         pageIndex: 1,
       })
-      console.log('[AddressPicker] search result:', result)
       if (result.data && result.data.length > 0) {
         poiList.value = result.data.map((item: any) => ({
           title: item.title,
@@ -224,8 +232,7 @@ watch(keyword, (val) => {
       } else {
         poiList.value = []
       }
-    } catch (e) {
-      console.error('[AddressPicker] search error:', e)
+    } catch {
       poiList.value = []
     }
   }, 400)
@@ -240,7 +247,6 @@ function clearSearch() {
 function selectPoi(idx: number) {
   selectedIdx.value = idx
   const poi = poiList.value[idx]
-  currentAddress.value = poi.title
   currentLat.value = poi.lat
   currentLng.value = poi.lng
   const TMap = (window as any).TMap
@@ -265,19 +271,39 @@ async function locateUser() {
   }
 }
 
-function confirmAddress() {
+async function confirmAddress() {
   const poi = poiList.value[selectedIdx.value]
   if (!poi) {
     showToast('请先选择地址')
     return
   }
-  savedAddress.value = poi.title
-  emit('confirm', {
+
+  const payload = {
     address: poi.title,
     lat: poi.lat.toString(),
     lng: poi.lng.toString(),
-  })
-  showPicker.value = false
+  }
+
+  let saved = false
+  if (props.enableSave && saveToCommon.value) {
+    try {
+      await addressStore.add({
+        label: selectedLabel.value || null,
+        address: poi.title,
+        detail: null,
+        lat: poi.lat.toString(),
+        lng: poi.lng.toString(),
+      })
+      saved = true
+    } catch (e: any) {
+      const msg = e?.response?.data?.message || '地址保存失败'
+      showToast(msg)
+      // 保存失败仍允许使用该地址下单
+    }
+  }
+
+  emit('confirm', { ...payload, saved })
+  emit('update:show', false)
 }
 </script>
 
@@ -404,5 +430,21 @@ function confirmAddress() {
   flex-shrink: 0;
   padding: 12px 16px;
   border-top: 1px solid #f0f0f0;
+}
+
+.save-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+
+  :deep(.van-checkbox) {
+    margin-right: auto;
+  }
+}
+
+.label-tag {
+  cursor: pointer;
 }
 </style>

@@ -1,12 +1,12 @@
 # PetShopOrder 开发进度
 
-> 更新时间：2026-06-01
+> 更新时间：2026-06-03
 
 ## 项目概况
 
 宠物店点单系统，顾客(H5)浏览商品下单，商家(Admin)管理商品/会员/订单。
 
-**技术栈：** Spring Boot 3.3.6 / Vue 3 + TypeScript / Vant 4(H5) / Element Plus(Admin) / MySQL 8.0 / Sa-Token
+**技术栈：** Spring Boot 3.3.6 / Vue 3 + TypeScript / Vant 4(H5) / Element Plus(Admin) / MySQL 8.0 / Sa-Token / 腾讯地图 JS API GL
 
 ## 后端 — 已完成
 
@@ -31,10 +31,10 @@
 | 模块 | 说明 |
 |------|------|
 | 登录 | 深色背景 + 角色鉴权路由守卫 |
-| 订单管理 | 筛选 + 详情抽屉 + 标记已处理 |
+| 订单管理 | 筛选 + 详情抽屉 + 标记已处理 + **新订单轮询通知（15s 间隔，右下角弹窗"有新订单来了"）** |
 | 商品管理 | 商品 CRUD + SKU + 上下架（已移除分类管理） |
 | 会员管理 | 会员列表 + 等级 CRUD + 多手机号 |
-| 系统配置 | 配送/接单/通知配置 + 收款二维码上传 + 变更记录 |
+| 系统配置 | 配送/接单/通知配置 + 收款二维码上传 + **店铺坐标地图选点（腾讯地图 GL + libraries=service）** + 变更记录 |
 | 账号管理 | CRUD + 启停用 + 重置密码（仅 BOSS） |
 
 ## 前端 H5 — 已完成
@@ -44,8 +44,8 @@
 | 登录 | 手机号 + 验证码（固定 1234） |
 | 首页 | 「用品」/「服务」Tab 切换 + 搜索 + SKU 弹窗 + CartBar |
 | 购物车 | 纯前端 Pinia + localStorage |
-| 结算 | 商品明细 + 会员折扣 + 配送开关 + 地址模拟输入 |
-| 下单 | 提交订单 → 成功页（展示收款码） |
+| 结算 | 商品明细 + 会员折扣 + 配送开关 + **腾讯地图选点** + **常用地址管理（列表选择/设默认/删除）** |
+| 下单 | 提交订单 → 成功页（展示收款码，260×260，显示"应付金额"） |
 | 订单列表/详情 | 分页加载 + 状态展示 |
 
 ## 前后端联调 — 已通过（2026-05-26）
@@ -67,19 +67,39 @@
 | 商品上下架 | ✅ |
 | 会员折扣变更 | ✅ |
 
+## Bug 修复记录（2026-06-03）
+
+| 问题 | 根因 | 修复 |
+|------|------|------|
+| 系统配置保存报"服务器内部错误" | AES 密钥 `PetShop2026Order!` 17 字节，AES 要求 16/24/32 | 所有 AES 调用统一改用 SHA-256 派生 32 字节密钥 |
+| 收款码上传后不显示 | Mapper XML 缺 `payment_qr_url`、Controller Request/Params 未传递该字段 | 三处补全：Mapper select/update/insert、Request 类、buildUpdateParams |
+| Admin 菜单高亮与未保存提醒不同步 | `el-menu` 点击立即更新内部状态，导航被取消后不恢复 | `handleMenuSelect` 改 async，导航完成后 `menuKey++` 强制 el-menu 重新渲染 |
+| 地图选点报"加载失败" | 腾讯地图 GLJS 未加 `libraries=service`，`TMap.service.Geocoder` 为 undefined | URL 加 `&libraries=service`，就绪检查同时等待 `TMap.service.Geocoder` |
+| 地图拖动后地址不更新 | 事件名 `map_move_end` 不是腾讯地图 GL 的正确事件名 | 改为 `moveend` |
+| 地图搜索无结果 | `TMap.service.Suggestion.search()` 和 `Search.search()` 均不存在 | 改用 `Search.searchRegion({ keyword, cityName: '全国' })` |
+| el-dialog 打开地图白屏 | `@open` 时 DOM 未渲染完成，地图容器尺寸为 0 | 改为 `@opened`（对话框动画结束后初始化） |
+| 系统配置页白屏 | `@element-plus/icons-vue` 无 `Circle` 导出，导致 MapLocationPicker 加载失败 | 用 CSS 空心圆替代 |
+| el-radio 降级警告 | `el-radio-button` 使用 `:label` 传值，新版 Element Plus 要求 `:value` | `:label` → `:value` |
+| .env 文件被覆盖 | 创建 .env 时 `echo >` 覆盖了原 `VITE_API_BASE_URL=/` | 恢复原内容 + 追加 `VITE_TMAP_KEY` |
+| 地图 UI 重构 | 原设计为全屏地图+搜索浮层，体验不佳 | 参考美团风格：上方地图(40vh)+下方可滚动 POI 列表，拖动地图自动刷新附近 POI（`getPoi:true`），点击列表项联动地图跳转 |
+| Webhook 通知发送失败 | `NotificationServiceImpl` 也用了原始 `aesKey.getBytes()` | 统一改为 `deriveAesKey()` |
+| 通知消息时间不显示 | `order.createTime` 在 insert 后 Java 对象中为 null（数据库 DEFAULT 填充） | 为 null 时用 `LocalDateTime.now()` 兜底 |
+| 通知消息缺少信息 | 无联系人、备注、地址；电话脱敏；商品不换行 | 电话不脱敏、商品逐行加粗、新增联系人/备注/配送地址 |
+
 ## 已知问题 & 待开发
 
 | 优先级 | 项目 | 说明 |
 |--------|------|------|
 | ~~高~~ | ~~地址选择器~~ | ✅ 已完成（2026-06-01）：接入腾讯地图 JS API GL，H5 地图选点+搜索+定位，Admin 店铺坐标配置 |
+| ~~中~~ | ~~用户收货地址管理~~ | ✅ 已完成（2026-06-04）：新增 `user_address` 表 + CRUD 接口，CheckoutPage 改为地址列表选择（省地图 API 调用），AddressPicker 增加保存常用地址+标签，新增地址管理页（设默认/删除） |
 | ~~高~~ | ~~起送金额硬编码~~ | ✅ 已修复（2026-06-01）：改用 calculate 接口返回的 `deliveryCheck.reachedMinAmount` / `gap` |
 | 中 | 购物车改为底部弹窗 | CartBar 点购物车图标应弹出底部抽屉而非跳转页面 |
-| 中 | ~~下单成功页加收款码~~ | ✅ 已完成（2026-06-01） |
-| 中 | 配送规则联调 | Admin 设置店铺坐标后，可验证配送半径/起送价/运费完整流程 |
+| 中 | ~~下单成功页加收款码~~ | ✅ 已完成（2026-06-01），二维码已放大至 260×260 |
+| ~~中~~ | ~~配送规则联调~~ | ✅ 已完成（2026-06-03）：收款码持久化、地图选点、通知推送全链路联调通过 |
 | 低 | 短信验证码 | 当前固定 `1234`，未对接真实短信服务商 |
 | 低 | Admin 数据统计页 | 订单趋势、会员排行（后端接口已有） |
 | 低 | Admin 操作日志页 | 后端接口已有，前端未挂路由 |
-| 低 | WebSocket | 新订单实时推送至 Admin |
+| ~~低~~ | ~~WebSocket~~ | ✅ 已用轻量轮询方案替代（2026-06-03）：15s 间隔查询新订单计数 + ElNotification 弹窗提醒 + 自动刷新列表 |
 
 ## 本地启动
 

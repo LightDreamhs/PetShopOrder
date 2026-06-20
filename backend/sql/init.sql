@@ -217,6 +217,20 @@ CREATE TABLE IF NOT EXISTS system_config_log (
     INDEX idx_config_log_time (create_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='系统配置变更日志';
 
+CREATE TABLE IF NOT EXISTS user_address (
+    id           BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id      BIGINT       NOT NULL COMMENT 'app_user.id',
+    label        VARCHAR(20)  NULL COMMENT '标签：家/公司/学校/其他',
+    address      VARCHAR(255) NOT NULL COMMENT 'POI 名称或自定义地址',
+    detail       VARCHAR(255) NULL COMMENT '补充详细地址（楼栋/门牌号）',
+    lat          DECIMAL(10,7) NOT NULL,
+    lng          DECIMAL(10,7) NOT NULL,
+    is_default   TINYINT      NOT NULL DEFAULT 0 COMMENT '1=默认地址',
+    create_time  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_user_address_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户收货地址';
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ============================================

@@ -35,14 +35,45 @@
             <van-icon name="info-o" />
             <span>{{ deliveryHint }}</span>
           </div>
-          <template v-if="needDelivery && deliveryAddress">
-            <van-cell title="配送地址" :value="deliveryAddress.address" />
-          </template>
         </van-cell-group>
 
         <!-- 地址选择 -->
         <div v-if="needDelivery" class="address-section">
-          <AddressPicker @confirm="handleAddressConfirm" />
+          <div class="address-toolbar">
+            <span class="address-toolbar-title">收货地址</span>
+            <span class="address-toolbar-action" @click="openAddressManage">管理</span>
+          </div>
+
+          <!-- 已保存地址列表 -->
+          <div v-if="addressStore.list.length > 0" class="address-list">
+            <div
+              v-for="addr in addressStore.list"
+              :key="addr.id"
+              class="address-item"
+              :class="{ active: selectedAddressId === addr.id }"
+              @click="selectSavedAddress(addr.id)"
+            >
+              <van-icon name="location-o" class="addr-icon" />
+              <div class="addr-info">
+                <div class="addr-title">
+                  <span v-if="addr.label" class="addr-label">{{ addr.label }}</span>
+                  <span>{{ addr.address }}</span>
+                </div>
+                <div v-if="addr.detail" class="addr-detail">{{ addr.detail }}</div>
+              </div>
+              <van-icon v-if="selectedAddressId === addr.id" name="success" color="#ee0a24" />
+            </div>
+            <div class="add-address-btn" @click="showPicker = true">
+              <van-icon name="add-o" />
+              <span>新增地址</span>
+            </div>
+          </div>
+
+          <!-- 无地址时 -->
+          <div v-else class="no-address" @click="showPicker = true">
+            <van-icon name="add-o" size="20" />
+            <span>新增收货地址</span>
+          </div>
         </div>
       </div>
 
@@ -88,19 +119,23 @@
         提交订单
       </van-button>
     </div>
+
+    <!-- 地图选点弹窗 -->
+    <AddressPicker v-model:show="showPicker" @confirm="handleAddressConfirm" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast, showDialog } from 'vant'
 import { useCartStore } from '@/stores/cart'
 import { useMemberStore } from '@/stores/member'
 import { useOrderStore } from '@/stores/order'
+import { useAddressStore } from '@/stores/address'
 import { calculateCart } from '@/api/cart'
 import { createOrder } from '@/api/order'
-import type { CartCalculateResult } from '@/types'
+import type { CartCalculateResult, UserAddress } from '@/types'
 import AddressPicker from '@/components/checkout/AddressPicker.vue'
 import PriceBreakdown from '@/components/checkout/PriceBreakdown.vue'
 
@@ -108,16 +143,21 @@ const router = useRouter()
 const cartStore = useCartStore()
 const memberStore = useMemberStore()
 const orderStore = useOrderStore()
+const addressStore = useAddressStore()
 
 const customerName = ref('')
 const remark = ref('')
 const needDelivery = ref(false)
 const deliveryAddress = ref<{ address: string; lat: string; lng: string } | null>(null)
+const selectedAddressId = ref<number | null>(null)
+const showPicker = ref(false)
 const calculateResult = ref<CartCalculateResult | null>(null)
 const submitting = ref(false)
 
 const deliveryEnabled = computed(() => {
-  return calculateResult.value?.deliveryCheck.reachedMinAmount ?? false
+  const check = calculateResult.value?.deliveryCheck
+  if (check) return check.reachedMinAmount
+  return cartStore.hasGoods
 })
 
 const deliveryHint = computed(() => {
@@ -156,9 +196,46 @@ watch([needDelivery, deliveryAddress], () => {
   recalculate()
 })
 
-function handleAddressConfirm(data: { address: string; lat: string; lng: string }) {
-  deliveryAddress.value = data
+function handleAddressConfirm(data: { address: string; lat: string; lng: string; saved?: boolean }) {
+  deliveryAddress.value = { address: data.address, lat: data.lat, lng: data.lng }
+  // 若已保存为新地址，默认选中它
+  if (data.saved && addressStore.list.length > 0) {
+    const matched = addressStore.list.find(
+      (a) => a.address === data.address && a.lat === data.lat && a.lng === data.lng,
+    )
+    if (matched) selectedAddressId.value = matched.id
+  }
 }
+
+function selectSavedAddress(id: number) {
+  const addr = addressStore.getById(id)
+  if (!addr) return
+  selectedAddressId.value = id
+  deliveryAddress.value = { address: addr.address, lat: addr.lat, lng: addr.lng }
+}
+
+function openAddressManage() {
+  router.push('/address/manage')
+}
+
+// 开启配送时加载地址列表，无地址则自动弹地图
+watch(needDelivery, async (v) => {
+  if (!v) return
+  if (!addressStore.loaded) {
+    await addressStore.fetchList()
+  }
+  if (addressStore.list.length === 0) {
+    showPicker.value = true
+    return
+  }
+  // 默认选中默认地址
+  const def = addressStore.list.find((a) => a.isDefault) || addressStore.list[0]
+  selectSavedAddress(def.id)
+})
+
+onMounted(() => {
+  addressStore.fetchList().catch(() => {})
+})
 
 async function handleSubmit() {
   if (cartStore.items.length === 0) {
@@ -245,6 +322,115 @@ async function handleSubmit() {
 .address-section {
   margin-top: 4px;
   padding: 0 4px;
+}
+
+.address-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 12px;
+  margin-bottom: 6px;
+}
+
+.address-toolbar-title {
+  font-size: 13px;
+  color: $text-secondary;
+}
+
+.address-toolbar-action {
+  font-size: 13px;
+  color: $primary;
+  cursor: pointer;
+}
+
+.address-list {
+  background: #fff;
+  margin: 0 10px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.address-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #f5f5f5;
+  cursor: pointer;
+
+  &:last-of-type {
+    border-bottom: none;
+  }
+
+  &.active {
+    background: #fff5f5;
+  }
+}
+
+.addr-icon {
+  font-size: 18px;
+  color: $primary;
+  flex-shrink: 0;
+}
+
+.addr-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.addr-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: $text;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.addr-label {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: #fff;
+  background: $primary;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.addr-detail {
+  font-size: 12px;
+  color: $text-secondary;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.add-address-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px;
+  font-size: 14px;
+  color: $primary;
+  cursor: pointer;
+}
+
+.no-address {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 28px;
+  margin: 0 10px;
+  background: #fff;
+  border-radius: 12px;
+  color: $primary;
+  font-size: 14px;
+  cursor: pointer;
 }
 
 .item-list {

@@ -45,6 +45,12 @@ const router = createRouter({
       component: () => import('@/views/OrderDetailPage.vue'),
       meta: { requiresAuth: true, title: '订单详情' },
     },
+    {
+      path: '/address/manage',
+      name: 'AddressManage',
+      component: () => import('@/views/AddressManagePage.vue'),
+      meta: { requiresAuth: true, title: '管理收货地址' },
+    },
   ],
   scrollBehavior() {
     return { top: 0 }

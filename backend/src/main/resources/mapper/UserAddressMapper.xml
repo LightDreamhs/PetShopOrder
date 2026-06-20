@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.petshop.order.mapper.UserAddressMapper">
+
+    <select id="selectByUserId" resultType="com.petshop.order.entity.UserAddress">
+        SELECT id, user_id, label, address, detail, lat, lng, is_default, create_time, update_time
+        FROM user_address
+        WHERE user_id = #{userId}
+        ORDER BY is_default DESC, create_time DESC
+    </select>
+
+    <select id="selectById" resultType="com.petshop.order.entity.UserAddress">
+        SELECT id, user_id, label, address, detail, lat, lng, is_default, create_time, update_time
+        FROM user_address
+        WHERE id = #{id}
+    </select>
+
+    <select id="countByUserId" resultType="int">
+        SELECT COUNT(*) FROM user_address WHERE user_id = #{userId}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_address (user_id, label, address, detail, lat, lng, is_default)
+        VALUES (#{userId}, #{label}, #{address}, #{detail}, #{lat}, #{lng}, #{isDefault})
+    </insert>
+
+    <update id="updateById">
+        UPDATE user_address
+        SET label = #{label},
+            address = #{address},
+            detail = #{detail},
+            lat = #{lat},
+            lng = #{lng}
+        WHERE id = #{id}
+    </update>
+
+    <update id="clearDefaultByUserId">
+        UPDATE user_address SET is_default = 0 WHERE user_id = #{userId}
+    </update>
+
+    <update id="setDefault">
+        UPDATE user_address SET is_default = 1 WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM user_address WHERE id = #{id}
+    </delete>
+
+</mapper>
