@@ -131,7 +131,7 @@
 | 低 | Admin 数据统计页 | 订单趋势、会员排行（后端接口已有） |
 | 低 | Admin 操作日志页 | 后端接口已有，前端未挂路由 |
 | ~~低~~ | ~~WebSocket~~ | ✅ 已用轻量轮询方案替代（2026-06-03）：15s 间隔查询新订单计数 + ElNotification 弹窗提醒 + 自动刷新列表 |
-| ~~中~~ | ~~H5 商品简介（描述）展示~~ | ✅ 已完成（2026-06-30）：后端 `GET /api/app/products` 列表接口 `toAppMap()` 回传 `description`；H5 首页 `ProductCard` 商品名下加描述（单行省略）、SKU 弹窗 `SkuSelectorPopup` 填充原预留 `.sku-desc` 占位（2 行省略）；`Product` 类型补字段。计划存档 [`plans/商品简介H5展示.md`](plans/商品简介H5展示.md) |
+| ~~中~~ | ~~H5 商品简介（描述）展示~~ | ✅ 已完成（2026-06-30）：后端 `GET /api/app/products` 列表接口 `toAppMap()` 回传 `description`；H5 首页 `ProductCard` 商品名下加描述（单行省略）、SKU 弹窗 `SkuSelectorPopup` 填充原预留 `.sku-desc` 占位（2 行省略）；`Product` 类型补字段。 |
 
 ## 本地启动
 
