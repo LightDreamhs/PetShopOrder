@@ -1,6 +1,10 @@
 # 宠物店微信私域 H5 下单系统 - 功能模块清单
 
 > 基于 plan.md 整理，参考 MVP 原型补充交互细节。面向开发自用，按后端/前端拆分。
+>
+> **修订（2026-06-30）**：已与代码实现核对并标注现状差异：① 商品「分类子分类」功能已下线，仅保留固定 GOODS/SERVICE 两类（无分类 CRUD）；② 新订单通知改用 `GET /api/admin/orders/new-count` 轮询替代 WebSocket；③ 运费策略仅实现 FREE/TIERED，FIXED 未实现；④ 配送费改为按 `system_config` 运费策略计算，不再是「≤3km 免费/超距电话确认」。下方涉及处以「现状」标注。权威实现以代码为准。
+
+---
 
 ---
 
@@ -27,22 +31,22 @@
 
 ---
 
-### 2. 商品与分类模块
+### 2. 商品模块
 
 **功能点**：
-- 商品分类 CRUD（type 区分 GOODS / SERVICE）
-- 商品 CRUD（含封图、上下架、排序）
+- ~~商品分类 CRUD（type 区分 GOODS / SERVICE）~~ → **现状**：分类子分类已下线，仅保留固定 `GOODS`/`SERVICE` 两类，无分类 CRUD
+- 商品 CRUD（含封图、描述、上下架、排序）
 - SKU CRUD（多规格，含原价、会员价、库存）
 - 图片上传（存储在服务器本地）
 
 **业务规则**：
-- 商品 type 不可跨分类混用（分类的 type 决定商品的 type）
+- ~~商品 type 不可跨分类混用（分类的 type 决定商品的 type）~~ → **现状**：商品直接归属 GOODS/SERVICE 类型
 - SERVICE 类型商品 `support_delivery` 强制为否，SKU 的 `member_price` 字段忽略
 - GOODS 类型 SKU 的 `stock` 必填，SERVICE 可为 -1（不限）
 - 商品下架后用户端不可见，但历史订单不受影响
 
 **边界条件**：
-- 删除分类前需检查是否有关联商品
+- ~~删除分类前需检查是否有关联商品~~ → **现状**：无分类概念，已删除商品需检查是否被订单引用
 - SKU 价格修改需记录操作日志（用于追溯改价历史）
 
 ---
@@ -135,7 +139,7 @@
 - 下单时快照：`customer_phone_snapshot`、`member_level_snapshot`、`original_price`、`deal_price`
 - 订单无状态流转（无支付/发货生命周期），仅作为记账记录
 - `total_amount = goods_amount + service_amount + delivery_fee`
-- 配送费下单时自动计算（≤3km 免费，>3km 按梯度计价表），不存在"待确认"态
+- 配送费下单时自动计算（按 `system_config` 运费策略：FREE 免运费 / TIERED 分段运费），不存在"待确认"态。~~（≤3km 免费，>3km 按梯度计价表）~~ → **现状**：不再用固定 3km 门槛，统一走配置的策略
 - 新订单默认"未处理"，商家线下收款后手动标记为"已处理"
 
 **边界条件**：
@@ -151,7 +155,7 @@
 - 企业微信群机器人 Webhook 推送新订单通知
 - 通知内容格式化（会员标识、商品明细、金额、配送信息、备注）
 - 超距订单在通知中标注配送距离和运费
-- 管理后台 WebSocket + 浏览器 Notification API 兜底推送
+- ~~管理后台 WebSocket + 浏览器 Notification API 兜底推送~~ → **现状**：改用轻量轮询——管理端每 15 秒查 `GET /api/admin/orders/new-count`，有新订单时 `ElNotification` 右下角弹窗 + 自动刷新列表
 
 **业务规则**：
 - 下单成功后异步推送，不阻塞下单流程
@@ -160,7 +164,7 @@
 
 **边界条件**：
 - Webhook 地址配置错误或网络超时 → 不影响下单，仅日志告警
-- WebSocket 断连后需自动重连
+- ~~WebSocket 断连后需自动重连~~ → **现状**：轮询方案无连接态，无需重连
 
 ---
 
@@ -212,7 +216,7 @@
 ### 11. 文件上传模块
 
 **功能点**：
-- 图片上传（商品封面图、分类图标）
+- 图片上传（商品封面图）
 - 存储在服务器本地目录
 - 静态资源通过 Nginx 托管访问
 
@@ -273,7 +277,7 @@
 - 默认选中第一个规格
 - 会员价/折扣价实时计算展示
 - 不展示库存信息
-- 预留商品描述区域（当前为空，后续可填充）
+- 商品描述区域：在商品名/价格下方展示 `description`（2 行省略）；首页商品卡片同样在商品名下展示描述（单行省略）
 
 ---
 
@@ -340,9 +344,9 @@
 
 **功能点**：
 - 商品列表（搜索、筛选、上下架操作）
-- 新增/编辑商品（名称、分类、描述、封面图、类型、排序）
+- 新增/编辑商品（名称、~~分类~~描述、封面图、类型、排序）
 - SKU 管理（规格名、原价、会员价、库存、排序）
-- 分类管理（名称、图标、排序、类型）
+- ~~分类管理（名称、图标、排序、类型）~~ → **现状**：分类子分类已下线，无此页
 
 ---
 
@@ -365,7 +369,7 @@
 - 订单列表（按时间、手机号、会员、处理状态等筛选）
 - 订单详情查看（商品明细、金额、配送信息、备注）
 - 订单"已处理/未处理"标记切换
-- WebSocket 实时新订单推送 + 浏览器弹窗通知
+- ~~WebSocket 实时新订单推送 + 浏览器弹窗通知~~ → **现状**：15 秒轮询 `GET /api/admin/orders/new-count` + ElNotification 右下角弹窗 + 自动刷新列表
 
 **权限**：
 - 所有角色可查看订单
@@ -376,8 +380,8 @@
 #### Admin-5. 系统配置
 
 **功能点**：
-- 店铺坐标设置（经纬度）
-- 配送规则设置（起送金额、免费配送距离）
+- 店铺坐标设置（经纬度，地图选点）
+- 配送规则设置（配送半径、起送金额、运费策略 FREE/TIERED + 分段规则）
 - 企微机器人 Webhook 地址配置
 
 **权限**：仅老板
@@ -419,22 +423,12 @@
 
 ### 商品体系
 
-```sql
--- 商品分类
-CREATE TABLE category (
-  id          BIGINT AUTO_INCREMENT PRIMARY KEY,
-  name        VARCHAR(32)  NOT NULL,
-  icon        VARCHAR(255) NULL,
-  type        VARCHAR(16)  NOT NULL COMMENT 'GOODS / SERVICE',
-  sort        INT          NOT NULL DEFAULT 0,
-  create_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  update_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
+> ~~`category` 商品分类表~~ → **现状**：分类子分类已下线，该表不再使用（仅保留 GOODS/SERVICE 两类，由 `product.type` 区分）。
 
+```sql
 -- 商品/服务（统一表，type 区分）
 CREATE TABLE product (
   id                BIGINT AUTO_INCREMENT PRIMARY KEY,
-  category_id       BIGINT       NOT NULL,
   name              VARCHAR(128) NOT NULL,
   description       TEXT         NULL,
   cover_img         VARCHAR(255) NULL,
@@ -444,7 +438,6 @@ CREATE TABLE product (
   sort              INT          NOT NULL DEFAULT 0,
   create_time       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   update_time       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX idx_product_category(category_id),
   INDEX idx_product_type_status(type, status)
 );
 
@@ -525,7 +518,7 @@ CREATE TABLE orders (
   member_level_snapshot  VARCHAR(32)   NULL COMMENT '下单时等级名快照',
   goods_amount           DECIMAL(10,2) NOT NULL COMMENT '用品金额（已折扣）',
   service_amount         DECIMAL(10,2) NOT NULL COMMENT '服务金额（已折扣）',
-  delivery_fee           DECIMAL(10,2) NOT NULL DEFAULT 0 COMMENT '配送费（≤3km=0，>3km按梯度计价）',
+  delivery_fee           DECIMAL(10,2) NOT NULL DEFAULT 0 COMMENT '配送费（按 system_config 运费策略 FREE/TIERED 计算）',
   total_amount           DECIMAL(10,2) NOT NULL COMMENT 'goods + service + delivery_fee',
   need_delivery          TINYINT       NOT NULL DEFAULT 0,
   delivery_address       VARCHAR(255)  NULL,
@@ -642,11 +635,11 @@ CREATE TABLE system_config_log (
 
 ### 配送计价规则
 
-| 策略 | 运费 |
-|------|------|
-| FREE | 始终免运费 |
-| FIXED | 按固定金额收取 |
-| TIERED | 按 `system_config_delivery_tier` 距离分段自动计算，下单时确定 |
+| 策略 | 运费 | 现状 |
+|------|------|------|
+| FREE | 始终免运费 | ✅ 已实现 |
+| FIXED | 按固定金额收取 | ❌ 未实现（后端 `SystemConfigServiceImpl` 仅接受 FREE/TIERED） |
+| TIERED | 按 `system_config_delivery_tier` 距离分段自动计算，下单时确定 | ✅ 已实现 |
 
 ---
 
@@ -654,7 +647,7 @@ CREATE TABLE system_config_log (
 
 ```
 后端基础层（先开发）：
-  认证与登录 → 系统配置 → 文件上传 → 商品与分类
+  认证与登录 → 系统配置 → 文件上传 → 商品
 
 后端业务层（依赖基础层）：
   会员模块 → 价格计算引擎 → 配送与距离计算 → 订单模块 → 通知模块

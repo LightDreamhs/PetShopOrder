@@ -148,6 +148,7 @@ public class AppProductController {
         return Map.of(
                 "id", p.getId(),
                 "name", p.getName(),
+                "description", p.getDescription() != null ? p.getDescription() : "",
                 "coverImg", p.getCoverImg() != null ? p.getCoverImg() : "",
                 "type", p.getType(),
                 "supportDelivery", p.getSupportDelivery() != null && p.getSupportDelivery() == 1,

@@ -17,6 +17,7 @@ export interface Paginated<T> {
 export interface Product {
   id: number
   name: string
+  description: string
   coverImg: string | null
   type: 'GOODS' | 'SERVICE'
   supportDelivery: boolean

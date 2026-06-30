@@ -14,7 +14,7 @@
           <div class="sku-price-info">
             <div class="sku-name">{{ product?.name }}</div>
             <div class="sku-price">{{ formatPrice(selectedSku?.dealPrice ?? product?.skus[0]?.dealPrice ?? '0') }}</div>
-            <div class="sku-desc"></div>
+            <div v-if="product?.description" class="sku-desc">{{ product.description }}</div>
           </div>
         </div>
         <van-icon name="cross" size="20" class="sku-close" @click="visible = false" />
@@ -175,7 +175,12 @@ function handleAddToCart() {
 .sku-desc {
   font-size: 12px;
   color: $text-muted;
-  min-height: 18px;
+  line-height: 1.4;
+  word-break: break-all;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
 .sku-close {

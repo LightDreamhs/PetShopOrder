@@ -1,6 +1,6 @@
 # PetShopOrder 开发进度
 
-> 更新时间：2026-06-21
+> 更新时间：2026-06-30
 
 ## 项目概况
 
@@ -102,6 +102,21 @@
 >
 > 产品决策：H5 顾客端「我的订单」不显示订单处理状态（商家内部状态，Admin 端可见即可），类型定义无 `processed` 字段，保持 C 端简洁。
 
+## 文档核对与修订（2026-06-30）
+
+逐份核对项目文档与代码实现，修订过时内容（验证：前后端 build + 后端编译均通过）。
+
+| 文档 | 修订内容 |
+|------|---------|
+| `api.md` | 删除已废弃的「分类管理」整章（4 个 CRUD 接口）、C 端 categories 接口段；删除未实现的 WebSocket 章节，总览 WS 行替换为实际轮询接口 `GET /api/admin/orders/new-count`；清理商品接口残留的 `categoryId`/`categoryName` 字段；商品列表/详情响应补 `description` 字段；管理端章节重新编号；顶部加修订说明 |
+| `modules.md` | 以「现状」标注修订：分类子分类下线、WebSocket 改 15s 轮询、FIXED 未实现、3km 门槛改为配置策略、删除 `category` 表 DDL 与 `product.category_id`；H5-3 描述区改为已实现；顶部加修订说明 |
+| `plan.md` | 顶部加「历史档案」警示，列出 6 项已被推翻的决策（分类、3km/OVER_RANGE、FIXED、WebSocket、企微→飞书、短信自研→PNVS），指向权威文档 |
+
+### 待处理（尚未动，待确认）
+
+- `AGENTS.md` 与 `CLAUDE.md` 内容完全重复，建议保留其一。
+- `飞书订单通知群webhook.txt` 含真实 webhook 明文地址且疑似未在 `.gitignore`，有泄露风险，建议移出仓库并加忽略。
+
 ## 已知问题 & 待开发
 
 | 优先级 | 项目 | 说明 |
@@ -116,6 +131,7 @@
 | 低 | Admin 数据统计页 | 订单趋势、会员排行（后端接口已有） |
 | 低 | Admin 操作日志页 | 后端接口已有，前端未挂路由 |
 | ~~低~~ | ~~WebSocket~~ | ✅ 已用轻量轮询方案替代（2026-06-03）：15s 间隔查询新订单计数 + ElNotification 弹窗提醒 + 自动刷新列表 |
+| ~~中~~ | ~~H5 商品简介（描述）展示~~ | ✅ 已完成（2026-06-30）：后端 `GET /api/app/products` 列表接口 `toAppMap()` 回传 `description`；H5 首页 `ProductCard` 商品名下加描述（单行省略）、SKU 弹窗 `SkuSelectorPopup` 填充原预留 `.sku-desc` 占位（2 行省略）；`Product` 类型补字段。计划存档 [`plans/商品简介H5展示.md`](plans/商品简介H5展示.md) |
 
 ## 本地启动
 

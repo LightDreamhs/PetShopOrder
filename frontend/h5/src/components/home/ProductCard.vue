@@ -8,6 +8,7 @@
     </div>
     <div class="product-info">
       <div class="product-name">{{ product.name }}</div>
+      <div v-if="product.description" class="product-desc">{{ product.description }}</div>
       <div class="product-price-row">
         <div class="price-group">
           <span class="price-symbol">¥</span>
@@ -119,6 +120,16 @@ const cartQty = computed(() => cartStore.getItemQty(props.product.id, null))
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+}
+
+.product-desc {
+  margin-top: 2px;
+  font-size: 12px;
+  color: $text-muted;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .product-price-row {

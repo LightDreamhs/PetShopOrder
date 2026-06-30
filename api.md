@@ -1,6 +1,8 @@
 # 宠物店下单系统 API 接口文档
 
 > 基于 modules.md 生成。统一服务，URL 前缀区分：`/api/app/*`（C 端）、`/api/admin/*`（管理端）。
+>
+> **修订（2026-06-30）**：已与后端代码逐接口核对——移除已废弃的「分类管理」相关接口（子分类功能早已下线，仅保留 GOODS/SERVICE 两类）、移除未实现的 WebSocket 推送章节（实际用 `GET /api/admin/orders/new-count` 轮询替代）、商品列表/详情接口补全 `description` 字段。
 
 ---
 
@@ -134,28 +136,6 @@
 
 ### 2. 商品浏览
 
-#### GET /api/app/categories
-
-获取商品分类列表。
-
-**Query 参数**：
-
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| type | String | 否 | 筛选类型：`GOODS` / `SERVICE`，不传则返回全部 |
-
-**响应 data**：`List<Category>`
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | Long | 分类 ID |
-| name | String | 分类名称 |
-| icon | String | 分类图标 URL |
-| type | String | `GOODS` / `SERVICE` |
-| sort | Integer | 排序值（升序） |
-
----
-
 #### GET /api/app/products
 
 按类型获取在售商品列表（C 端首页主接口）。
@@ -172,33 +152,7 @@
 |------|------|------|
 | id | Long | 商品 ID |
 | name | String | 商品名称 |
-| coverImg | String | 封面图 URL |
-| type | String | `GOODS` / `SERVICE` |
-| supportDelivery | Boolean | 是否支持配送（仅 GOODS 有意义） |
-| price | String | 最低 SKU 原价（如 `"79.00"`） |
-| dealPrice | String | 当前用户的最低 SKU 成交价（已根据会员等级计算） |
-| hasSpec | Boolean | 是否有多规格 |
-
----
-
-#### GET /api/app/categories/{categoryId}/products
-
-获取某分类下的在售商品列表。
-
-**Path 参数**：`categoryId`
-
-**Query 参数**：
-
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| keyword | String | 否 | 搜索关键词（匹配商品名称） |
-
-**响应 data**：`List<Product>`
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | Long | 商品 ID |
-| name | String | 商品名称 |
+| description | String | 商品描述（无则空串） |
 | coverImg | String | 封面图 URL |
 | type | String | `GOODS` / `SERVICE` |
 | supportDelivery | Boolean | 是否支持配送（仅 GOODS 有意义） |
@@ -489,85 +443,7 @@
 
 ---
 
-### 2. 分类管理
-
-> 权限：BOSS + MANAGER
-
-#### GET /api/admin/categories
-
-分类列表（不分页）。
-
-**Query 参数**：
-
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| type | String | 否 | `GOODS` / `SERVICE` |
-
-**响应 data**：`List<CategoryDetail>`
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| id | Long | 分类 ID |
-| name | String | 分类名称 |
-| icon | String \| null | 图标 URL |
-| type | String | `GOODS` / `SERVICE` |
-| sort | Integer | 排序值 |
-| productCount | Integer | 该分类下商品数量 |
-
----
-
-#### POST /api/admin/categories
-
-新增分类。
-
-**请求体**：
-
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| name | String | 是 | 分类名称 |
-| icon | String | 否 | 图标 URL |
-| type | String | 是 | `GOODS` / `SERVICE` |
-| sort | Integer | 否 | 排序值，默认 0 |
-
-**响应 data**：新增的 `CategoryDetail`（同上）
-
----
-
-#### PUT /api/admin/categories/{id}
-
-编辑分类。
-
-**Path 参数**：`id`
-
-**请求体**：
-
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| name | String | 否 | 分类名称 |
-| icon | String | 否 | 图标 URL |
-| sort | Integer | 否 | 排序值 |
-
-**响应 data**：更新后的 `CategoryDetail`
-
-**业务规则**：
-- `type` 不可修改（分类类型创建后不可变）
-
----
-
-#### DELETE /api/admin/categories/{id}
-
-删除分类。
-
-**Path 参数**：`id`
-
-**响应 data**：`null`
-
-**业务规则**：
-- 该分类下有商品时禁止删除，返回 400
-
----
-
-### 3. 商品管理
+### 2. 商品管理
 
 > 权限：BOSS + MANAGER
 
@@ -582,7 +458,6 @@
 | page | Integer | 否 | 页码，默认 1 |
 | size | Integer | 否 | 每页条数，默认 20 |
 | keyword | String | 否 | 搜索关键词（商品名称） |
-| categoryId | Long | 否 | 按分类筛选 |
 | type | String | 否 | `GOODS` / `SERVICE` |
 | status | String | 否 | `ON_SALE` / `OFF_SALE` |
 
@@ -593,7 +468,6 @@
 | id | Long | 商品 ID |
 | name | String | 商品名称 |
 | coverImg | String \| null | 封面图 URL |
-| categoryName | String | 所属分类名称 |
 | type | String | `GOODS` / `SERVICE` |
 | status | String | `ON_SALE` / `OFF_SALE` |
 | supportDelivery | Boolean | 是否支持配送 |
@@ -612,11 +486,10 @@
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| categoryId | Long | 是 | 所属分类 ID |
 | name | String | 是 | 商品名称 |
 | description | String | 否 | 商品描述 |
 | coverImg | String | 否 | 封面图 URL |
-| type | String | 是 | `GOODS` / `SERVICE`（必须与分类 type 一致） |
+| type | String | 是 | `GOODS` / `SERVICE`（固定两类，用品/服务） |
 | supportDelivery | Boolean | 否 | 是否支持配送，默认 false（SERVICE 强制 false） |
 | sort | Integer | 否 | 排序值，默认 0 |
 | skus | List\<SkuInput\> | 否 | SKU 列表 |
@@ -645,8 +518,6 @@
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | id | Long | 商品 ID |
-| categoryId | Long | 分类 ID |
-| categoryName | String | 分类名称 |
 | name | String | 商品名称 |
 | description | String \| null | 描述 |
 | coverImg | String \| null | 封面图 URL |
@@ -724,7 +595,7 @@
 
 ---
 
-### 4. 会员等级管理
+### 3. 会员等级管理
 
 > 权限：BOSS + MANAGER
 
@@ -811,7 +682,7 @@
 
 ---
 
-### 5. 会员管理
+### 4. 会员管理
 
 > 权限：BOSS + MANAGER
 
@@ -894,7 +765,7 @@
 
 ---
 
-### 6. 订单管理
+### 5. 订单管理
 
 > 权限：查看 — 全角色；标记已处理 — 全角色
 
@@ -971,7 +842,7 @@
 
 ---
 
-### 7. 系统配置
+### 6. 系统配置
 
 > 权限：仅 BOSS
 
@@ -1045,7 +916,7 @@
 
 ---
 
-### 8. 账号管理
+### 7. 账号管理
 
 > 权限：仅 BOSS
 
@@ -1152,7 +1023,7 @@
 
 ---
 
-### 9. 数据统计
+### 8. 数据统计
 
 > 权限：BOSS + MANAGER
 
@@ -1222,7 +1093,7 @@
 
 ---
 
-### 10. 操作日志
+### 9. 操作日志
 
 #### GET /api/admin/logs
 
@@ -1254,7 +1125,7 @@
 
 ---
 
-### 11. 文件上传
+### 10. 文件上传
 
 > 权限：BOSS + MANAGER
 
@@ -1287,36 +1158,6 @@
 
 ---
 
-### 12. WebSocket
-
-#### WS /api/admin/ws/orders
-
-新订单实时推送（管理端连接）。
-
-**连接方式**：WebSocket，通过 cookie 鉴权。
-
-**推送消息格式**：
-
-```json
-{
-  "type": "NEW_ORDER",
-  "data": {
-    "orderNo": "PS20260423001",
-    "customerName": "张先生",
-    "customerPhone": "138****8888",
-    "memberLevelSnapshot": "2000档会员",
-    "totalAmount": "220.00",
-    "needDelivery": true,
-    "deliveryDistanceMeter": 2300,
-    "deliveryDistanceText": "2.3km",
-    "createTime": "2026-04-23 14:32:00",
-    "itemSummary": "金毛粮5kg ×1, 中型犬洗澡 ×1"
-  }
-}
-```
-
----
-
 ## 三、接口总览
 
 ### C 端（/api/app）
@@ -1327,9 +1168,7 @@
 | POST | /api/app/auth/login | 登录 | 否 |
 | POST | /api/app/auth/logout | 退出 | 是 |
 | GET | /api/app/auth/check | 检查登录态 | 否 |
-| GET | /api/app/categories | 分类列表 | 否 |
 | GET | /api/app/products | 按类型获取商品列表 | 否 |
-| GET | /api/app/categories/{id}/products | 分类下商品 | 否 |
 | GET | /api/app/products/{id} | 商品详情 | 否 |
 | GET | /api/app/member/profile | 会员信息 | 是 |
 | POST | /api/app/cart/calculate | 购物车价格预览 | 是 |
@@ -1344,10 +1183,6 @@
 | POST | /api/admin/auth/login | 后台登录 | - |
 | POST | /api/admin/auth/logout | 后台退出 | 已登录 |
 | GET | /api/admin/auth/profile | 当前账号信息 | 已登录 |
-| GET | /api/admin/categories | 分类列表 | BOSS/MANAGER |
-| POST | /api/admin/categories | 新增分类 | BOSS/MANAGER |
-| PUT | /api/admin/categories/{id} | 编辑分类 | BOSS/MANAGER |
-| DELETE | /api/admin/categories/{id} | 删除分类 | BOSS/MANAGER |
 | GET | /api/admin/products | 商品列表 | BOSS/MANAGER |
 | POST | /api/admin/products | 新增商品 | BOSS/MANAGER |
 | GET | /api/admin/products/{id} | 商品详情 | BOSS/MANAGER |
@@ -1381,4 +1216,4 @@
 | GET | /api/admin/logs | 操作日志 | ALL |
 | POST | /api/admin/files/upload | 上传图片 | BOSS/MANAGER |
 | DELETE | /api/admin/files/{key} | 删除图片 | BOSS/MANAGER |
-| WS | /api/admin/ws/orders | 新订单推送 | ALL |
+| GET | /api/admin/orders/new-count | 新订单计数（轮询） | ALL |

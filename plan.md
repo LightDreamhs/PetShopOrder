@@ -1,5 +1,16 @@
 LD，需求已经清晰，现在给出完整方案。
 
+> ⚠️ **历史档案（2026-06-30 标注）**
+>
+> 本文件是项目最初的技术方案文档，**部分决策在后续开发中已被推翻**，仅供追溯设计意图，**不反映当前实现**。下方列出的内容已与现状不符，请以 [`modules.md`](modules.md) / [`api.md`](api.md) / 代码实现为权威：
+>
+> - **商品分类子分类**：方案设计了 `category` 表 + 分类 CRUD，实际已下线，仅保留固定 GOODS/SERVICE 两类。
+> - **配送运费**：方案设计为「≤3km 免费 / >3km 不自动计费，标记 `delivery_status=OVER_RANGE` 电话确认」，实际改为按 `system_config` 运费策略（FREE / TIERED 分段）统一计算，无 OVER_RANGE 态。
+> - **FIXED 固定运费策略**：方案设计了 FREE/FIXED/TIERED 三策略，实际仅实现 FREE/TIERED。
+> - **新订单通知兜底**：方案设计用 WebSocket + 浏览器 Notification API，实际改用 15 秒轮询 `GET /api/admin/orders/new-count` + ElNotification。
+> - **企微机器人**：方案仅提企业微信，实际已扩展支持飞书 Webhook。
+> - **短信验证码**：方案设计为自研验证码逻辑，实际改造方向见 [`deploy/sms-pnvs-planning/实施计划.md`](deploy/sms-pnvs-planning/实施计划.md)（阿里云号码认证服务 PNVS）。
+
 ---
 
 # 宠物店微信私域 H5 下单系统 - 技术方案
