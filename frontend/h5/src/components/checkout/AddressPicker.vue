@@ -59,7 +59,8 @@
           <van-tag
             v-for="lb in labelOptions"
             :key="lb"
-            :type="selectedLabel === lb ? 'danger' : 'plain'"
+            :type="selectedLabel === lb ? 'danger' : 'default'"
+            :plain="selectedLabel !== lb"
             size="medium"
             round
             class="label-tag"
