@@ -3,7 +3,7 @@
     <div class="login-bg-pattern"></div>
     <div class="login-header">
       <div class="login-logo-wrap">
-        <span class="login-logo">🐾</span>
+        <img class="login-logo" :src="shopLogo" alt="贰掌柜宠物店" />
       </div>
       <h1 class="login-title">贰掌柜宠物店</h1>
     </div>
@@ -62,6 +62,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { showToast } from 'vant'
 import { useAuthStore } from '@/stores/auth'
 import { useSmsCountdown } from '@/composables/useSmsCountdown'
+import shopLogo from '@/assets/shop-logo.jpg'
 
 const router = useRouter()
 const route = useRoute()
@@ -159,11 +160,14 @@ async function handleLogin() {
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 12px rgba(255, 106, 0, 0.25);
+  overflow: hidden;
 }
 
 .login-logo {
-  font-size: 38px;
-  line-height: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 .login-title {

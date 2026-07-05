@@ -5,7 +5,8 @@
       <div class="home-header">
         <div class="header-left">
           <div class="header-title-row">
-            <h1 class="header-title">🐾 贰掌柜宠物店</h1>
+            <img class="header-logo" :src="shopLogo" alt="贰掌柜宠物店" />
+            <h1 class="header-title">贰掌柜宠物店</h1>
           </div>
           <span v-if="memberStore.isMember" class="member-badge" :class="memberBadgeClass">
             <van-icon name="crown-o" size="10" />
@@ -95,6 +96,7 @@ import CategorySidebar from '@/components/home/CategorySidebar.vue'
 import ProductCard from '@/components/home/ProductCard.vue'
 import CartBar from '@/components/common/CartBar.vue'
 import SkuSelectorPopup from '@/components/product/SkuSelectorPopup.vue'
+import shopLogo from '@/assets/shop-logo.jpg'
 
 const router = useRouter()
 const cartStore = useCartStore()
@@ -233,6 +235,14 @@ function handleDirectQty(product: Product, delta: number) {
   font-weight: 800;
   margin: 0;
   letter-spacing: -0.3px;
+}
+
+.header-logo {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  border-radius: 8px;
+  flex-shrink: 0;
 }
 
 .member-badge {
