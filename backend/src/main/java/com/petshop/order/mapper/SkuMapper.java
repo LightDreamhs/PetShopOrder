@@ -11,6 +11,8 @@ public interface SkuMapper {
 
     List<Sku> selectByProductId(@Param("productId") Long productId);
 
+    Sku selectById(@Param("id") Long id);
+
     int insert(Sku sku);
 
     int insertBatch(@Param("list") List<Sku> list);

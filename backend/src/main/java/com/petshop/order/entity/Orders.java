@@ -26,5 +26,6 @@ public class Orders extends BaseEntity {
     private BigDecimal deliveryLng;
     private Integer deliveryDistance;
     private Integer processed;
+    private Integer cancelled;
     private String remark;
 }

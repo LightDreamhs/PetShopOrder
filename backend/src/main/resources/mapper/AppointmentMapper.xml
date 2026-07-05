@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.petshop.order.mapper.AppointmentMapper">
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO appointment (order_id, user_id, main_product_id, main_sku_id,
+                                 start_time, end_time, total_duration, pet_info, status)
+        VALUES (#{orderId}, #{userId}, #{mainProductId}, #{mainSkuId},
+                #{startTime}, #{endTime}, #{totalDuration}, #{petInfo}, #{status})
+    </insert>
+
+    <select id="selectById" resultType="com.petshop.order.entity.Appointment">
+        SELECT * FROM appointment WHERE id = #{id}
+    </select>
+
+    <select id="selectByOrderId" resultType="com.petshop.order.entity.Appointment">
+        SELECT * FROM appointment WHERE order_id = #{orderId}
+    </select>
+
+    <!-- 批量查多订单的预约信息（用于订单列表补全）。返回 Map，含 orderId -->
+    <select id="selectByOrderIds" resultType="java.util.LinkedHashMap">
+        SELECT a.id              AS id,
+               a.order_id        AS orderId,
+               a.start_time      AS startTime,
+               a.end_time        AS endTime,
+               a.total_duration  AS totalDuration,
+               a.pet_info        AS petInfo,
+               a.status          AS status
+        FROM appointment a
+        WHERE a.order_id IN
+        <foreach collection="orderIds" item="oid" open="(" separator="," close=")">
+            #{oid}
+        </foreach>
+    </select>
+
+    <!-- 单条订单的预约信息（用于订单详情补全） -->
+    <select id="selectMapByOrderId" resultType="java.util.LinkedHashMap">
+        SELECT a.id              AS id,
+               a.order_id        AS orderId,
+               a.start_time      AS startTime,
+               a.end_time        AS endTime,
+               a.total_duration  AS totalDuration,
+               a.pet_info        AS petInfo,
+               a.status          AS status
+        FROM appointment a
+        WHERE a.order_id = #{orderId}
+    </select>
+
+    <!-- 冲突检测核心：数与新预约区间 [start,end) 重叠的、非取消的已有预约数。
+         两区间 [s1,e1) 与 [s2,e2) 重叠 ⟺ s1 < e2 AND s2 < e1 -->
+    <select id="countOverlap" resultType="int">
+        SELECT COUNT(*) FROM appointment
+        WHERE status &lt;&gt; 'CANCELLED'
+          AND start_time &lt; #{end}
+          AND end_time   &gt; #{start}
+    </select>
+
+    <!-- 我的预约列表（含主服务名、订单号、金额等快照），支持按状态筛选 -->
+    <select id="selectPageListByUserId" resultType="java.util.LinkedHashMap">
+        SELECT a.id              AS id,
+               a.order_id        AS orderId,
+               a.main_product_id AS mainProductId,
+               a.main_sku_id     AS mainSkuId,
+               a.start_time      AS startTime,
+               a.end_time        AS endTime,
+               a.total_duration  AS totalDuration,
+               a.pet_info        AS petInfo,
+               a.status          AS status,
+               a.create_time     AS createTime,
+               p.name            AS mainProductName,
+               p.cover_img       AS mainProductCoverImg,
+               s.spec_name       AS mainSkuName,
+               o.order_no        AS orderNo,
+               o.total_amount    AS totalAmount,
+               o.cancelled       AS orderCancelled
+        FROM appointment a
+        JOIN product p ON p.id = a.main_product_id
+        LEFT JOIN sku s ON s.id = a.main_sku_id
+        JOIN orders o ON o.id = a.order_id
+        WHERE a.user_id = #{userId}
+        <if test="status != null and status != ''">
+            AND a.status = #{status}
+        </if>
+        ORDER BY a.start_time DESC, a.id DESC
+    </select>
+
+    <update id="updateStatus">
+        UPDATE appointment SET status = #{status} WHERE id = #{id}
+    </update>
+
+    <!-- Admin 看板：按日期范围（预约开始时间）+ 状态 + 关键词查询。
+         keyword 匹配订单号 / 顾客电话 / 联系人。 -->
+    <select id="selectPageListForAdmin" resultType="java.util.LinkedHashMap">
+        SELECT a.id              AS id,
+               a.order_id        AS orderId,
+               a.main_product_id AS mainProductId,
+               a.main_sku_id     AS mainSkuId,
+               a.start_time      AS startTime,
+               a.end_time        AS endTime,
+               a.total_duration  AS totalDuration,
+               a.pet_info        AS petInfo,
+               a.status          AS status,
+               a.create_time     AS createTime,
+               p.name            AS mainProductName,
+               s.spec_name       AS mainSkuName,
+               o.order_no        AS orderNo,
+               o.customer_phone_snapshot AS customerPhone,
+               o.customer_name   AS customerName,
+               o.total_amount    AS totalAmount,
+               o.cancelled       AS orderCancelled
+        FROM appointment a
+        JOIN product p ON p.id = a.main_product_id
+        LEFT JOIN sku s ON s.id = a.main_sku_id
+        JOIN orders o ON o.id = a.order_id
+        <where>
+            <if test="startTime != null">
+                AND a.start_time &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND a.start_time &lt; #{endTime}
+            </if>
+            <if test="status != null and status != ''">
+                AND a.status = #{status}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (o.order_no LIKE CONCAT('%', #{keyword}, '%')
+                     OR o.customer_phone_snapshot LIKE CONCAT('%', #{keyword}, '%')
+                     OR o.customer_name LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+        ORDER BY a.start_time ASC, a.id ASC
+    </select>
+
+    <!-- 查某区间内非取消的预约（只取 id/start/end，用于时段可约判断） -->
+    <select id="selectActiveInRange" resultType="com.petshop.order.entity.Appointment">
+        SELECT id, start_time, end_time FROM appointment
+        WHERE status &lt;&gt; 'CANCELLED'
+          AND start_time &lt; #{endTime}
+          AND end_time   &gt; #{startTime}
+        ORDER BY start_time ASC
+    </select>
+
+</mapper>

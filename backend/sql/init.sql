@@ -17,12 +17,14 @@ CREATE TABLE IF NOT EXISTS product (
     description      TEXT         NULL,
     cover_img        VARCHAR(255) NULL,
     type             VARCHAR(16)  NOT NULL COMMENT 'GOODS / SERVICE',
+    service_category VARCHAR(16)  NULL COMMENT '服务子类：MAIN_SERVICE 主服务 / ADDON_SERVICE 附加服务。仅 type=SERVICE 时有效，GOODS 为 NULL',
     status           VARCHAR(16)  NOT NULL DEFAULT 'ON_SALE' COMMENT 'ON_SALE / OFF_SALE',
     support_delivery TINYINT      NOT NULL DEFAULT 0 COMMENT '仅 GOODS 有效，SERVICE 强制为 0',
     sort             INT          NOT NULL DEFAULT 0,
     create_time      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_time      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_product_type_status (type, status)
+    INDEX idx_product_type_status (type, status),
+    INDEX idx_product_service_category (type, service_category, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='商品/服务';
 
 -- SKU（多规格）
@@ -32,6 +34,7 @@ CREATE TABLE IF NOT EXISTS sku (
     spec_name    VARCHAR(64)   NOT NULL COMMENT '如 "5kg" / "中型犬（10-25kg）"',
     price        DECIMAL(10,2) NOT NULL COMMENT '原价',
     member_price DECIMAL(10,2) NULL COMMENT '会员价（仅 GOODS 用，SERVICE 忽略）',
+    duration     INT           NULL COMMENT '服务时长（分钟）。仅 SERVICE 的 SKU 用，GOODS 为 NULL',
     stock        INT           NOT NULL DEFAULT 0 COMMENT 'SERVICE 可为 -1 表示不限',
     sort         INT           NOT NULL DEFAULT 0,
     create_time  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -110,6 +113,7 @@ CREATE TABLE IF NOT EXISTS orders (
     delivery_lng            DECIMAL(10,7)  NULL,
     delivery_distance       INT            NULL COMMENT '与店铺直线距离，单位米',
     processed               TINYINT        NOT NULL DEFAULT 0 COMMENT '0 未处理 / 1 已处理',
+    cancelled               TINYINT        NOT NULL DEFAULT 0 COMMENT '0 正常 / 1 已取消（取消预约时联动置 1，商家后台据此识别）',
     remark                  VARCHAR(255)   NULL,
     create_time             DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_time             DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -137,6 +141,38 @@ CREATE TABLE IF NOT EXISTS order_item (
     update_time    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_order_item_order (order_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='订单明细';
+
+-- 主服务-附加服务绑定关系
+CREATE TABLE IF NOT EXISTS main_service_addon (
+    id               BIGINT AUTO_INCREMENT PRIMARY KEY,
+    main_product_id  BIGINT NOT NULL COMMENT '主服务 product.id（service_category=MAIN_SERVICE）',
+    addon_product_id BIGINT NOT NULL COMMENT '附加服务 product.id（service_category=ADDON_SERVICE）',
+    sort             INT    NOT NULL DEFAULT 0,
+    create_time      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE INDEX uk_main_addon (main_product_id, addon_product_id),
+    INDEX idx_addon_main (addon_product_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='主服务-附加服务绑定';
+
+-- 服务预约记录（核心：与 orders 一对一，order_id 关联）
+CREATE TABLE IF NOT EXISTS appointment (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    order_id        BIGINT      NOT NULL COMMENT '关联 orders.id（一笔预约对应一个订单）',
+    user_id         BIGINT      NOT NULL COMMENT 'app_user.id',
+    main_product_id BIGINT      NOT NULL COMMENT '主服务 product.id 快照',
+    main_sku_id     BIGINT      NOT NULL COMMENT '主服务 sku.id 快照',
+    start_time      DATETIME    NOT NULL COMMENT '预约开始时间（顾客到店/服务开始）',
+    end_time        DATETIME    NOT NULL COMMENT 'start_time + total_duration 分钟',
+    total_duration  INT         NOT NULL COMMENT '总占用时长（分钟）= 主服务 + Σ附加服务',
+    pet_info        VARCHAR(255) NULL COMMENT '宠物信息（文本：名字/种类/体重/性格等）',
+    status          VARCHAR(16) NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING 待服务 / SERVICED 已完成 / CANCELLED 已取消',
+    create_time     DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time     DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE INDEX uk_appointment_order (order_id),
+    INDEX idx_appointment_user (user_id),
+    INDEX idx_appointment_status_time (status, start_time, end_time),
+    INDEX idx_appointment_time_range (start_time, end_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='服务预约';
 
 -- ============================================
 -- 系统
@@ -178,9 +214,9 @@ CREATE TABLE IF NOT EXISTS system_config (
     delivery_min_amount  DECIMAL(10,2)  NOT NULL DEFAULT 20.00 COMMENT '起送价',
     delivery_fee_type    VARCHAR(16)    NOT NULL DEFAULT 'FREE' COMMENT 'FREE / TIERED',
     fixed_delivery_fee   DECIMAL(10,2)  NOT NULL DEFAULT 0.00 COMMENT '保留字段（当前不使用）',
-    order_time_enabled   TINYINT        NOT NULL DEFAULT 0 COMMENT '预留：接单时段开关',
-    order_start_time     TIME           NULL COMMENT '预留：接单开始时间',
-    order_end_time       TIME           NULL COMMENT '预留：接单结束时间',
+    order_time_enabled   TINYINT        NOT NULL DEFAULT 0 COMMENT '预约营业时段开关：1=限制预约开始时间在 order_start/end_time 内；实物商品下单不受此字段约束',
+    order_start_time     TIME           NULL COMMENT '可预约开始时间下限（如 09:00）',
+    order_end_time       TIME           NULL COMMENT '可预约开始时间上限（如 21:00，开区间）',
     qywx_webhook_url_enc VARBINARY(1024) NULL COMMENT '企微 Webhook URL 加密存储',
     has_qywx_webhook     TINYINT        NOT NULL DEFAULT 0 COMMENT '是否已配置 Webhook',
     payment_qr_url       VARCHAR(255)   NULL COMMENT '收款二维码图片地址',
@@ -248,51 +284,51 @@ INSERT INTO system_config_delivery_tier (config_id, min_distance_km, max_distanc
 (1, 4.00, 6.00, 8.00, 3);
 
 -- 商品 + SKU
-INSERT INTO product (id, name, type, status, support_delivery, sort) VALUES
-(1,  '皇家金毛成犬粮',     'GOODS',   'ON_SALE', 1, 1),
-(2,  '伯纳天纯中大型犬粮', 'GOODS',   'ON_SALE', 1, 2),
-(3,  '皇家英短成猫粮',     'GOODS',   'ON_SALE', 1, 1),
-(4,  '渴望鸡肉猫粮',       'GOODS',   'ON_SALE', 1, 2),
-(5,  '疯狂小狗鸡肉干',     'GOODS',   'ON_SALE', 1, 1),
-(6,  '猫条零食',           'GOODS',   'ON_SALE', 1, 2),
-(7,  '宠物尿垫',           'GOODS',   'ON_SALE', 1, 1),
-(8,  '宠物牵引绳',         'GOODS',   'ON_SALE', 1, 2),
-(9,  '洗澡服务',           'SERVICE', 'ON_SALE', 0, 1),
-(10, '药浴服务',           'SERVICE', 'ON_SALE', 0, 2),
-(11, '美容修剪',           'SERVICE', 'ON_SALE', 0, 1),
-(12, '猫洗澡+修剪',        'SERVICE', 'ON_SALE', 0, 2);
+INSERT INTO product (id, name, type, service_category, status, support_delivery, sort) VALUES
+(1,  '皇家金毛成犬粮',     'GOODS',   NULL,           'ON_SALE', 1, 1),
+(2,  '伯纳天纯中大型犬粮', 'GOODS',   NULL,           'ON_SALE', 1, 2),
+(3,  '皇家英短成猫粮',     'GOODS',   NULL,           'ON_SALE', 1, 1),
+(4,  '渴望鸡肉猫粮',       'GOODS',   NULL,           'ON_SALE', 1, 2),
+(5,  '疯狂小狗鸡肉干',     'GOODS',   NULL,           'ON_SALE', 1, 1),
+(6,  '猫条零食',           'GOODS',   NULL,           'ON_SALE', 1, 2),
+(7,  '宠物尿垫',           'GOODS',   NULL,           'ON_SALE', 1, 1),
+(8,  '宠物牵引绳',         'GOODS',   NULL,           'ON_SALE', 1, 2),
+(9,  '洗澡服务',           'SERVICE', 'MAIN_SERVICE', 'ON_SALE', 0, 1),
+(10, '药浴服务',           'SERVICE', 'MAIN_SERVICE', 'ON_SALE', 0, 2),
+(11, '美容修剪',           'SERVICE', 'MAIN_SERVICE', 'ON_SALE', 0, 1),
+(12, '猫洗澡+修剪',        'SERVICE', 'MAIN_SERVICE', 'ON_SALE', 0, 2);
 
-INSERT INTO sku (product_id, spec_name, price, member_price, stock, sort) VALUES
+INSERT INTO sku (product_id, spec_name, price, member_price, duration, stock, sort) VALUES
 -- 狗粮
-(1,  '15kg',  '368.00', '298.00', -1, 1),
-(1,  '3kg',   '89.00',  '72.00',  -1, 2),
-(2,  '10kg',  '199.00', '168.00', -1, 1),
+(1,  '15kg',  '368.00', '298.00', NULL, -1, 1),
+(1,  '3kg',   '89.00',  '72.00',  NULL, -1, 2),
+(2,  '10kg',  '199.00', '168.00', NULL, -1, 1),
 -- 猫粮
-(3,  '10kg',  '329.00', '269.00', -1, 1),
-(3,  '2kg',   '79.00',  '65.00',  -1, 2),
-(4,  '5.4kg', '469.00', '399.00', -1, 1),
-(4,  '1.8kg', '169.00', '145.00', -1, 2),
+(3,  '10kg',  '329.00', '269.00', NULL, -1, 1),
+(3,  '2kg',   '79.00',  '65.00',  NULL, -1, 2),
+(4,  '5.4kg', '469.00', '399.00', NULL, -1, 1),
+(4,  '1.8kg', '169.00', '145.00', NULL, -1, 2),
 -- 零食
-(5,  '500g',  '39.90',  '32.90',  -1, 1),
-(6,  '15支装', '25.00',  '19.90',  -1, 1),
-(6,  '30支装', '45.00',  '36.00',  -1, 2),
+(5,  '500g',  '39.90',  '32.90',  NULL, -1, 1),
+(6,  '15支装', '25.00',  '19.90',  NULL, -1, 1),
+(6,  '30支装', '45.00',  '36.00',  NULL, -1, 2),
 -- 用品
-(7,  '60×45cm 50片', '35.00', '28.00', -1, 1),
-(7,  '60×60cm 30片', '32.00', '26.00', -1, 2),
-(8,  'S号（小型犬）', '29.00', '24.00', -1, 1),
-(8,  'M号（中型犬）', '35.00', '28.00', -1, 2),
-(8,  'L号（大型犬）', '42.00', '35.00', -1, 3),
--- 洗护
-(9,  '小型犬（<10kg）',  '79.00',  NULL, -1, 1),
-(9,  '中型犬（10-25kg）', '99.00', NULL, -1, 2),
-(9,  '大型犬（>25kg）',  '129.00', NULL, -1, 3),
-(10, '小型犬',   '119.00', NULL, -1, 1),
-(10, '中大型犬', '159.00', NULL, -1, 2),
+(7,  '60×45cm 50片', '35.00', '28.00', NULL, -1, 1),
+(7,  '60×60cm 30片', '32.00', '26.00', NULL, -1, 2),
+(8,  'S号（小型犬）', '29.00', '24.00', NULL, -1, 1),
+(8,  'M号（中型犬）', '35.00', '28.00', NULL, -1, 2),
+(8,  'L号（大型犬）', '42.00', '35.00', NULL, -1, 3),
+-- 洗护（duration 单位：分钟）
+(9,  '小型犬（<10kg）',  '79.00',  NULL, 60,  -1, 1),
+(9,  '中型犬（10-25kg）', '99.00', NULL, 75,  -1, 2),
+(9,  '大型犬（>25kg）',  '129.00', NULL, 90,  -1, 3),
+(10, '小型犬',   '119.00', NULL, 75,  -1, 1),
+(10, '中大型犬', '159.00', NULL, 90,  -1, 2),
 -- 美容
-(11, '基础护理', '139.00', NULL, -1, 1),
-(11, '全套精修', '199.00', NULL, -1, 2),
-(12, '短毛猫',   '129.00', NULL, -1, 1),
-(12, '长毛猫',   '169.00', NULL, -1, 2);
+(11, '基础护理', '139.00', NULL, 90,  -1, 1),
+(11, '全套精修', '199.00', NULL, 110, -1, 2),
+(12, '短毛猫',   '129.00', NULL, 60,  -1, 1),
+(12, '长毛猫',   '169.00', NULL, 75,  -1, 2);
 
 -- 会员等级
 INSERT INTO member_level (id, name, discount_rate, sort, status) VALUES

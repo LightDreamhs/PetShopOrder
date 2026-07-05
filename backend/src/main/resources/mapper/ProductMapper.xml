@@ -9,6 +9,7 @@
         <result property="description" column="description"/>
         <result property="coverImg" column="cover_img"/>
         <result property="type" column="type"/>
+        <result property="serviceCategory" column="service_category"/>
         <result property="status" column="status"/>
         <result property="supportDelivery" column="support_delivery"/>
         <result property="sort" column="sort"/>
@@ -25,6 +26,7 @@
             <result property="specName" column="sku_spec_name"/>
             <result property="price" column="sku_price"/>
             <result property="memberPrice" column="sku_member_price"/>
+            <result property="duration" column="sku_duration"/>
             <result property="stock" column="sku_stock"/>
             <result property="sort" column="sku_sort"/>
             <result property="createTime" column="sku_create_time"/>
@@ -58,6 +60,7 @@
                s.spec_name AS sku_spec_name,
                s.price AS sku_price,
                s.member_price AS sku_member_price,
+               s.duration AS sku_duration,
                s.stock AS sku_stock,
                s.sort AS sku_sort,
                s.create_time AS sku_create_time,
@@ -69,8 +72,8 @@
     </select>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO product (name, description, cover_img, type, status, support_delivery, sort)
-        VALUES (#{name}, #{description}, #{coverImg}, #{type}, #{status}, #{supportDelivery}, #{sort})
+        INSERT INTO product (name, description, cover_img, type, service_category, status, support_delivery, sort)
+        VALUES (#{name}, #{description}, #{coverImg}, #{type}, #{serviceCategory}, #{status}, #{supportDelivery}, #{sort})
     </insert>
 
     <update id="updateById">
@@ -79,6 +82,7 @@
             description = #{description},
             cover_img = #{coverImg},
             type = #{type},
+            service_category = #{serviceCategory},
             support_delivery = #{supportDelivery},
             sort = #{sort}
         WHERE id = #{id}

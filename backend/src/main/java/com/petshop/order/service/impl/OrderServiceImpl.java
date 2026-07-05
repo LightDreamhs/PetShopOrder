@@ -9,6 +9,7 @@ import com.petshop.order.entity.*;
 import com.petshop.order.mapper.MemberLevelMapper;
 import com.petshop.order.mapper.MemberMapper;
 import com.petshop.order.mapper.MemberPhoneMapper;
+import com.petshop.order.mapper.AppointmentMapper;
 import com.petshop.order.mapper.OrderItemMapper;
 import com.petshop.order.mapper.OrdersMapper;
 import com.petshop.order.mapper.ProductMapper;
@@ -37,6 +38,7 @@ public class OrderServiceImpl implements OrderService {
 
     private final OrdersMapper ordersMapper;
     private final OrderItemMapper orderItemMapper;
+    private final AppointmentMapper appointmentMapper;
     private final AppAuthService appAuthService;
     private final PriceCalculationService priceCalculationService;
     private final DeliveryService deliveryService;
@@ -52,6 +54,12 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> createOrder(Map<String, Object> req) {
+        return createOrder(req, false);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> createOrder(Map<String, Object> req, boolean suppressNotification) {
         AppUser currentUser = appAuthService.getCurrentUser();
         Long userId = currentUser.getId();
         String phone = currentUser.getPhone();
@@ -171,6 +179,7 @@ public class OrderServiceImpl implements OrderService {
         order.setDeliveryLng(deliveryLngBd);
         order.setDeliveryDistance(deliveryDistance);
         order.setProcessed(0);
+        order.setCancelled(0);
         order.setRemark(remark);
         ordersMapper.insert(order);
 
@@ -191,12 +200,15 @@ public class OrderServiceImpl implements OrderService {
         }
         orderItemMapper.insertBatch(orderItems);
 
-        try {
-            notificationService.sendNewOrderNotification(order, orderItems);
-        } catch (Exception ignored) {
+        if (!suppressNotification) {
+            try {
+                notificationService.sendNewOrderNotification(order, orderItems);
+            } catch (Exception ignored) {
+            }
         }
 
         Map<String, Object> result = new LinkedHashMap<>();
+        result.put("id", order.getId());
         result.put("orderNo", orderNo);
         result.put("totalAmount", totalAmount.toPlainString());
         result.put("goodsAmount", goodsAmount.toPlainString());
@@ -213,6 +225,19 @@ public class OrderServiceImpl implements OrderService {
         List<Orders> orders = ordersMapper.selectPageListByUserId(userId);
         PageInfo<Orders> pageInfo = new PageInfo<>(orders);
 
+        // 批量查预约信息，按 orderId 分组（一个订单最多一条预约）
+        Map<Long, Map<String, Object>> apptByOrderId = new HashMap<>();
+        if (!pageInfo.getList().isEmpty()) {
+            List<Long> orderIds = pageInfo.getList().stream().map(Orders::getId).collect(Collectors.toList());
+            List<Map<String, Object>> appts = appointmentMapper.selectByOrderIds(orderIds);
+            for (Map<String, Object> a : appts) {
+                Object oid = a.get("orderId");
+                if (oid != null) {
+                    apptByOrderId.put(((Number) oid).longValue(), a);
+                }
+            }
+        }
+
         List<Map<String, Object>> list = pageInfo.getList().stream().map(order -> {
             List<OrderItem> items = orderItemMapper.selectByOrderId(order.getId());
             String summaryText = buildSummaryText(items);
@@ -224,9 +249,12 @@ public class OrderServiceImpl implements OrderService {
             m.put("goodsAmount", order.getGoodsAmount().toPlainString());
             m.put("serviceAmount", order.getServiceAmount().toPlainString());
             m.put("needDelivery", order.getNeedDelivery() == 1);
+            m.put("cancelled", order.getCancelled() != null && order.getCancelled() == 1);
             m.put("createTime", order.getCreateTime() != null ? order.getCreateTime().format(FMT) : null);
             m.put("itemCount", items.size());
             m.put("summaryText", summaryText);
+            // 预约信息（非预约订单为 null）
+            m.put("appointment", formatAppointmentMap(apptByOrderId.get(order.getId())));
             return m;
         }).collect(Collectors.toList());
 
@@ -338,6 +366,9 @@ public class OrderServiceImpl implements OrderService {
         m.put("createTime", order.getCreateTime() != null ? order.getCreateTime().format(FMT) : null);
         m.put("items", itemMaps);
         m.put("processed", order.getProcessed() != null && order.getProcessed() == 1);
+        m.put("cancelled", order.getCancelled() != null && order.getCancelled() == 1);
+        // 预约信息（非预约订单为 null）
+        m.put("appointment", formatAppointmentMap(appointmentMapper.selectMapByOrderId(order.getId())));
 
         if (isAdmin) {
             m.put("customerPhoneRaw", order.getCustomerPhoneSnapshot());
@@ -345,6 +376,26 @@ public class OrderServiceImpl implements OrderService {
             m.put("deliveryLng", order.getDeliveryLng());
         }
         return m;
+    }
+
+    /**
+     * 把预约查询返回的 Map 格式化为前端友好的结构：LocalDateTime → 字符串。
+     * 输入为 null（非预约订单）时返回 null。
+     */
+    private Map<String, Object> formatAppointmentMap(Map<String, Object> raw) {
+        if (raw == null) {
+            return null;
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("id", raw.get("id"));
+        Object start = raw.get("startTime");
+        Object end = raw.get("endTime");
+        result.put("startTime", start != null ? start.toString() : null);
+        result.put("endTime", end != null ? end.toString() : null);
+        result.put("totalDuration", raw.get("totalDuration"));
+        result.put("petInfo", raw.get("petInfo"));
+        result.put("status", raw.get("status"));
+        return result;
     }
 
     private String buildSummaryText(List<OrderItem> items) {

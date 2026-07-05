@@ -8,6 +8,7 @@ import com.petshop.order.entity.Orders;
 import com.petshop.order.entity.SystemConfig;
 import com.petshop.order.mapper.SystemConfigMapper;
 import com.petshop.order.service.NotificationService;
+import com.petshop.order.service.dto.AppointmentNotifyInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -54,6 +55,12 @@ public class NotificationServiceImpl implements NotificationService {
     @Async
     @Override
     public void sendNewOrderNotification(Orders order, List<OrderItem> items) {
+        sendNewOrderNotification(order, items, null);
+    }
+
+    @Async
+    @Override
+    public void sendNewOrderNotification(Orders order, List<OrderItem> items, AppointmentNotifyInfo appointmentInfo) {
         try {
             SystemConfig config = systemConfigMapper.selectById(1L);
             if (config == null || config.getHasQywxWebhook() == null || config.getHasQywxWebhook() != 1) {
@@ -93,10 +100,10 @@ public class NotificationServiceImpl implements NotificationService {
             String jsonBody;
             if (isFeishu(webhookUrl)) {
                 jsonBody = buildFeishuCard(order, phone, customerName, memberInfo,
-                        deliveryInfo, deliveryAddress, goodsList, remark, timeStr);
+                        deliveryInfo, deliveryAddress, goodsList, remark, timeStr, appointmentInfo);
             } else {
                 jsonBody = buildQywxMarkdown(order, phone, customerName, memberInfo,
-                        deliveryInfo, deliveryAddress, goodsList, remark, timeStr);
+                        deliveryInfo, deliveryAddress, goodsList, remark, timeStr, appointmentInfo);
             }
             if (jsonBody == null) {
                 return;
@@ -146,14 +153,14 @@ public class NotificationServiceImpl implements NotificationService {
     private String buildFeishuCard(Orders order, String phone, String customerName,
                                     String memberInfo, String deliveryInfo,
                                     String deliveryAddress, String goodsList,
-                                    String remark, String timeStr) {
+                                    String remark, String timeStr, AppointmentNotifyInfo appointmentInfo) {
         try {
             Map<String, Object> header = new LinkedHashMap<>();
             Map<String, Object> title = new LinkedHashMap<>();
             title.put("tag", "plain_text");
-            title.put("content", "🎉 新订单通知");
+            title.put("content", appointmentInfo != null ? "📅 新预约通知" : "🎉 新订单通知");
             header.put("title", title);
-            header.put("template", "turquoise");
+            header.put("template", appointmentInfo != null ? "orange" : "turquoise");
 
             StringBuilder md = new StringBuilder();
             md.append("**订单号**: ").append(order.getOrderNo()).append("\n");
@@ -161,6 +168,15 @@ public class NotificationServiceImpl implements NotificationService {
             md.append("**电话**: ").append(phone != null ? phone : "未知").append("\n");
             md.append("**会员**: ").append(memberInfo).append("\n");
             md.append("**金额**: ¥").append(order.getTotalAmount().toPlainString()).append("\n");
+            // 预约信息块（仅预约订单展示）
+            if (appointmentInfo != null) {
+                md.append("**预约时间**: ").append(appointmentInfo.getStartTime().format(FMT))
+                        .append(" ~ ").append(appointmentInfo.getEndTime().format(FMT))
+                        .append("（").append(appointmentInfo.getTotalDuration()).append("分钟）\n");
+                if (appointmentInfo.getPetInfo() != null && !appointmentInfo.getPetInfo().isEmpty()) {
+                    md.append("**宠物**: ").append(appointmentInfo.getPetInfo()).append("\n");
+                }
+            }
             md.append("**配送**: ").append(deliveryInfo);
             if (order.getNeedDelivery() == 1 && deliveryAddress != null && !deliveryAddress.isEmpty()) {
                 md.append("\n**地址**: ").append(deliveryAddress);
@@ -197,15 +213,24 @@ public class NotificationServiceImpl implements NotificationService {
     private String buildQywxMarkdown(Orders order, String phone, String customerName,
                                       String memberInfo, String deliveryInfo,
                                       String deliveryAddress, String goodsList,
-                                      String remark, String timeStr) {
+                                      String remark, String timeStr, AppointmentNotifyInfo appointmentInfo) {
         try {
             StringBuilder content = new StringBuilder();
-            content.append("### 🎉 新订单通知\n");
+            content.append(appointmentInfo != null ? "### 📅 新预约通知\n" : "### 🎉 新订单通知\n");
             content.append("**订单号**: ").append(order.getOrderNo()).append("\n");
             content.append("**联系人**: ").append(customerName != null ? customerName : "未填写").append("\n");
             content.append("**电话**: ").append(phone != null ? phone : "未知").append("\n");
             content.append("**会员**: ").append(memberInfo).append("\n");
             content.append("**金额**: ¥").append(order.getTotalAmount().toPlainString()).append("\n");
+            // 预约信息块（仅预约订单展示）
+            if (appointmentInfo != null) {
+                content.append("**预约时间**: ").append(appointmentInfo.getStartTime().format(FMT))
+                        .append(" ~ ").append(appointmentInfo.getEndTime().format(FMT))
+                        .append("（").append(appointmentInfo.getTotalDuration()).append("分钟）\n");
+                if (appointmentInfo.getPetInfo() != null && !appointmentInfo.getPetInfo().isEmpty()) {
+                    content.append("**宠物**: ").append(appointmentInfo.getPetInfo()).append("\n");
+                }
+            }
             content.append("**配送**: ").append(deliveryInfo);
             if (order.getNeedDelivery() == 1 && deliveryAddress != null && !deliveryAddress.isEmpty()) {
                 content.append("\n**地址**: ").append(deliveryAddress);

@@ -45,6 +45,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public Product create(Product product) {
+        normalizeServiceCategory(product);
         if ("SERVICE".equals(product.getType())) {
             product.setSupportDelivery(0);
         }
@@ -72,6 +73,7 @@ public class ProductServiceImpl implements ProductService {
             throw new BusinessException("商品不存在");
         }
         product.setId(id);
+        normalizeServiceCategory(product);
         if ("SERVICE".equals(product.getType())) {
             product.setSupportDelivery(0);
         }
@@ -89,6 +91,20 @@ public class ProductServiceImpl implements ProductService {
         }
 
         return getDetail(id);
+    }
+
+    /**
+     * 规整服务子类：GOODS 强制 null；SERVICE 缺省 MAIN_SERVICE；其他类型清空。
+     */
+    private void normalizeServiceCategory(Product product) {
+        if ("SERVICE".equals(product.getType())) {
+            String cat = product.getServiceCategory();
+            if (cat == null || cat.isEmpty()) {
+                product.setServiceCategory("MAIN_SERVICE");
+            }
+        } else {
+            product.setServiceCategory(null);
+        }
     }
 
     @Override

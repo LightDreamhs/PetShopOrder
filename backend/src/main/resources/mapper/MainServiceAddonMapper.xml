@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.petshop.order.mapper.MainServiceAddonMapper">
+
+    <!-- 查某主服务绑定的附加服务：JOIN product，并取每个附加服务的默认 SKU（sort 最小）的价格/时长 -->
+    <select id="selectAddonsByMainProduct" resultType="java.util.LinkedHashMap">
+        SELECT p.id              AS productId,
+               p.name            AS name,
+               p.cover_img       AS coverImg,
+               p.description     AS description,
+               sa.sort           AS sort,
+               def.id            AS skuId,
+               def.spec_name     AS skuName,
+               def.price         AS price,
+               def.duration      AS duration
+        FROM main_service_addon sa
+        JOIN product p ON p.id = sa.addon_product_id
+        LEFT JOIN (
+            SELECT s.*
+            FROM sku s
+            INNER JOIN (
+                SELECT product_id, MIN(sort) AS min_sort FROM sku GROUP BY product_id
+            ) m ON m.product_id = s.product_id AND m.min_sort = s.sort
+        ) def ON def.product_id = p.id
+        WHERE sa.main_product_id = #{mainProductId}
+          AND p.status = 'ON_SALE'
+        ORDER BY sa.sort ASC, p.id ASC
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO main_service_addon (main_product_id, addon_product_id, sort)
+        VALUES (#{mainProductId}, #{addonProductId}, #{sort})
+    </insert>
+
+    <!-- Admin 编辑回显：某主服务已绑定的附加服务 id 列表 -->
+    <select id="selectAddonIdsByMainProductId" resultType="java.lang.Long">
+        SELECT addon_product_id FROM main_service_addon
+        WHERE main_product_id = #{mainProductId}
+        ORDER BY sort ASC, addon_product_id ASC
+    </select>
+
+    <delete id="deleteByMainProductId">
+        DELETE FROM main_service_addon WHERE main_product_id = #{mainProductId}
+    </delete>
+
+    <!-- 批量插入绑定（覆盖式更新时配合 deleteByMainProductId 使用） -->
+    <insert id="insertBatch">
+        INSERT INTO main_service_addon (main_product_id, addon_product_id, sort)
+        VALUES
+        <foreach collection="addonProductIds" item="aid" index="idx" separator=",">
+            (#{mainProductId}, #{aid}, #{idx})
+        </foreach>
+    </insert>
+
+    <delete id="deleteByBoth">
+        DELETE FROM main_service_addon
+        WHERE main_product_id = #{mainProductId} AND addon_product_id = #{addonProductId}
+    </delete>
+
+    <select id="existsByBoth" resultType="int">
+        SELECT COUNT(*) FROM main_service_addon
+        WHERE main_product_id = #{mainProductId} AND addon_product_id = #{addonProductId}
+    </select>
+
+</mapper>

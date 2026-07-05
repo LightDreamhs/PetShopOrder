@@ -6,6 +6,7 @@ import com.petshop.order.common.PageResult;
 import com.petshop.order.common.R;
 import com.petshop.order.entity.Product;
 import com.petshop.order.entity.Sku;
+import com.petshop.order.mapper.MainServiceAddonMapper;
 import com.petshop.order.service.ProductService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -28,6 +29,7 @@ public class AdminProductController {
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     private final ProductService productService;
+    private final MainServiceAddonMapper mainServiceAddonMapper;
 
     private void checkManager() {
         if (!StpUtil.hasRole("BOSS") && !StpUtil.hasRole("MANAGER")) {
@@ -66,6 +68,8 @@ public class AdminProductController {
         checkManager();
         Product product = toEntity(req);
         Product saved = productService.create(product);
+        // 主服务：覆盖式更新附加服务绑定
+        replaceAddons(saved.getId(), req);
         return R.ok(toDetailMap(saved));
     }
 
@@ -74,7 +78,24 @@ public class AdminProductController {
         checkManager();
         Product product = toEntity(req);
         Product updated = productService.update(id, product);
+        // 主服务：覆盖式更新附加服务绑定（非主服务清空其作为 main 的绑定）
+        replaceAddons(updated.getId(), req);
         return R.ok(toDetailMap(updated));
+    }
+
+    /**
+     * 覆盖式更新某主服务的附加服务绑定（先删后插）。
+     * 仅当 type=SERVICE 且 serviceCategory=MAIN_SERVICE 时生效。
+     */
+    private void replaceAddons(Long productId, ProductRequest req) {
+        if (!"SERVICE".equals(req.getType()) || !"MAIN_SERVICE".equals(req.getServiceCategory())) {
+            return;
+        }
+        List<Long> addonIds = req.getAddonProductIds() != null ? req.getAddonProductIds() : List.of();
+        mainServiceAddonMapper.deleteByMainProductId(productId);
+        if (!addonIds.isEmpty()) {
+            mainServiceAddonMapper.insertBatch(productId, addonIds);
+        }
     }
 
     @PutMapping("/{id}/status")
@@ -97,6 +118,13 @@ public class AdminProductController {
         p.setDescription(req.getDescription());
         p.setCoverImg(req.getCoverImg());
         p.setType(req.getType());
+        // 服务子类：GOODS 强制 null；SERVICE 缺省 MAIN_SERVICE
+        if ("GOODS".equals(req.getType())) {
+            p.setServiceCategory(null);
+        } else if ("SERVICE".equals(req.getType())) {
+            String cat = req.getServiceCategory();
+            p.setServiceCategory(cat != null && !cat.isEmpty() ? cat : "MAIN_SERVICE");
+        }
         p.setSupportDelivery(req.getSupportDelivery() != null && req.getSupportDelivery() ? 1 : 0);
         p.setSort(req.getSort() != null ? req.getSort() : 0);
         if (req.getSkus() != null) {
@@ -110,6 +138,7 @@ public class AdminProductController {
         sku.setSpecName(s.getSpecName());
         sku.setPrice(s.getPrice());
         sku.setMemberPrice(s.getMemberPrice());
+        sku.setDuration(s.getDuration());
         sku.setStock(-1);
         sku.setSort(s.getSort() != null ? s.getSort() : 0);
         return sku;
@@ -121,6 +150,7 @@ public class AdminProductController {
         m.put("name", p.getName());
         m.put("coverImg", p.getCoverImg() != null ? p.getCoverImg() : "");
         m.put("type", p.getType());
+        m.put("serviceCategory", p.getServiceCategory() != null ? p.getServiceCategory() : "");
         m.put("status", p.getStatus());
         m.put("supportDelivery", p.getSupportDelivery() != null && p.getSupportDelivery() == 1);
         m.put("sort", p.getSort());
@@ -137,11 +167,14 @@ public class AdminProductController {
         m.put("description", p.getDescription() != null ? p.getDescription() : "");
         m.put("coverImg", p.getCoverImg() != null ? p.getCoverImg() : "");
         m.put("type", p.getType());
+        m.put("serviceCategory", p.getServiceCategory() != null ? p.getServiceCategory() : "");
         m.put("status", p.getStatus());
         m.put("supportDelivery", p.getSupportDelivery() != null && p.getSupportDelivery() == 1);
         m.put("sort", p.getSort());
         m.put("createTime", p.getCreateTime() != null ? p.getCreateTime().format(FMT) : "");
         m.put("skus", p.getSkus() != null ? p.getSkus().stream().map(this::toSkuMap).toList() : List.of());
+        // 主服务：回显已绑定的附加服务 id 列表
+        m.put("addonProductIds", mainServiceAddonMapper.selectAddonIdsByMainProductId(p.getId()));
         return m;
     }
 
@@ -151,6 +184,7 @@ public class AdminProductController {
                 "specName", s.getSpecName(),
                 "price", s.getPrice().toPlainString(),
                 "memberPrice", s.getMemberPrice() != null ? s.getMemberPrice().toPlainString() : "",
+                "duration", s.getDuration() != null ? s.getDuration() : 0,
                 "sort", s.getSort()
         );
     }
@@ -163,10 +197,13 @@ public class AdminProductController {
         private String coverImg;
         @NotBlank
         private String type;
+        private String serviceCategory;
         private Boolean supportDelivery;
         private Integer sort;
         @Valid
         private List<SkuRequest> skus;
+        /** 主服务绑定的附加服务 product id 列表（仅 type=SERVICE&serviceCategory=MAIN_SERVICE 时生效） */
+        private List<Long> addonProductIds;
     }
 
     @Data
@@ -176,6 +213,7 @@ public class AdminProductController {
         @NotNull
         private BigDecimal price;
         private BigDecimal memberPrice;
+        private Integer duration;
         private Integer sort;
     }
 

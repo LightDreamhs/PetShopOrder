@@ -7,16 +7,20 @@
         SELECT * FROM sku WHERE product_id = #{productId} ORDER BY sort ASC, id ASC
     </select>
 
+    <select id="selectById" resultType="com.petshop.order.entity.Sku">
+        SELECT * FROM sku WHERE id = #{id}
+    </select>
+
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO sku (product_id, spec_name, price, member_price, stock, sort)
-        VALUES (#{productId}, #{specName}, #{price}, #{memberPrice}, #{stock}, #{sort})
+        INSERT INTO sku (product_id, spec_name, price, member_price, duration, stock, sort)
+        VALUES (#{productId}, #{specName}, #{price}, #{memberPrice}, #{duration}, #{stock}, #{sort})
     </insert>
 
     <insert id="insertBatch">
-        INSERT INTO sku (product_id, spec_name, price, member_price, stock, sort)
+        INSERT INTO sku (product_id, spec_name, price, member_price, duration, stock, sort)
         VALUES
         <foreach collection="list" item="item" separator=",">
-            (#{item.productId}, #{item.specName}, #{item.price}, #{item.memberPrice}, #{item.stock}, #{item.sort})
+            (#{item.productId}, #{item.specName}, #{item.price}, #{item.memberPrice}, #{item.duration}, #{item.stock}, #{item.sort})
         </foreach>
     </insert>
 

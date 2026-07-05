@@ -14,6 +14,7 @@ public class Sku extends BaseEntity {
     private String specName;
     private BigDecimal price;
     private BigDecimal memberPrice;
+    private Integer duration;
     private Integer stock;
     private Integer sort;
 }

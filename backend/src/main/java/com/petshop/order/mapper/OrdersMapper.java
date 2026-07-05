@@ -23,5 +23,7 @@ public interface OrdersMapper {
 
     int updateProcessed(@Param("id") Long id, @Param("processed") Integer processed);
 
+    int updateCancelled(@Param("id") Long id, @Param("cancelled") Integer cancelled);
+
     int countNewOrders(@Param("since") String since);
 }

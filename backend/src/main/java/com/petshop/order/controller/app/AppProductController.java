@@ -75,6 +75,7 @@ public class AppProductController {
                 "description", product.getDescription() != null ? product.getDescription() : "",
                 "coverImg", product.getCoverImg() != null ? product.getCoverImg() : "",
                 "type", product.getType(),
+                "serviceCategory", product.getServiceCategory() != null ? product.getServiceCategory() : "",
                 "supportDelivery", product.getSupportDelivery() != null && product.getSupportDelivery() == 1,
                 "price", price,
                 "dealPrice", dealPrice,
@@ -82,6 +83,7 @@ public class AppProductController {
                         "id", s.getId(),
                         "specName", s.getSpecName(),
                         "price", s.getPrice().toPlainString(),
+                        "duration", s.getDuration() != null ? s.getDuration() : 0,
                         "dealPrice", calcDealPrice(s.getPrice(), s.getMemberPrice(), discountRate, product.getType())
                 )).toList()
         );
@@ -151,6 +153,7 @@ public class AppProductController {
                 "description", p.getDescription() != null ? p.getDescription() : "",
                 "coverImg", p.getCoverImg() != null ? p.getCoverImg() : "",
                 "type", p.getType(),
+                "serviceCategory", p.getServiceCategory() != null ? p.getServiceCategory() : "",
                 "supportDelivery", p.getSupportDelivery() != null && p.getSupportDelivery() == 1,
                 "price", price,
                 "dealPrice", dealPrice,

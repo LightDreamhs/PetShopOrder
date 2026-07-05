@@ -15,6 +15,7 @@ public class Product extends BaseEntity {
     private String description;
     private String coverImg;
     private String type;
+    private String serviceCategory;
     private String status;
     private Integer supportDelivery;
     private Integer sort;

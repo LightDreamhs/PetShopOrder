@@ -7,18 +7,18 @@
         INSERT INTO orders (order_no, user_id, customer_phone_snapshot, customer_name,
                             member_id, member_level_snapshot, goods_amount, service_amount,
                             delivery_fee, total_amount, need_delivery, delivery_address,
-                            delivery_lat, delivery_lng, delivery_distance, processed, remark)
+                            delivery_lat, delivery_lng, delivery_distance, processed, cancelled, remark)
         VALUES (#{orderNo}, #{userId}, #{customerPhoneSnapshot}, #{customerName},
                 #{memberId}, #{memberLevelSnapshot}, #{goodsAmount}, #{serviceAmount},
                 #{deliveryFee}, #{totalAmount}, #{needDelivery}, #{deliveryAddress},
-                #{deliveryLat}, #{deliveryLng}, #{deliveryDistance}, #{processed}, #{remark})
+                #{deliveryLat}, #{deliveryLng}, #{deliveryDistance}, #{processed}, #{cancelled}, #{remark})
     </insert>
 
     <select id="selectById" resultType="com.petshop.order.entity.Orders">
         SELECT id, order_no, user_id, customer_phone_snapshot, customer_name,
                member_id, member_level_snapshot, goods_amount, service_amount,
                delivery_fee, total_amount, need_delivery, delivery_address,
-               delivery_lat, delivery_lng, delivery_distance, processed, remark,
+               delivery_lat, delivery_lng, delivery_distance, processed, cancelled, remark,
                create_time, update_time
         FROM orders WHERE id = #{id}
     </select>
@@ -27,7 +27,7 @@
         SELECT id, order_no, user_id, customer_phone_snapshot, customer_name,
                member_id, member_level_snapshot, goods_amount, service_amount,
                delivery_fee, total_amount, need_delivery, delivery_address,
-               delivery_lat, delivery_lng, delivery_distance, processed, remark,
+               delivery_lat, delivery_lng, delivery_distance, processed, cancelled, remark,
                create_time, update_time
         FROM orders WHERE user_id = #{userId}
         ORDER BY create_time DESC
@@ -37,7 +37,7 @@
         SELECT id, order_no, user_id, customer_phone_snapshot, customer_name,
                member_id, member_level_snapshot, goods_amount, service_amount,
                delivery_fee, total_amount, need_delivery, delivery_address,
-               delivery_lat, delivery_lng, delivery_distance, processed, remark,
+               delivery_lat, delivery_lng, delivery_distance, processed, cancelled, remark,
                create_time, update_time
         FROM orders
         <where>
@@ -64,6 +64,10 @@
 
     <update id="updateProcessed">
         UPDATE orders SET processed = #{processed} WHERE id = #{id}
+    </update>
+
+    <update id="updateCancelled">
+        UPDATE orders SET cancelled = #{cancelled} WHERE id = #{id}
     </update>
 
     <select id="countNewOrders" resultType="int">
