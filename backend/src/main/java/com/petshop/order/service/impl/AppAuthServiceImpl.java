@@ -5,13 +5,13 @@ import com.petshop.order.common.BusinessException;
 import com.petshop.order.entity.AppUser;
 import com.petshop.order.mapper.AppUserMapper;
 import com.petshop.order.service.AppAuthService;
+import com.petshop.order.sms.SmsVerifyService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
@@ -19,22 +19,17 @@ import java.util.concurrent.ConcurrentHashMap;
 public class AppAuthServiceImpl implements AppAuthService {
 
     private final AppUserMapper appUserMapper;
-
-    // 开发期：内存存储验证码
-    private final Map<String, String> codeStore = new ConcurrentHashMap<>();
+    private final SmsVerifyService smsVerifyService;
 
     @Override
     public void sendSmsCode(String phone) {
-        // 开发期固定验证码 1234
-        String code = "1234";
-        codeStore.put(phone, code);
-        log.info("[SMS] phone={}, code={}", phone, code);
+        // 验证码的生成/有效期/防刷/核验全部委托给 SmsVerifyService（log 兜底或 aliyun 真实）
+        smsVerifyService.send(phone);
     }
 
     @Override
     public Map<String, Object> login(String phone, String code) {
-        String stored = codeStore.get(phone);
-        if (stored == null || !stored.equals(code)) {
+        if (!smsVerifyService.verify(phone, code)) {
             throw new BusinessException("验证码错误");
         }
 
@@ -55,7 +50,6 @@ public class AppAuthServiceImpl implements AppAuthService {
         }
 
         StpUtil.login(user.getId());
-        codeStore.remove(phone);
 
         Map<String, Object> result = new java.util.HashMap<>();
         result.put("user", user);

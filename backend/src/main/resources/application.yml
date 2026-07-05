@@ -39,3 +39,13 @@ app:
 
 file:
   upload-dir: ${UPLOAD_DIR:./uploads}
+
+sms:
+  # log（默认兜底）：固定码 1234 放行，便于本地联调
+  # aliyun：阿里云号码认证服务 PNVS 真实核验
+  provider: ${SMS_PROVIDER:log}
+  aliyun:
+    access-key-id: ${ALIYUN_SMS_AK:}
+    access-key-secret: ${ALIYUN_SMS_SK:}
+    sign-name: ${ALIYUN_SMS_SIGN:速通互联验证码}
+    template-code: ${ALIYUN_SMS_TEMPLATE:100001}

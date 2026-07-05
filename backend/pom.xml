@@ -23,6 +23,7 @@
         <pagehelper.version>2.1.0</pagehelper.version>
         <sa-token.version>1.39.0</sa-token.version>
         <hutool.version>5.8.32</hutool.version>
+        <aliyun-dypnsapi.version>2.0.0</aliyun-dypnsapi.version>
     </properties>
 
     <dependencies>
@@ -57,6 +58,13 @@
             <groupId>cn.dev33</groupId>
             <artifactId>sa-token-spring-boot3-starter</artifactId>
             <version>${sa-token.version}</version>
+        </dependency>
+
+        <!-- 阿里云号码认证服务 PNVS（短信验证码发送/核验，同步 SDK） -->
+        <dependency>
+            <groupId>com.aliyun</groupId>
+            <artifactId>dypnsapi20170525</artifactId>
+            <version>${aliyun-dypnsapi.version}</version>
         </dependency>
 
         <!-- MySQL -->
