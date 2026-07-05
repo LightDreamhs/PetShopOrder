@@ -12,6 +12,13 @@
           <span class="info-label">应付金额</span>
           <span class="info-amount">¥{{ order.totalAmount }}</span>
         </div>
+        <div v-if="appointment" class="info-row appointment-row">
+          <span class="info-label">预约时间</span>
+          <span class="info-value">
+            {{ appointment.startTime }} ~ {{ appointment.endTime }}
+            <span class="info-duration">（{{ appointment.totalDuration }}分钟）</span>
+          </span>
+        </div>
         <div v-if="paymentQrUrl" class="pay-qr-section">
           <p class="pay-qr-title">请扫码完成付款</p>
           <img :src="paymentQrUrl" class="pay-qr-img" alt="收款码" />
@@ -45,6 +52,7 @@ import { getPublicConfig } from '@/api/config'
 const router = useRouter()
 const orderStore = useOrderStore()
 const order = computed(() => orderStore.lastOrder)
+const appointment = computed(() => orderStore.lastAppointment)
 const isOverRange = computed(() => {
   if (!order.value) return false
   return order.value.deliveryDistanceMeter !== null && order.value.deliveryDistanceMeter > 3000
@@ -118,6 +126,23 @@ onMounted(async () => {
   font-size: 18px;
   font-weight: 700;
   color: $primary;
+}
+
+.appointment-row {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+
+  .info-value {
+    font-weight: 600;
+    color: $primary;
+  }
+}
+
+.info-duration {
+  color: $text-muted;
+  font-weight: 400;
+  font-size: 12px;
 }
 
 .pay-qr-section {

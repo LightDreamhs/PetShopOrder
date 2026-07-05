@@ -51,6 +51,12 @@ const router = createRouter({
       component: () => import('@/views/AddressManagePage.vue'),
       meta: { requiresAuth: true, title: '管理收货地址' },
     },
+    {
+      path: '/appointment/:productId',
+      name: 'Appointment',
+      component: () => import('@/views/AppointmentPage.vue'),
+      meta: { requiresAuth: true, title: '服务预约' },
+    },
   ],
   scrollBehavior() {
     return { top: 0 }

@@ -67,6 +67,7 @@
             :product="p"
             @select-spec="openSpecPicker"
             @change-qty="handleDirectQty"
+            @go-appointment="goAppointment"
           />
           <van-empty v-if="filteredProducts.length === 0" description="暂无商品" />
         </template>
@@ -118,8 +119,15 @@ const loading = ref(false)
 
 const filteredProducts = computed(() => {
   const kw = keyword.value.trim().toLowerCase()
-  if (kw) return allProducts.value.filter((p) => p.name.toLowerCase().includes(kw))
-  return allProducts.value.filter((p) => p.type === activeType.value)
+  if (kw) {
+    // 搜索时仍排除附加服务（附加服务跟随主服务，不在首页独立展示）
+    return allProducts.value.filter(
+      (p) => p.name.toLowerCase().includes(kw) && p.serviceCategory !== 'ADDON_SERVICE',
+    )
+  }
+  return allProducts.value.filter(
+    (p) => p.type === activeType.value && p.serviceCategory !== 'ADDON_SERVICE',
+  )
 })
 
 loading.value = true
@@ -178,6 +186,10 @@ async function openSpecPicker(product: Product) {
   } catch {
     // handled
   }
+}
+
+function goAppointment(product: Product) {
+  router.push(`/appointment/${product.id}`)
 }
 
 function handleDirectQty(product: Product, delta: number) {

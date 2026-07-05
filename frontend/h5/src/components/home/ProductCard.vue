@@ -20,7 +20,14 @@
           </span>
         </div>
         <div class="product-action">
-          <template v-if="product.hasSpec">
+          <!-- 主服务：去预约按钮（优先级最高） -->
+          <template v-if="isMainService">
+            <button class="spec-btn" @click="$emit('goAppointment', product)">
+              去预约
+            </button>
+          </template>
+          <!-- 其他：有规格选规格，无规格加减 -->
+          <template v-else-if="product.hasSpec">
             <button class="spec-btn" @click="$emit('selectSpec', product)">
               选规格
             </button>
@@ -59,12 +66,18 @@ const props = defineProps<{
 defineEmits<{
   selectSpec: [product: Product]
   changeQty: [product: Product, delta: number]
+  goAppointment: [product: Product]
 }>()
 
 const { hasDiscount } = usePriceDisplay()
 const cartStore = useCartStore()
 
 const cartQty = computed(() => cartStore.getItemQty(props.product.id, null))
+
+// 主服务走预约入口（serviceCategory=MAIN_SERVICE），优先于 hasSpec
+const isMainService = computed(
+  () => props.product.type === 'SERVICE' && props.product.serviceCategory === 'MAIN_SERVICE',
+)
 </script>
 
 <style scoped lang="scss">

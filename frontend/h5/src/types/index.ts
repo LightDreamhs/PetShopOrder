@@ -20,6 +20,7 @@ export interface Product {
   description: string
   coverImg: string | null
   type: 'GOODS' | 'SERVICE'
+  serviceCategory: 'MAIN_SERVICE' | 'ADDON_SERVICE' | '' | null
   supportDelivery: boolean
   price: string
   dealPrice: string
@@ -31,6 +32,7 @@ export interface SkuPrice {
   id: number
   specName: string
   price: string
+  duration: number | null
   dealPrice: string
 }
 
@@ -41,6 +43,7 @@ export interface ProductDetail {
   description: string | null
   coverImg: string | null
   type: 'GOODS' | 'SERVICE'
+  serviceCategory: 'MAIN_SERVICE' | 'ADDON_SERVICE' | '' | null
   supportDelivery: boolean
   skus: SkuPrice[]
 }
@@ -123,6 +126,7 @@ export interface CreateOrderRequest {
 
 // 下单响应
 export interface CreateOrderResult {
+  id: number
   orderNo: string
   totalAmount: string
   goodsAmount: string
@@ -140,9 +144,11 @@ export interface OrderListItem {
   goodsAmount: string
   serviceAmount: string
   needDelivery: boolean
+  cancelled?: boolean
   createTime: string
   itemCount: number
   summaryText: string
+  appointment?: OrderAppointment | null
 }
 
 // 订单明细项
@@ -174,6 +180,19 @@ export interface OrderDetail {
   remark: string | null
   createTime: string
   items: OrderItemDetail[]
+  processed?: boolean
+  cancelled?: boolean
+  appointment?: OrderAppointment | null
+}
+
+// 订单关联的预约信息（非预约订单为 null）
+export interface OrderAppointment {
+  id: number
+  startTime: string
+  endTime: string
+  totalDuration: number
+  petInfo: string | null
+  status: AppointmentStatus
 }
 
 // 登录响应
@@ -208,4 +227,89 @@ export interface AddressRequest {
   detail: string | null
   lat: string
   lng: string
+}
+
+// ========== 服务预约 ==========
+export type ServiceCategory = 'MAIN_SERVICE' | 'ADDON_SERVICE' | ''
+
+// 附加服务（含默认 SKU 的价格/时长）
+export interface AddonService {
+  productId: number
+  name: string
+  coverImg: string | null
+  description: string | null
+  sort: number
+  skuId: number
+  skuName: string
+  price: string
+  duration: number | null
+}
+
+// 冲突预检请求
+export interface ConflictCheckReq {
+  startTime: string
+  mainSkuId: number
+  addonSkuIds: number[]
+}
+
+// 冲突预检响应
+export interface ConflictCheckResult {
+  available: boolean
+  overlapCount: number
+  maxConcurrent: number
+  totalDuration: number
+  startTime: string
+  endTime: string
+  message: string
+}
+
+// 时段可约状态（时间网格用）
+export interface TimeSlot {
+  time: string
+  available: boolean
+}
+
+// 创建预约请求
+export interface AppointmentCreateReq {
+  mainProductId: number
+  mainSkuId: number
+  addonSkuIds: number[]
+  startTime: string
+  petInfo?: string
+  customerName?: string
+  remark?: string
+}
+
+// 创建预约响应
+export interface AppointmentCreateResult {
+  appointmentId: number
+  orderId: number
+  orderNo: string
+  startTime: string
+  endTime: string
+  totalDuration: number
+  totalAmount: string
+}
+
+// 预约状态
+export type AppointmentStatus = 'PENDING' | 'SERVICED' | 'CANCELLED'
+
+// 我的预约列表项
+export interface AppointmentListItem {
+  id: number
+  orderId: number
+  mainProductId: number
+  mainSkuId: number
+  startTime: string
+  endTime: string
+  totalDuration: number
+  petInfo: string | null
+  status: AppointmentStatus
+  createTime: string
+  mainProductName: string
+  mainProductCoverImg: string | null
+  mainSkuName: string
+  orderNo: string
+  totalAmount: string
+  orderCancelled: number
 }
