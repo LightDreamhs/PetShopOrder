@@ -1,6 +1,6 @@
 # PetShopOrder 开发进度
 
-> 更新时间：2026-06-30
+> 更新时间：2026-07-03
 
 ## 项目概况
 
@@ -20,7 +20,7 @@
 | 5 | 价格计算 | GOODS 用会员价 / SERVICE 用等级折扣率（BigDecimal HALF_UP） |
 | 6 | 配送 | Haversine 距离 + 起送价校验 + 分段运费 |
 | 7 | 系统配置 | 配置读写 + 变更审计日志 + Webhook SSRF 防护 + 收款二维码 |
-| 8 | 订单 | 创建/查询/快照，下单时自动触发通知 |
+| 8 | 订单 | 创建/查询/快照，下单时自动触发通知；结算页备注 placeholder 改为「在此预约服务时间」（临时引导，待预约系统上线后还原） |
 | 9 | 通知 | 飞书/企微 Webhook 异步推送 + 失败重试 |
 | 10 | Admin 用户 | CRUD + BOSS 保护 + BCrypt |
 | 11 | 操作日志 | 分页查询 |
@@ -47,6 +47,7 @@
 | 结算 | 商品明细 + 会员折扣 + 配送开关 + **腾讯地图选点** + **常用地址管理（列表选择/设默认/删除）** |
 | 下单 | 提交订单 → 成功页（展示收款码，260×260，显示"应付金额"） |
 | 订单列表/详情 | 分页加载 + 状态展示 |
+| 店铺 Logo | 首页导航栏 + 登录页 Logo 由 emoji（🐾）替换为真实店铺 logo 图片（`assets/shop-logo.jpg`） |
 
 ## 前后端联调 — 已通过（2026-05-26）
 
@@ -117,6 +118,45 @@
 - `AGENTS.md` 与 `CLAUDE.md` 内容完全重复，建议保留其一。
 - `飞书订单通知群webhook.txt` 含真实 webhook 明文地址且疑似未在 `.gitignore`，有泄露风险，建议移出仓库并加忽略。
 
+## 短信认证服务接入（PNVS）（2026-06-30）
+
+按 [`deploy/sms-pnvs-planning/实施计划.md`](deploy/sms-pnvs-planning/实施计划.md) 落地阿里云号码认证服务（PNVS），改造 H5 登录从"内存固定 `1234`"为"可切换真实核验"。**前端 `LoginPage.vue` 零改动**（接口签名不变）。`mvn compile` 通过。
+
+### 改动清单（7 处）
+
+| 操作 | 文件 | 说明 |
+|------|------|------|
+| 改 | `backend/pom.xml` | 加 SDK `com.aliyun:dypnsapi20170525:2.0.0`（**同步 SDK**，计划写的是异步 `alibabacloud-d` 前缀，按低耦合/阻塞契合原则改用同步） |
+| 改 | `backend/src/main/resources/application.yml` | 新增 `sms` 命名空间，默认 `provider=log`，AK/SK 走环境变量，签名/模板已填默认值 |
+| 新建 | `backend/.../config/SmsProperties.java` | `@ConfigurationProperties(prefix="sms")` + `@Component` 自注册（无需改主启动类） |
+| 新建 | `backend/.../sms/SmsVerifyService.java` | 接口 `send(phone)` + `verify(phone, code)` |
+| 新建 | `backend/.../sms/LogSmsService.java` | `provider=log`（默认）兜底，`1234` 放行 |
+| 新建 | `backend/.../sms/AliyunPnvsSmsService.java` | `provider=aliyun` 真实核验（`SendSmsVerifyCode` + `CheckSmsVerifyCode`） |
+| 改 | `backend/.../service/impl/AppAuthServiceImpl.java` | 删 `codeStore` + 固定码，注入 `SmsVerifyService` |
+
+### 核对官方文档修正的坑（避免上线翻车）
+
+- `CodeType`/`CodeLength` setter 入参是 `Long` 不是 `int` → 传 `1L`/`6L`
+- `verifyResult` **嵌套在 `Body.Model` 内**，不在顶层 Body → `getBody().getModel().getVerifyResult()`
+- 发送成功判定是 `Code="OK"` **不是 `"200"`**
+- `TemplateParam` 必填 `{"code":"##code##","min":"5"}`，否则阿里云不生成验证码，`CheckSmsVerifyCode` 必失败
+
+### 切换真实短信
+
+默认 `provider=log`，`1234` 仍可登录，联调不受影响。真实核验需设环境变量（无需改代码/重新编译）：
+
+```bash
+export SMS_PROVIDER=aliyun
+export ALIYUN_SMS_AK=<AccessKey ID>
+export ALIYUN_SMS_SK=<AccessKey Secret>
+# sign-name=速通互联验证码、template-code=100001 已在 yml 设默认值
+```
+
+### 待办
+
+- [ ] 真实手机号端到端验证（`provider=aliyun`：发码→收码→正/误码登录）
+- [ ] `短信验证服务Access key.txt` 现含明文 Secret，仅本地 `.git/info/exclude` 忽略；建议另存密码管理器，避免单点丢失
+
 ## 已知问题 & 待开发
 
 | 优先级 | 项目 | 说明 |
@@ -127,11 +167,67 @@
 | 中 | 购物车改为底部弹窗 | CartBar 点购物车图标应弹出底部抽屉而非跳转页面 |
 | 中 | ~~下单成功页加收款码~~ | ✅ 已完成（2026-06-01），二维码已放大至 260×260 |
 | ~~中~~ | ~~配送规则联调~~ | ✅ 已完成（2026-06-03）：收款码持久化、地图选点、通知推送全链路联调通过 |
-| 低 | 短信验证码 | 当前固定 `1234`，未对接真实短信服务商 |
+| ~~低~~ | ~~短信验证码~~ | ✅ 已接入阿里云号码认证服务（PNVS）（2026-06-30）：默认 `provider=log` 兜底（`1234` 仍可用），真实核验待环境变量切换 + 端到端验证，详见下文「短信认证服务接入」段 |
 | 低 | Admin 数据统计页 | 订单趋势、会员排行（后端接口已有） |
 | 低 | Admin 操作日志页 | 后端接口已有，前端未挂路由 |
 | ~~低~~ | ~~WebSocket~~ | ✅ 已用轻量轮询方案替代（2026-06-03）：15s 间隔查询新订单计数 + ElNotification 弹窗提醒 + 自动刷新列表 |
 | ~~中~~ | ~~H5 商品简介（描述）展示~~ | ✅ 已完成（2026-06-30）：后端 `GET /api/app/products` 列表接口 `toAppMap()` 回传 `description`；H5 首页 `ProductCard` 商品名下加描述（单行省略）、SKU 弹窗 `SkuSelectorPopup` 填充原预留 `.sku-desc` 占位（2 行省略）；`Product` 类型补字段。 |
+| 🔴 高 | 服务预约系统 | 📋 **方案已定稿待执行（2026-07-03）**。当前服务像商品一样直接下单、无时间维度。新方案：**主服务+附加服务+选时间**的独立预约入口，带**时间冲突检测**（任意时刻同时进行 ≤3 个）。完整方案见 [`docs/appointment-system-plan.md`](docs/appointment-system-plan.md)，分 4 期实施，第 1 期（数据层+后端核心闭环）即可形成最小可用闭环。 |
+
+## 服务预约系统（规划中，2026-07-03）
+
+> 📋 **状态：方案已定稿，待分期执行**。完整方案见 [`docs/appointment-system-plan.md`](docs/appointment-system-plan.md)。
+
+### 背景
+
+当前系统把服务（`type=SERVICE`）当成"不可配送的特殊商品"来卖——下单不选时间、不选服务人员，时间安排只能塞进订单备注自由文本，**无法校验时间冲突**。需新增"主服务+附加服务+选时间"的预约能力，并解决多预约之间的时间冲突。
+
+### 核心约束（已与产品方逐条确认）
+
+| 维度 | 决策 |
+|---|---|
+| 全局容量 | 任意时刻同时进行的服务 **≤ 3 个**（留余量） |
+| 资源模型 | 不区分美容师/工位，只数全局同时进行数 |
+| 冲突算法 | 区间重叠计数：新预约 `[start, start+总时长)` 与已有非取消预约比较，重叠数 ≥3 拒绝 |
+| 并发安全 | 应用层检查即可（单店低流量，极端竞态事后人工处理，不加 DB 锁） |
+| 服务时长 | 按 SKU 配 `duration`（分钟），店主自填 |
+| 总占用时长 | 主服务 duration + Σ 附加服务 duration（累加） |
+| 时间粒度 | 精确任意时间（如 09:30），用户自选开始时间 |
+| 下单模式 | 1 主服务 + N 附加服务，主服务占时间段，附加服务跟着走 |
+| 主/附加区分 | `product.service_category`（`MAIN_SERVICE` / `ADDON_SERVICE`） |
+| 附加服务范围 | 每个主服务单独绑定可选附加服务（关联表） |
+| 入口 | 服务走独立预约入口；实物商品购物车流程不变 |
+| 营业时间 | 系统 24h 可访问；可选开始时间限营业时间内（复用 `system_config`） |
+| 可取消 | 预约有状态（PENDING/SERVICED/CANCELLED），取消后时段释放 |
+| 数据存储 | 复用 `orders`+`order_item` 存快照，新增 `appointment` 表存时间信息，`order_id` 关联 |
+| 价格 | 复用现有 `PriceCalculationService`（会员按等级折扣） |
+| 宠物信息 | 文本填写（不建 pet 表） |
+
+### 冲突检测（核心算法）
+
+```sql
+-- 任意时刻同时进行数 = 与新预约重叠的非取消已有预约数 + 1（自身）
+SELECT COUNT(*) FROM appointment
+WHERE status <> 'CANCELLED'
+  AND start_time < :newEnd     -- existing.start < newEnd
+  AND end_time   > :newStart;  -- existing.end  > newStart
+-- 结果 >= 3 即满，拒绝
+```
+
+### 分期实施计划
+
+| 期 | 范围 | 产出 |
+|---|---|---|
+| 第 1 期 | 数据层 + 后端预约核心闭环 | DDL 加字段+2 张新表、`AppointmentService`（冲突检测+下单复用订单）、App 接口。**最小可用闭环** |
+| 第 2 期 | 前端预约页 + 首页入口 | `/appointment/:productId`、`AppointmentPage.vue`、ProductCard 改"去预约" |
+| 第 3 期 | 取消 / 状态流转 / 我的预约页 | 预约列表、取消按钮、状态联动 |
+| 第 4 期 | Admin 配置 + 预约看板 | service_category/duration/绑定配置 UI、营业时间配置、当日预约时间线可视化 |
+
+### 待改造的关键点（详见方案文档）
+
+- `OrderServiceImpl.createOrder`（`OrderServiceImpl.java:52-208`）返回结果需带出 `orderId`，供 `appointment.order_id` 关联（第 1 期唯一侵入性改动）。
+- `system_config.order_start/end_time` 从"预留接单时段"语义复用为"可预约开始时间范围"，需更新注释。
+- `ProductCard.vue:22-42` 对 `MAIN_SERVICE` 改"去预约"按钮跳转预约页。
 
 ## 本地启动
 

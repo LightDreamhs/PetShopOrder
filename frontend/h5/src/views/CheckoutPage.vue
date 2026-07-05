@@ -8,7 +8,7 @@
         <div class="section-title">联系信息</div>
         <van-cell-group inset>
           <van-field v-model="customerName" label="联系人" placeholder="选填，如：张先生" />
-          <van-field v-model="remark" label="备注" placeholder="选填，如：周六下午送到" type="textarea" rows="2" />
+          <van-field v-model="remark" label="备注" placeholder="在此预约服务时间" type="textarea" rows="2" />
         </van-cell-group>
       </div>
 
