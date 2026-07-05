@@ -456,22 +456,6 @@ onMounted(() => {
   }
 }
 
-.filter-card {
-  padding: 16px 20px;
-}
-
-.table-card {
-  padding: 20px;
-}
-
-.text-orange {
-  color: #ff5a00;
-}
-
-.font-bold {
-  font-weight: 600;
-}
-
 /* 手机号标签 */
 .phone-tags {
   display: flex;
@@ -480,7 +464,7 @@ onMounted(() => {
 }
 
 .phone-tag {
-  border-color: rgba(255, 90, 0, 0.2);
+  border-color: var(--el-color-primary-light-7);
   color: #666;
 }
 

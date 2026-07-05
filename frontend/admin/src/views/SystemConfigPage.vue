@@ -44,11 +44,9 @@ const form = reactive<UpdateSystemConfigRequest>({
 
 const feeTypeOptions: Array<{ label: string; value: DeliveryFeeType }> = [
   { label: '免运费', value: 'FREE' },
-  { label: '固定运费', value: 'FIXED' },
   { label: '分段运费', value: 'TIERED' },
 ]
 
-const showFixedFee = computed(() => form.deliveryFeeType === 'FIXED')
 const showTieredFee = computed(() => form.deliveryFeeType === 'TIERED')
 const isDirty = computed(() => loaded.value && buildSnapshot() !== initialSnapshot.value)
 
@@ -188,10 +186,6 @@ function validateForm() {
   }
   if (!Number.isFinite(Number(form.deliveryMinAmount)) || Number(form.deliveryMinAmount) < 0) {
     ElMessage.warning('起送价不能小于 0')
-    return false
-  }
-  if (showFixedFee.value && (!Number.isFinite(Number(form.fixedDeliveryFee)) || Number(form.fixedDeliveryFee) < 0)) {
-    ElMessage.warning('固定运费不能小于 0')
     return false
   }
 
@@ -470,12 +464,6 @@ onMounted(() => {
               {{ item.label }}
             </el-radio-button>
           </el-radio-group>
-        </el-form-item>
-
-        <el-form-item v-if="showFixedFee" label="固定运费（元）">
-          <el-input v-model="form.fixedDeliveryFee" style="max-width: 280px">
-            <template #append>元</template>
-          </el-input>
         </el-form-item>
 
         <el-form-item v-if="showTieredFee" label="分段运费">

@@ -70,71 +70,164 @@ public class SystemConfigServiceImpl implements SystemConfigService {
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> updateConfig(Map<String, Object> params, AdminUser operator) {
         SystemConfig config = getOrCreateConfig();
+        List<SystemConfigDeliveryTier> oldTiers = tierMapper.selectByConfigId(CONFIG_ID);
         String beforeJson = toJson(config);
-        String summary = buildSummary(params, config);
+        List<String> changes = new ArrayList<>();
 
-        if (params.containsKey("shopLat")) {
-            config.setShopLat(toBigDecimal(params.get("shopLat")));
-        }
-        if (params.containsKey("shopLng")) {
-            config.setShopLng(toBigDecimal(params.get("shopLng")));
-        }
+        // ===== 校验：集中前置，保证失败时不产生部分写入 =====
         if (params.containsKey("deliveryRadiusKm")) {
             BigDecimal radius = toBigDecimal(params.get("deliveryRadiusKm"));
             if (radius == null || radius.compareTo(BigDecimal.ZERO) <= 0) {
                 throw new BusinessException("配送半径必须大于 0");
             }
-            config.setDeliveryRadiusKm(radius);
-        }
-        if (params.containsKey("deliveryMinAmount")) {
-            config.setDeliveryMinAmount(toBigDecimal(params.get("deliveryMinAmount")));
         }
         if (params.containsKey("deliveryFeeType")) {
             String feeType = (String) params.get("deliveryFeeType");
             if (!"FREE".equals(feeType) && !"TIERED".equals(feeType)) {
                 throw new BusinessException("配送费类型只支持 FREE 或 TIERED");
             }
-            config.setDeliveryFeeType(feeType);
         }
-        if (params.containsKey("fixedDeliveryFee")) {
-            config.setFixedDeliveryFee(toBigDecimal(params.get("fixedDeliveryFee")));
-        }
-        if (params.containsKey("orderTimeEnabled")) {
-            config.setOrderTimeEnabled(toBoolean(params.get("orderTimeEnabled")) ? 1 : 0);
-        }
-        if (params.containsKey("orderStartTime")) {
-            config.setOrderStartTime(parseTime(params.get("orderStartTime")));
-        }
-        if (params.containsKey("orderEndTime")) {
-            config.setOrderEndTime(parseTime(params.get("orderEndTime")));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> tierRules = (List<Map<String, Object>>) params.get("tieredDeliveryFeeRules");
+        BigDecimal effectiveRadius = params.containsKey("deliveryRadiusKm")
+                ? toBigDecimal(params.get("deliveryRadiusKm"))
+                : config.getDeliveryRadiusKm();
+        String effectiveFeeType = params.containsKey("deliveryFeeType")
+                ? (String) params.get("deliveryFeeType")
+                : config.getDeliveryFeeType();
+        if (tierRules != null && "TIERED".equals(effectiveFeeType)) {
+            validateTierRules(tierRules, effectiveRadius);
         }
 
-        if (params.containsKey("qywxWebhookUrl")) {
-            String webhookUrl = (String) params.get("qywxWebhookUrl");
-            if (webhookUrl == null || webhookUrl.contains("key=***")) {
-                // null 或前端回传脱敏值 = 不修改
-            } else if (webhookUrl.isEmpty()) {
-                config.setQywxWebhookUrlEnc(null);
-                config.setHasQywxWebhook(0);
-            } else {
-                validateWebhookUrl(webhookUrl);
-                AES aes = SecureUtil.aes(deriveAesKey());
-                config.setQywxWebhookUrlEnc(aes.encrypt(webhookUrl));
-                config.setHasQywxWebhook(1);
+        // ===== 店铺位置（纬/经合并为一条）=====
+        boolean shopChanged = false;
+        BigDecimal newShopLat = config.getShopLat();
+        BigDecimal newShopLng = config.getShopLng();
+        if (params.containsKey("shopLat")) {
+            newShopLat = toBigDecimal(params.get("shopLat"));
+            if (!bdEquals(config.getShopLat(), newShopLat)) shopChanged = true;
+        }
+        if (params.containsKey("shopLng")) {
+            newShopLng = toBigDecimal(params.get("shopLng"));
+            if (!bdEquals(config.getShopLng(), newShopLng)) shopChanged = true;
+        }
+        if (shopChanged) {
+            changes.add("修改店铺位置（" + coordLabel(config.getShopLat(), config.getShopLng())
+                    + " → " + coordLabel(newShopLat, newShopLng) + "）");
+            config.setShopLat(newShopLat);
+            config.setShopLng(newShopLng);
+        }
+
+        // ===== 配送半径 =====
+        if (params.containsKey("deliveryRadiusKm")) {
+            BigDecimal radius = toBigDecimal(params.get("deliveryRadiusKm"));
+            if (!bdEquals(config.getDeliveryRadiusKm(), radius)) {
+                changes.add("修改配送半径（" + bdLabel(config.getDeliveryRadiusKm()) + " km → " + bdLabel(radius) + " km）");
+                config.setDeliveryRadiusKm(radius);
             }
         }
 
+        // ===== 起送价 =====
+        if (params.containsKey("deliveryMinAmount")) {
+            BigDecimal minAmount = toBigDecimal(params.get("deliveryMinAmount"));
+            if (!bdEquals(config.getDeliveryMinAmount(), minAmount)) {
+                changes.add("修改起送价（" + bdLabel(config.getDeliveryMinAmount()) + " 元 → " + bdLabel(minAmount) + " 元）");
+                config.setDeliveryMinAmount(minAmount);
+            }
+        }
+
+        // ===== 运费策略 =====
+        if (params.containsKey("deliveryFeeType")) {
+            String feeType = (String) params.get("deliveryFeeType");
+            if (!feeType.equals(config.getDeliveryFeeType())) {
+                changes.add("修改运费策略（" + feeTypeLabel(config.getDeliveryFeeType()) + " → " + feeTypeLabel(feeType) + "）");
+                config.setDeliveryFeeType(feeType);
+            }
+        }
+
+        // ===== 固定运费（保留处理逻辑以兼容历史，前端已无入口）=====
+        if (params.containsKey("fixedDeliveryFee")) {
+            BigDecimal fixedFee = toBigDecimal(params.get("fixedDeliveryFee"));
+            if (!bdEquals(config.getFixedDeliveryFee(), fixedFee)) {
+                changes.add("修改固定运费（" + bdLabel(config.getFixedDeliveryFee()) + " 元 → " + bdLabel(fixedFee) + " 元）");
+                config.setFixedDeliveryFee(fixedFee);
+            }
+        }
+
+        // ===== 预约时段（启用开关 + 起止合并为一条）=====
+        Integer newOrderTimeEnabled = config.getOrderTimeEnabled();
+        java.time.LocalTime newStartTime = config.getOrderStartTime();
+        java.time.LocalTime newEndTime = config.getOrderEndTime();
+        if (params.containsKey("orderTimeEnabled")) {
+            newOrderTimeEnabled = toBoolean(params.get("orderTimeEnabled")) ? 1 : 0;
+        }
+        if (params.containsKey("orderStartTime")) {
+            newStartTime = parseTime(params.get("orderStartTime"));
+        }
+        if (params.containsKey("orderEndTime")) {
+            newEndTime = parseTime(params.get("orderEndTime"));
+        }
+        boolean timeChanged = !Objects.equals(config.getOrderTimeEnabled(), newOrderTimeEnabled)
+                || !Objects.equals(config.getOrderStartTime(), newStartTime)
+                || !Objects.equals(config.getOrderEndTime(), newEndTime);
+        if (timeChanged) {
+            changes.add("修改预约时段（"
+                    + timeRangeLabel(config.getOrderTimeEnabled(), config.getOrderStartTime(), config.getOrderEndTime())
+                    + " → "
+                    + timeRangeLabel(newOrderTimeEnabled, newStartTime, newEndTime) + "）");
+            config.setOrderTimeEnabled(newOrderTimeEnabled);
+            config.setOrderStartTime(newStartTime);
+            config.setOrderEndTime(newEndTime);
+        }
+
+        // ===== 群机器人 Webhook 通知 =====
+        if (params.containsKey("qywxWebhookUrl")) {
+            String webhookUrl = (String) params.get("qywxWebhookUrl");
+            // 兼容飞书(hook/***)与企微(key=***)两种脱敏回传，回传脱敏值 = 不修改
+            if (webhookUrl != null && !webhookUrl.contains("key=***") && !webhookUrl.contains("hook/***")) {
+                String oldDecrypted = decryptWebhook(config);
+                boolean oldHas = oldDecrypted != null && !oldDecrypted.isEmpty();
+                boolean newHas = !webhookUrl.isEmpty();
+                if (oldHas != newHas || (oldHas && !oldDecrypted.equals(webhookUrl))) {
+                    if (!newHas) {
+                        changes.add("清空群机器人通知");
+                        config.setQywxWebhookUrlEnc(null);
+                        config.setHasQywxWebhook(0);
+                    } else {
+                        validateWebhookUrl(webhookUrl);
+                        AES aes = SecureUtil.aes(deriveAesKey());
+                        config.setQywxWebhookUrlEnc(aes.encrypt(webhookUrl));
+                        config.setHasQywxWebhook(1);
+                        changes.add(oldHas ? "修改群机器人通知" : "设置群机器人通知");
+                    }
+                }
+            }
+        }
+
+        // ===== 收款二维码 =====
         if (params.containsKey("paymentQrUrl")) {
-            config.setPaymentQrUrl((String) params.get("paymentQrUrl"));
+            String newQr = (String) params.get("paymentQrUrl");
+            String oldQr = config.getPaymentQrUrl();
+            boolean oldHas = oldQr != null && !oldQr.isEmpty();
+            boolean newHas = newQr != null && !newQr.isEmpty();
+            if (oldHas != newHas || (oldHas && !oldQr.equals(newQr))) {
+                if (!newHas) changes.add("移除收款二维码");
+                else if (!oldHas) changes.add("设置收款二维码");
+                else changes.add("更换收款二维码");
+            }
+            config.setPaymentQrUrl(newQr);
         }
 
         config.setUpdatedBy(operator.getId());
         systemConfigMapper.updateById(config);
 
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> tierRules = (List<Map<String, Object>>) params.get("tieredDeliveryFeeRules");
+        // ===== 分段运费规则（独立表，段数与区间均参与 diff）=====
         if (tierRules != null && "TIERED".equals(config.getDeliveryFeeType())) {
-            validateTierRules(tierRules, config.getDeliveryRadiusKm());
+            String oldSig = tierSignature(oldTiers);
+            String newSig = tierSignatureFromParams(tierRules);
+            if (!oldSig.equals(newSig)) {
+                changes.add("修改分段运费规则（" + oldTiers.size() + " 段 → " + tierRules.size() + " 段）");
+            }
             tierMapper.deleteByConfigId(CONFIG_ID);
             if (!tierRules.isEmpty()) {
                 List<SystemConfigDeliveryTier> tiers = new ArrayList<>();
@@ -151,6 +244,8 @@ public class SystemConfigServiceImpl implements SystemConfigService {
                 tierMapper.insertBatch(tiers);
             }
         }
+
+        String summary = changes.isEmpty() ? "无变更" : String.join("；", changes);
 
         SystemConfigLog configLog = new SystemConfigLog();
         configLog.setConfigId(CONFIG_ID);
@@ -383,20 +478,72 @@ public class SystemConfigServiceImpl implements SystemConfigService {
         }
     }
 
-    private String buildSummary(Map<String, Object> params, SystemConfig config) {
-        List<String> changes = new ArrayList<>();
-        if (params.containsKey("shopLat") || params.containsKey("shopLng")) changes.add("修改门店位置");
-        if (params.containsKey("deliveryRadiusKm")) changes.add("修改配送半径");
-        if (params.containsKey("deliveryMinAmount")) changes.add("修改起送金额");
-        if (params.containsKey("deliveryFeeType")) changes.add("修改配送费类型");
-        if (params.containsKey("fixedDeliveryFee")) changes.add("修改固定配送费");
-        if (params.containsKey("tieredDeliveryFeeRules")) changes.add("修改分段配送规则");
-        if (params.containsKey("orderTimeEnabled") || params.containsKey("orderStartTime") || params.containsKey("orderEndTime"))
-            changes.add("修改接单时间");
-        if (params.containsKey("qywxWebhookUrl")) changes.add("修改企业微信通知");
-        if (params.containsKey("paymentQrUrl")) changes.add("修改收款二维码");
-        if (changes.isEmpty()) changes.add("更新系统配置");
-        return String.join("、", changes);
+    /** BigDecimal 安全等值比较（null 安全，用 compareTo 避免精度差异如 5.00 vs 5.0）*/
+    private boolean bdEquals(BigDecimal a, BigDecimal b) {
+        if (a == null && b == null) return true;
+        if (a == null || b == null) return false;
+        return a.compareTo(b) == 0;
+    }
+
+    /** BigDecimal 转可读字符串（null → "未设置"）*/
+    private String bdLabel(BigDecimal v) {
+        return v == null ? "未设置" : v.stripTrailingZeros().toPlainString();
+    }
+
+    private String coordLabel(BigDecimal lat, BigDecimal lng) {
+        if (lat == null && lng == null) return "未设置";
+        return bdLabel(lat) + ", " + bdLabel(lng);
+    }
+
+    private String feeTypeLabel(String feeType) {
+        if ("FREE".equals(feeType)) return "免运费";
+        if ("TIERED".equals(feeType)) return "分段运费";
+        if ("FIXED".equals(feeType)) return "固定运费";
+        return feeType == null ? "未设置" : feeType;
+    }
+
+    private String timeRangeLabel(Integer enabled, java.time.LocalTime start, java.time.LocalTime end) {
+        if (enabled == null || enabled == 0) return "不限制";
+        String s = start == null ? "?" : start.format(TIME_FMT);
+        String e = end == null ? "?" : end.format(TIME_FMT);
+        return s + " ~ " + e;
+    }
+
+    /** 分段规则的"归一签名"：按 min 排序后拼成 min~max=fee，用于检测是否真的变了 */
+    private String tierSignature(List<SystemConfigDeliveryTier> tiers) {
+        if (tiers == null || tiers.isEmpty()) return "";
+        return tiers.stream()
+                .sorted(Comparator.comparing(t -> t.getMinDistanceKm() == null ? BigDecimal.ZERO : t.getMinDistanceKm()))
+                .map(t -> bdLabel(t.getMinDistanceKm()) + "~" + bdLabel(t.getMaxDistanceKm()) + "=" + bdLabel(t.getFee()))
+                .collect(Collectors.joining("|"));
+    }
+
+    @SuppressWarnings("unchecked")
+    private String tierSignatureFromParams(List<Map<String, Object>> rules) {
+        if (rules == null || rules.isEmpty()) return "";
+        return rules.stream()
+                .sorted(Comparator.comparing(r -> {
+                    BigDecimal min = toBigDecimal(r.get("minDistanceKm"));
+                    return min == null ? BigDecimal.ZERO : min;
+                }))
+                .map(r -> bdLabel(toBigDecimal(r.get("minDistanceKm"))) + "~"
+                        + bdLabel(toBigDecimal(r.get("maxDistanceKm"))) + "="
+                        + bdLabel(toBigDecimal(r.get("fee"))))
+                .collect(Collectors.joining("|"));
+    }
+
+    /** 解密当前存储的 webhook 明文（用于 diff），失败/空返回 null */
+    private String decryptWebhook(SystemConfig config) {
+        if (config.getHasQywxWebhook() == null || config.getHasQywxWebhook() == 0
+                || config.getQywxWebhookUrlEnc() == null) {
+            return null;
+        }
+        try {
+            AES aes = SecureUtil.aes(deriveAesKey());
+            return aes.decryptStr(config.getQywxWebhookUrlEnc());
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private BigDecimal toBigDecimal(Object val) {

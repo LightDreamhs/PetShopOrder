@@ -116,103 +116,104 @@ onMounted(() => {
 <template>
   <div class="booking-page">
     <!-- 筛选 -->
-    <div class="filter-bar">
-      <el-date-picker
-        v-model="filters.date"
-        type="date"
-        value-format="YYYY-MM-DD"
-        placeholder="选择日期"
-        :clearable="true"
-        style="width: 160px"
-      />
-      <el-select v-model="filters.status" placeholder="全部状态" clearable style="width: 120px">
-        <el-option v-for="o in statusOptions" :key="o.value" :label="o.label" :value="o.value" />
-      </el-select>
-      <el-input v-model="filters.keyword" placeholder="订单号/电话/联系人" clearable style="width: 220px" @keyup.enter="handleSearch" />
-      <el-button type="primary" @click="handleSearch">查询</el-button>
-      <el-button @click="handleReset">重置</el-button>
-      <span class="filter-tip">默认查询今日预约；清空日期查全部</span>
+    <div class="page-card filter-card">
+      <div class="filter-bar">
+        <el-date-picker
+          v-model="filters.date"
+          type="date"
+          value-format="YYYY-MM-DD"
+          placeholder="选择日期"
+          :clearable="true"
+          style="width: 160px"
+        />
+        <el-select v-model="filters.status" placeholder="全部状态" clearable style="width: 120px">
+          <el-option v-for="o in statusOptions" :key="o.value" :label="o.label" :value="o.value" />
+        </el-select>
+        <el-input v-model="filters.keyword" placeholder="订单号/电话/联系人" clearable style="width: 220px" @keyup.enter="handleSearch" />
+        <el-button type="primary" @click="handleSearch">查询</el-button>
+        <el-button @click="handleReset">重置</el-button>
+        <span class="filter-tip">默认查询今日预约；清空日期查全部</span>
+      </div>
     </div>
 
     <!-- 列表 -->
-    <el-table :data="bookings" v-loading="loading" stripe style="width: 100%" empty-text="暂无预约">
-      <el-table-column label="预约时间" width="200">
-        <template #default="{ row }">
-          <div class="appt-time">
-            <div>{{ fmtDateTime(row.startTime) }} ~ {{ fmtTime(row.endTime) }}</div>
-            <div class="appt-duration">{{ row.totalDuration }} 分钟</div>
-          </div>
-        </template>
-      </el-table-column>
-      <el-table-column label="主服务" min-width="160">
-        <template #default="{ row }">
-          <div>{{ row.mainProductName }}</div>
-          <div v-if="row.mainSkuName" class="text-muted">{{ row.mainSkuName }}</div>
-        </template>
-      </el-table-column>
-      <el-table-column label="顾客" min-width="160">
-        <template #default="{ row }">
-          <div>{{ row.customerName || '-' }}</div>
-          <div class="text-muted">{{ row.customerPhone }}</div>
-        </template>
-      </el-table-column>
-      <el-table-column label="宠物信息" min-width="140">
-        <template #default="{ row }">
-          <span v-if="row.petInfo">{{ row.petInfo }}</span>
-          <span v-else class="text-muted">-</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="金额" width="100" align="right">
-        <template #default="{ row }">
-          ¥{{ row.totalAmount }}
-        </template>
-      </el-table-column>
-      <el-table-column label="订单号" width="180">
-        <template #default="{ row }">
-          <span class="order-no">{{ row.orderNo }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="状态" width="100" align="center">
-        <template #default="{ row }">
-          <el-tag :type="statusType(row.status)" size="small" effect="dark">
-            {{ statusLabel(row.status) }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="操作" width="170" fixed="right">
-        <template #default="{ row }">
-          <el-button
-            v-if="row.status === 'PENDING'"
-            type="success"
-            size="small"
-            link
-            @click="handleMarkServiced(row)"
-          >
-            标记完成
-          </el-button>
-          <el-button
-            v-if="row.status === 'PENDING'"
-            type="danger"
-            size="small"
-            link
-            @click="handleCancel(row)"
-          >
-            取消
-          </el-button>
-          <span v-if="row.status !== 'PENDING'" class="text-muted">-</span>
-        </template>
-      </el-table-column>
-    </el-table>
+    <div class="page-card table-card">
+      <el-table :data="bookings" v-loading="loading" stripe style="width: 100%" empty-text="暂无预约">
+        <el-table-column label="预约时间" width="200">
+          <template #default="{ row }">
+            <div class="appt-time">
+              <div>{{ fmtDateTime(row.startTime) }} ~ {{ fmtTime(row.endTime) }}</div>
+              <div class="appt-duration">{{ row.totalDuration }} 分钟</div>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="主服务" min-width="160">
+          <template #default="{ row }">
+            <div>{{ row.mainProductName }}</div>
+            <div v-if="row.mainSkuName" class="text-muted">{{ row.mainSkuName }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column label="顾客" min-width="160">
+          <template #default="{ row }">
+            <div>{{ row.customerName || '-' }}</div>
+            <div class="text-muted">{{ row.customerPhone }}</div>
+          </template>
+        </el-table-column>
+        <el-table-column label="宠物信息" min-width="140">
+          <template #default="{ row }">
+            <span v-if="row.petInfo">{{ row.petInfo }}</span>
+            <span v-else class="text-muted">-</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="金额" width="100" align="right">
+          <template #default="{ row }">
+            ¥{{ row.totalAmount }}
+          </template>
+        </el-table-column>
+        <el-table-column label="订单号" width="180">
+          <template #default="{ row }">
+            <span class="order-no">{{ row.orderNo }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="100" align="center">
+          <template #default="{ row }">
+            <el-tag :type="statusType(row.status)" size="small" effect="dark">
+              {{ statusLabel(row.status) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="170" fixed="right">
+          <template #default="{ row }">
+            <el-button
+              v-if="row.status === 'PENDING'"
+              type="success"
+              size="small"
+              link
+              @click="handleMarkServiced(row)"
+            >
+              标记完成
+            </el-button>
+            <el-button
+              v-if="row.status === 'PENDING'"
+              type="danger"
+              size="small"
+              link
+              @click="handleCancel(row)"
+            >
+              取消
+            </el-button>
+            <span v-if="row.status !== 'PENDING'" class="text-muted">-</span>
+          </template>
+        </el-table-column>
+      </el-table>
 
-    <!-- 分页 -->
-    <div class="pagination">
+      <!-- 分页 -->
       <el-pagination
         v-model:current-page="filters.page"
         v-model:page-size="filters.size"
         :total="total"
         :page-sizes="[10, 20, 50]"
         layout="total, sizes, prev, pager, next"
-        background
         @current-change="fetchBookings"
         @size-change="() => { filters.page = 1; fetchBookings() }"
       />
@@ -222,15 +223,9 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 .booking-page {
-  padding: 16px;
-}
-
-.filter-bar {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .filter-tip {
@@ -247,19 +242,8 @@ onMounted(() => {
   color: var(--el-text-color-secondary);
 }
 
-.text-muted {
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
-}
-
 .order-no {
   font-family: monospace;
   font-size: 12px;
-}
-
-.pagination {
-  margin-top: 16px;
-  display: flex;
-  justify-content: flex-end;
 }
 </style>

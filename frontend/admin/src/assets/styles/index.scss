@@ -31,6 +31,9 @@ body {
   --el-color-primary-light-8: #ffcfb3;
   --el-color-primary-light-9: #ffdfcc;
   --el-color-primary-dark-2: #cc4800;
+  // 品牌语义色：供页面引用，避免硬编码 #ff5a00 散落
+  --brand-color: #ff5a00;
+  --brand-color-light: #ff8a3d;
 }
 
 // 表格圆角卡片
@@ -68,6 +71,16 @@ body {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
+/* 筛选栏卡片：比 .page-card 内边距更紧凑，用于顶部筛选区 */
+.filter-card {
+  padding: 16px 20px;
+}
+
+/* 表格卡片：与 .page-card 等效的语义别名，用于主体表格区 */
+.table-card {
+  padding: 20px;
+}
+
 .filter-bar {
   display: flex;
   align-items: center;
@@ -77,5 +90,19 @@ body {
 }
 
 .text-orange {
-  color: #ff5a00;
+  color: var(--brand-color);
+}
+
+/* 次要文字：统一各页面的 .text-muted（原 #999 / CSS变量 / 13px 三方不一致）*/
+.text-muted {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+
+.text-danger {
+  color: var(--el-color-danger);
+}
+
+.font-bold {
+  font-weight: 600;
 }

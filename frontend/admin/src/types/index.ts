@@ -172,7 +172,7 @@ export interface UploadResult {
 }
 
 // ========== 系统配置 ==========
-export type DeliveryFeeType = 'FREE' | 'FIXED' | 'TIERED'
+export type DeliveryFeeType = 'FREE' | 'TIERED'
 
 export interface DeliveryFeeTierRule {
   id: number

@@ -473,23 +473,10 @@ onBeforeUnmount(() => {
   gap: 16px;
 }
 
-.filter-card {
-  padding: 16px 20px;
-}
-
-.table-card {
-  padding: 20px;
-}
-
 .order-no {
-  color: #ff5a00;
+  color: var(--brand-color);
   font-weight: 500;
   cursor: pointer;
-}
-
-.text-muted {
-  color: #999;
-  font-size: 12px;
 }
 
 .text-xs {
@@ -498,10 +485,6 @@ onBeforeUnmount(() => {
 
 .line-through {
   text-decoration: line-through;
-}
-
-.font-bold {
-  font-weight: 600;
 }
 
 :deep(.el-table) {
@@ -519,7 +502,7 @@ onBeforeUnmount(() => {
   color: #333;
   margin: 0 0 10px;
   padding-left: 10px;
-  border-left: 3px solid #ff5a00;
+  border-left: 3px solid var(--brand-color);
 }
 
 .fee-list {

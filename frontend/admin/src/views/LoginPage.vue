@@ -130,7 +130,7 @@ async function handleLogin() {
 .bg-orb-1 {
   width: 500px;
   height: 500px;
-  background: #ff5a00;
+  background: var(--brand-color);
   top: -15%;
   right: -10%;
   animation: float-1 12s ease-in-out infinite;
@@ -310,8 +310,8 @@ async function handleLogin() {
     }
 
     &.is-focus {
-      border-color: #ff5a00;
-      box-shadow: 0 0 0 3px rgba(255, 90, 0, 0.12);
+      border-color: var(--brand-color);
+      box-shadow: 0 0 0 3px var(--el-color-primary-light-9);
     }
   }
 
@@ -341,13 +341,13 @@ async function handleLogin() {
   font-size: 15px;
   font-weight: 600;
   letter-spacing: 4px;
-  background: linear-gradient(135deg, #ff5a00, #ff7f33);
+  background: linear-gradient(135deg, var(--brand-color), var(--brand-color-light));
   border: none;
   transition: all 0.3s;
 
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(255, 90, 0, 0.35);
+    box-shadow: 0 6px 20px var(--el-color-primary-light-7);
   }
 
   &:active {

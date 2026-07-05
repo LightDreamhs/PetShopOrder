@@ -1,55 +1,47 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import {
-  Document,
-  Goods,
-  User,
-  Setting,
-  UserFilled,
-  Fold,
-  Expand,
-  SwitchButton,
-  Calendar,
-} from '@element-plus/icons-vue'
+import { Fold, Expand, SwitchButton } from '@element-plus/icons-vue'
+
+interface MenuEntry {
+  path: string
+  title: string
+  icon: string
+  roles?: string[]
+}
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 
 const isCollapsed = ref(false)
-const menuKey = ref(0)
+
+// 高亮：按前缀匹配当前路径，与路由表 path 对齐
 const activeMenu = computed(() => {
   const path = route.path
-  if (path.startsWith('/orders')) return '/orders'
-  if (path.startsWith('/bookings')) return '/bookings'
-  if (path.startsWith('/products')) return '/products'
-  if (path.startsWith('/members')) return '/members'
-  if (path.startsWith('/settings')) return '/settings'
-  if (path.startsWith('/accounts')) return '/accounts'
-  return '/orders'
+  const matched = menuItems.value.find((item) => path === item.path || path.startsWith(item.path + '/'))
+  return matched?.path ?? '/orders'
 })
 
-const menuItems = computed(() => {
-  const allMenus = [
-    { path: '/orders', title: '订单管理', icon: Document },
-    { path: '/bookings', title: '预约管理', icon: Calendar },
-    { path: '/products', title: '商品管理', icon: Goods, roles: ['BOSS', 'MANAGER'] },
-    { path: '/members', title: '会员管理', icon: User, roles: ['BOSS', 'MANAGER'] },
-    { path: '/settings', title: '系统配置', icon: Setting, roles: ['BOSS'] },
-    { path: '/accounts', title: '账号管理', icon: UserFilled, roles: ['BOSS'] },
-  ]
-  return allMenus.filter(
-    (item) => !item.roles || item.roles.includes(authStore.role!)
-  )
+// 从路由表单一数据源生成菜单（避免与 router meta 双重维护）
+// 仅取根布局下的子路由（有 title 且非登录页）
+const menuItems = computed<MenuEntry[]>(() => {
+  const rootRoute = router.options.routes.find((r) => r.path === '/' && r.children)
+  const children = rootRoute?.children ?? []
+  return children
+    .filter((child) => Boolean(child.meta?.title) && Boolean(child.meta?.icon))
+    .map((child) => ({
+      path: `/${child.path}`,
+      title: child.meta!.title as string,
+      icon: child.meta!.icon as string,
+      roles: child.meta!.roles as string[] | undefined,
+    }))
+    .filter((item) => !item.roles || item.roles.includes(authStore.role!))
 })
 
-async function handleMenuSelect(path: string) {
-  if (path === route.path) return
-  await router.push(path)
-  // 导航完成后（无论成功还是被守卫取消），强制 el-menu 重新渲染以同步高亮
-  menuKey.value++
+function handleMenuSelect(path: string) {
+  if (path !== route.path) router.push(path)
 }
 
 async function handleLogout() {
@@ -66,11 +58,11 @@ async function handleLogout() {
         <div class="logo-area">
           <div class="logo-icon">
             <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="16" cy="16" r="14" fill="#ff5a00" opacity="0.15"/>
-              <path d="M16 8c-2.5 0-4.5 1.5-5 3.5-.2.8.1 1.6.7 2.1L16 17l4.3-3.4c.6-.5.9-1.3.7-2.1C20.5 9.5 18.5 8 16 8z" fill="#ff5a00"/>
-              <circle cx="11" cy="12" r="1.5" fill="#ff5a00" opacity="0.6"/>
-              <circle cx="21" cy="12" r="1.5" fill="#ff5a00" opacity="0.6"/>
-              <path d="M10 19c0 3.3 2.7 6 6 6s6-2.7 6-6" stroke="#ff5a00" stroke-width="1.5" stroke-linecap="round"/>
+              <circle cx="16" cy="16" r="14" fill="var(--brand-color)" opacity="0.15"/>
+              <path d="M16 8c-2.5 0-4.5 1.5-5 3.5-.2.8.1 1.6.7 2.1L16 17l4.3-3.4c.6-.5.9-1.3.7-2.1C20.5 9.5 18.5 8 16 8z" fill="var(--brand-color)"/>
+              <circle cx="11" cy="12" r="1.5" fill="var(--brand-color)" opacity="0.6"/>
+              <circle cx="21" cy="12" r="1.5" fill="var(--brand-color)" opacity="0.6"/>
+              <path d="M10 19c0 3.3 2.7 6 6 6s6-2.7 6-6" stroke="var(--brand-color)" stroke-width="1.5" stroke-linecap="round"/>
             </svg>
           </div>
           <transition name="fade-text">
@@ -80,7 +72,6 @@ async function handleLogout() {
       </div>
 
       <el-menu
-        :key="menuKey"
         :default-active="activeMenu"
         :collapse="isCollapsed"
         :collapse-transition="true"
@@ -239,11 +230,11 @@ async function handleLogout() {
     }
 
     &.is-active {
-      background: rgba(255, 90, 0, 0.15);
-      color: #ff5a00;
+      background: var(--el-color-primary-light-9);
+      color: var(--brand-color);
 
       .el-icon {
-        color: #ff5a00;
+        color: var(--brand-color);
       }
     }
   }
@@ -328,7 +319,7 @@ async function handleLogout() {
   width: 34px;
   height: 34px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #ff5a00, #ff8a3d);
+  background: linear-gradient(135deg, var(--brand-color), var(--brand-color-light));
   color: #fff;
   display: flex;
   align-items: center;
@@ -350,9 +341,9 @@ async function handleLogout() {
 }
 
 .role-tag {
-  border-color: rgba(255, 90, 0, 0.25);
-  color: #ff5a00;
-  background: rgba(255, 90, 0, 0.06);
+  border-color: var(--el-color-primary-light-7);
+  color: var(--brand-color);
+  background: var(--el-color-primary-light-9);
   font-size: 11px;
   height: 20px;
   padding: 0 6px;
@@ -363,7 +354,7 @@ async function handleLogout() {
   font-size: 13px;
 
   &:hover {
-    color: #ff5a00;
+    color: var(--brand-color);
   }
 
   .el-icon {

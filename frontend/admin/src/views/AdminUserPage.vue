@@ -258,20 +258,11 @@ onMounted(() => {
   gap: 16px;
 }
 
-.table-card {
-  padding: 20px;
-}
-
 .card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 16px;
-}
-
-.text-muted {
-  color: #999;
-  font-size: 13px;
 }
 
 .pwd-tip {
@@ -280,7 +271,7 @@ onMounted(() => {
   color: #666;
 
   strong {
-    color: #ff5a00;
+    color: var(--brand-color);
   }
 }
 </style>

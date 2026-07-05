@@ -501,16 +501,8 @@ onMounted(() => {
   gap: 16px;
 }
 
-.filter-card {
-  padding: 16px 20px;
-}
-
-.table-card {
-  padding: 20px;
-}
-
 .text-orange {
-  color: #ff5a00;
+  color: var(--brand-color);
   font-weight: 500;
 }
 
@@ -575,7 +567,7 @@ onMounted(() => {
     transition: border-color 0.2s;
 
     &:hover {
-      border-color: #ff5a00;
+      border-color: var(--brand-color);
     }
   }
 }
