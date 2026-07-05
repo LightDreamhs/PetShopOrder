@@ -28,7 +28,16 @@ sa-token:
     same-site: Lax
     path: /
   token-name: satoken
-  timeout: 86400
+  # C 端微信扫码场景需要长时间保持登录态：
+  #   timeout=30 天：token 绝对有效期，到期必须重新登录
+  #   active-timeout=30 天：滑动过期，每次请求框架自动续签「最后活跃时间」，
+  #     用户 30 天内任意访问即一直保持登录，扫码进入时 cookie 仍在即可免登
+  # 同时 AppAuthServiceImpl 登录时启用 isLastingCookie=true，
+  # 让浏览器写出持久化 Cookie（关闭页面/浏览器后仍保留），实现扫码进入自动恢复登录态。
+  # 如需服务重启不掉线 / 多实例共享会话，引入 sa-token-redis-jackson + spring-boot-starter-data-redis 即可，
+  # 以下配置无需改动。
+  timeout: ${SA_TOKEN_TIMEOUT:2592000}
+  active-timeout: ${SA_TOKEN_ACTIVE_TIMEOUT:2592000}
   is-read-cookie: true
   is-read-header: false
   is-log: false

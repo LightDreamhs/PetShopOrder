@@ -1,5 +1,6 @@
 package com.petshop.order.service.impl;
 
+import cn.dev33.satoken.stp.SaLoginModel;
 import cn.dev33.satoken.stp.StpUtil;
 import com.petshop.order.common.BusinessException;
 import com.petshop.order.entity.AppUser;
@@ -49,7 +50,9 @@ public class AppAuthServiceImpl implements AppAuthService {
             appUserMapper.updateLastLoginTime(user.getId(), LocalDateTime.now());
         }
 
-        StpUtil.login(user.getId());
+        // isLastingCookie=true：写出持久化 Cookie（Max-Age=timeout），
+        // 关闭页面/浏览器后 Cookie 仍保留，微信扫码再次进入时浏览器自动携带 → /auth/check 探测成功 → 免登恢复
+        StpUtil.login(user.getId(), new SaLoginModel().setIsLastingCookie(true));
 
         Map<String, Object> result = new java.util.HashMap<>();
         result.put("user", user);
