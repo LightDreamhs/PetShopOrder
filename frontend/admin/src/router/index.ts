@@ -21,6 +21,12 @@ const router = createRouter({
           meta: { title: '订单管理', icon: 'Document' },
         },
         {
+          path: 'bookings',
+          name: 'Bookings',
+          component: () => import('@/views/BookingBoardPage.vue'),
+          meta: { title: '预约管理', icon: 'Calendar' },
+        },
+        {
           path: 'products',
           name: 'Products',
           component: () => import('@/views/ProductPage.vue'),

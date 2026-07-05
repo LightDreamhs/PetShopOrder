@@ -27,11 +27,14 @@ export interface AdminProfile {
 }
 
 // ========== 商品 ==========
+export type ServiceCategory = 'MAIN_SERVICE' | 'ADDON_SERVICE' | ''
+
 export interface ProductListItem {
   id: number
   name: string
   coverImg: string | null
   type: 'GOODS' | 'SERVICE'
+  serviceCategory?: ServiceCategory
   status: 'ON_SALE' | 'OFF_SALE'
   supportDelivery: boolean
   sort: number
@@ -45,6 +48,7 @@ export interface SkuDetail {
   specName: string
   price: string
   memberPrice: string | null
+  duration?: number | null
   sort: number
 }
 
@@ -54,11 +58,13 @@ export interface ProductDetail {
   description: string | null
   coverImg: string | null
   type: 'GOODS' | 'SERVICE'
+  serviceCategory?: ServiceCategory
   status: 'ON_SALE' | 'OFF_SALE'
   supportDelivery: boolean
   sort: number
   createTime: string
   skus: SkuDetail[]
+  addonProductIds?: number[]
 }
 
 export interface ProductForm {
@@ -66,9 +72,11 @@ export interface ProductForm {
   description?: string
   coverImg?: string
   type: 'GOODS' | 'SERVICE'
+  serviceCategory?: ServiceCategory
   supportDelivery?: boolean
   sort?: number
   skus?: SkuDetail[]
+  addonProductIds?: number[]
 }
 
 // ========== 会员等级 ==========
@@ -228,4 +236,27 @@ export interface AdminUserForm {
   password: string
   realName: string
   role: 'MANAGER' | 'STAFF'
+}
+
+// ========== 预约看板 ==========
+export type BookingStatus = 'PENDING' | 'SERVICED' | 'CANCELLED'
+
+export interface BookingBoardItem {
+  id: number
+  orderId: number
+  mainProductId: number
+  mainSkuId: number
+  startTime: string
+  endTime: string
+  totalDuration: number
+  petInfo: string | null
+  status: BookingStatus
+  createTime: string
+  mainProductName: string
+  mainSkuName: string | null
+  orderNo: string
+  customerPhone: string
+  customerName: string | null
+  totalAmount: string
+  orderCancelled: number
 }

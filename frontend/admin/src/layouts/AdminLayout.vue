@@ -11,6 +11,7 @@ import {
   Fold,
   Expand,
   SwitchButton,
+  Calendar,
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -22,6 +23,7 @@ const menuKey = ref(0)
 const activeMenu = computed(() => {
   const path = route.path
   if (path.startsWith('/orders')) return '/orders'
+  if (path.startsWith('/bookings')) return '/bookings'
   if (path.startsWith('/products')) return '/products'
   if (path.startsWith('/members')) return '/members'
   if (path.startsWith('/settings')) return '/settings'
@@ -32,6 +34,7 @@ const activeMenu = computed(() => {
 const menuItems = computed(() => {
   const allMenus = [
     { path: '/orders', title: '订单管理', icon: Document },
+    { path: '/bookings', title: '预约管理', icon: Calendar },
     { path: '/products', title: '商品管理', icon: Goods, roles: ['BOSS', 'MANAGER'] },
     { path: '/members', title: '会员管理', icon: User, roles: ['BOSS', 'MANAGER'] },
     { path: '/settings', title: '系统配置', icon: Setting, roles: ['BOSS'] },

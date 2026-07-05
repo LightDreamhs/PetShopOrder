@@ -287,8 +287,8 @@ function removeTierRule(index: number) {
   form.tieredDeliveryFeeRules.splice(index, 1)
 }
 
-async function handleSave() {
-  if (!validateForm()) return
+async function handleSave(): Promise<boolean> {
+  if (!validateForm()) return false
   saving.value = true
   try {
     const payload: UpdateSystemConfigRequest = {
@@ -321,8 +321,10 @@ async function handleSave() {
     initialSnapshot.value = buildSnapshot()
     ElMessage.success('系统配置已保存')
     await fetchData()
+    return true
   } catch (error) {
     ElMessage.error(`配置保存失败：${getErrorMessage(error, '请稍后重试')}`)
+    return false
   } finally {
     saving.value = false
   }
@@ -379,14 +381,27 @@ function handleShopLocationConfirm(data: { lat: string; lng: string; address: st
 onBeforeRouteLeave(async () => {
   if (!isDirty.value) return true
   try {
-    await ElMessageBox.confirm('当前有未保存的系统配置，确认离开当前页面？', '未保存变更', {
-      type: 'warning',
-      confirmButtonText: '离开',
-      cancelButtonText: '继续编辑',
-    })
+    // 区分「取消按钮」与「关闭(×)」：
+    //   确认按钮 → 保存并离开
+    //   取消按钮 → 不保存离开
+    //   关闭(×)  → 继续编辑（留在页面）
+    await ElMessageBox.confirm(
+      '当前有未保存的配置变更，是否保存后再离开？',
+      '未保存变更',
+      {
+        type: 'warning',
+        confirmButtonText: '保存并离开',
+        cancelButtonText: '不保存离开',
+        distinguishCancelAndClose: true,
+      },
+    )
+    // 用户点「保存并离开」
+    return await handleSave()
+  } catch (action: unknown) {
+    // action === 'cancel'：用户点「不保存离开」，放行
+    // action === 'close'：用户点 × 或按 Esc，留在页面
+    if (action === 'close') return false
     return true
-  } catch {
-    return false
   }
 })
 
@@ -407,7 +422,7 @@ onMounted(() => {
       <div class="header-row">
         <div>
           <h3 class="block-title">系统配置</h3>
-          <p class="block-desc">用于控制配送规则、接单时段与新订单通知。</p>
+          <p class="block-desc">用于控制配送规则、预约营业时段与通知。</p>
         </div>
         <el-button type="primary" :loading="saving" @click="handleSave">
           保存配置
@@ -482,8 +497,9 @@ onMounted(() => {
           </div>
         </el-form-item>
 
-        <h4 class="section-title">接单设置</h4>
-        <el-form-item label="限制接单时段">
+        <h4 class="section-title">预约营业时段</h4>
+        <p class="section-tip">限制服务预约可选的开始时间范围；实物商品下单不受此限制。</p>
+        <el-form-item label="限制预约时段">
           <el-switch v-model="form.orderTimeEnabled" />
         </el-form-item>
 
@@ -575,6 +591,12 @@ onMounted(() => {
   margin-top: 6px;
   color: #909399;
   font-size: 13px;
+}
+
+.section-tip {
+  margin: 0 0 12px;
+  color: #909399;
+  font-size: 12px;
 }
 
 .config-form {

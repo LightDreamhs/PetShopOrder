@@ -3,7 +3,7 @@ import { ref, reactive, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getProducts, getProduct, createProduct, updateProduct, updateProductStatus, deleteProduct } from '@/api/product'
 import { uploadFile } from '@/api/file'
-import type { ProductListItem, SkuDetail } from '@/types'
+import type { ProductListItem, ServiceCategory, SkuDetail } from '@/types'
 
 // ==================== 商品列表 ====================
 const products = ref<ProductListItem[]>([])
@@ -56,14 +56,24 @@ const productForm = reactive({
   description: '',
   coverImg: '',
   type: 'GOODS' as 'GOODS' | 'SERVICE',
+  serviceCategory: 'MAIN_SERVICE' as ServiceCategory,
   supportDelivery: false,
   sort: 0,
   skus: [] as SkuDetail[],
+  addonProductIds: [] as number[],
 })
+
+// 可选的附加服务列表（type=SERVICE & serviceCategory=ADDON_SERVICE），用于主服务绑定时多选
+const addonServiceOptions = ref<ProductListItem[]>([])
 
 watch(() => productForm.type, () => {
   if (productForm.type === 'SERVICE') {
     productForm.supportDelivery = false
+    // 服务默认主服务分类
+    if (!productForm.serviceCategory) productForm.serviceCategory = 'MAIN_SERVICE'
+  } else {
+    // GOODS 清空服务分类
+    productForm.serviceCategory = ''
   }
 })
 
@@ -83,10 +93,13 @@ async function handleUpload(options: any) {
 }
 
 function addSkuRow() {
+  // 附加服务默认不占时间（0）；主服务默认 60 分钟
+  const isMainService = productForm.type === 'SERVICE' && productForm.serviceCategory !== 'ADDON_SERVICE'
   productForm.skus.push({
     specName: '',
     price: '0.00',
     memberPrice: null,
+    duration: productForm.type === 'SERVICE' ? (isMainService ? 60 : 0) : null,
     sort: productForm.skus.length + 1,
   })
 }
@@ -102,10 +115,13 @@ function openProductCreate() {
   productForm.description = ''
   productForm.coverImg = ''
   productForm.type = 'GOODS'
+  productForm.serviceCategory = ''
   productForm.supportDelivery = false
   productForm.sort = 0
   productForm.skus = []
+  productForm.addonProductIds = []
   addSkuRow()
+  fetchAddonServices()
   productDialogVisible.value = true
 }
 
@@ -119,12 +135,27 @@ async function openProductEdit(row: ProductListItem) {
     productForm.description = p.description || ''
     productForm.coverImg = p.coverImg || ''
     productForm.type = p.type
+    productForm.serviceCategory = (p.serviceCategory || '') as ServiceCategory
     productForm.supportDelivery = p.supportDelivery
     productForm.sort = p.sort
     productForm.skus = p.skus.map((s) => ({ ...s }))
+    productForm.addonProductIds = p.addonProductIds ? [...p.addonProductIds] : []
+    await fetchAddonServices()
     productDialogVisible.value = true
   } catch {
     // handled
+  }
+}
+
+/** 拉取所有附加服务（type=SERVICE & serviceCategory=ADDON_SERVICE），供主服务绑定多选 */
+async function fetchAddonServices() {
+  try {
+    const res = await getProducts({ type: 'SERVICE', size: 200 })
+    addonServiceOptions.value = (res.data.list as ProductListItem[]).filter(
+      (p) => p.serviceCategory === 'ADDON_SERVICE',
+    )
+  } catch {
+    addonServiceOptions.value = []
   }
 }
 
@@ -132,9 +163,17 @@ async function handleProductSubmit() {
   if (!productForm.name) { ElMessage.warning('请输入商品名称'); return }
   if (!productForm.type) { ElMessage.warning('请选择类型'); return }
   if (productForm.skus.length === 0) { ElMessage.warning('请至少添加一个规格'); return }
+  const isMainService = productForm.type === 'SERVICE' && productForm.serviceCategory === 'MAIN_SERVICE'
   for (const sku of productForm.skus) {
     if (!sku.specName) { ElMessage.warning('请填写规格名称'); return }
-    if (!sku.price || parseFloat(sku.price) <= 0) { ElMessage.warning('请填写有效的原价'); return }
+    // 价格允许 0（附加服务可免费），但不允许负数或空
+    if (sku.price === '' || sku.price === null || sku.price === undefined || parseFloat(sku.price) < 0) {
+      ElMessage.warning('请填写有效的原价（附加服务可填 0 表示免费）'); return
+    }
+    // 主服务的每个规格必须配 >0 的时长（决定预约占用时段）
+    if (isMainService && (!sku.duration || sku.duration <= 0)) {
+      ElMessage.warning('主服务的每个规格需填写服务时长（>0 分钟）'); return
+    }
   }
   productFormLoading.value = true
   try {
@@ -149,8 +188,16 @@ async function handleProductSubmit() {
         specName: s.specName,
         price: s.price,
         memberPrice: productForm.type === 'GOODS' ? s.memberPrice : null,
+        duration: productForm.type === 'SERVICE' ? (s.duration ?? null) : null,
         sort: s.sort,
       })),
+    }
+    // 服务分类 + 附加服务绑定（仅 SERVICE）
+    if (productForm.type === 'SERVICE') {
+      data.serviceCategory = productForm.serviceCategory || 'MAIN_SERVICE'
+      if (productForm.serviceCategory === 'MAIN_SERVICE') {
+        data.addonProductIds = productForm.addonProductIds
+      }
     }
     if (productFormMode.value === 'create') {
       await createProduct(data)
@@ -256,6 +303,17 @@ onMounted(() => {
           </template>
         </el-table-column>
 
+        <el-table-column label="服务分类" width="100" align="center">
+          <template #default="{ row }">
+            <template v-if="row.type === 'SERVICE'">
+              <el-tag v-if="row.serviceCategory === 'MAIN_SERVICE'" type="warning" size="small">主服务</el-tag>
+              <el-tag v-else-if="row.serviceCategory === 'ADDON_SERVICE'" type="info" size="small">附加</el-tag>
+              <span v-else class="text-muted">-</span>
+            </template>
+            <span v-else class="text-muted">-</span>
+          </template>
+        </el-table-column>
+
         <el-table-column prop="status" label="状态" width="80" align="center">
           <template #default="{ row }">
             <el-tag :type="row.status === 'ON_SALE' ? 'success' : 'info'" size="small" effect="dark">
@@ -321,6 +379,13 @@ onMounted(() => {
           </el-radio-group>
         </el-form-item>
 
+        <el-form-item v-if="productForm.type === 'SERVICE'" label="服务分类" required>
+          <el-radio-group v-model="productForm.serviceCategory">
+            <el-radio value="MAIN_SERVICE">主服务（可独立预约）</el-radio>
+            <el-radio value="ADDON_SERVICE">附加服务（仅作附加项）</el-radio>
+          </el-radio-group>
+        </el-form-item>
+
         <el-form-item label="商品描述">
           <el-input v-model="productForm.description" type="textarea" :rows="2" placeholder="可选" />
         </el-form-item>
@@ -358,13 +423,15 @@ onMounted(() => {
             </div>
             <div class="sku-guide">
               <span>规格名：如「500g」「单次洗澡」</span>
-              <span>原价/会员价：填写元，支持小数（如 99.00）</span>
-              <span>排序：数字越小越靠前</span>
+              <span>原价/会员价：填写元，支持小数（附加服务可填 0 表示免费）</span>
+              <span v-if="productForm.type === 'SERVICE'">时长(分钟)：主服务必填（决定预约占用时段）；附加服务填 0 表示不额外占用时间</span>
+              <span v-else>排序：数字越小越靠前</span>
             </div>
             <div class="sku-columns">
               <span style="width: 160px">规格名</span>
               <span style="width: 100px">原价(元)</span>
               <span v-if="productForm.type === 'GOODS'" style="width: 100px">会员价(元)</span>
+              <span v-if="productForm.type === 'SERVICE'" style="width: 110px">时长(分钟)</span>
               <span style="width: 100px">排序</span>
               <span style="width: 24px"></span>
             </div>
@@ -379,12 +446,40 @@ onMounted(() => {
                   placeholder="如：89.00"
                   style="width: 100px"
                 />
+                <el-input-number
+                  v-if="productForm.type === 'SERVICE'"
+                  v-model="sku.duration"
+                  :min="0"
+                  :max="600"
+                  placeholder="如：90"
+                  style="width: 110px"
+                  controls-position="right"
+                />
                 <el-input-number v-model="sku.sort" :min="0" :max="999" style="width: 100px" controls-position="right" />
                 <el-button link type="danger" @click="removeSkuRow(index)">
                   <el-icon><Delete /></el-icon>
                 </el-button>
               </div>
             </div>
+          </div>
+        </el-form-item>
+
+        <!-- 附加服务绑定（仅主服务显示） -->
+        <el-form-item
+          v-if="productForm.type === 'SERVICE' && productForm.serviceCategory === 'MAIN_SERVICE'"
+          label="可附加服务"
+        >
+          <div class="addon-bind-section">
+            <div class="addon-bind-hint">勾选后，顾客预约本主服务时可一并预约这些附加服务</div>
+            <el-checkbox-group v-if="addonServiceOptions.length > 0" v-model="productForm.addonProductIds">
+              <el-checkbox
+                v-for="addon in addonServiceOptions"
+                :key="addon.id"
+                :value="addon.id"
+                :label="addon.name"
+              />
+            </el-checkbox-group>
+            <el-empty v-else description="暂无附加服务（需先新建 type=服务、分类=附加服务 的商品）" :image-size="40" />
           </div>
         </el-form-item>
       </el-form>
@@ -496,5 +591,15 @@ onMounted(() => {
 
 .upload-icon {
   color: #ccc;
+}
+
+.addon-bind-section {
+  width: 100%;
+}
+
+.addon-bind-hint {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  margin-bottom: 8px;
 }
 </style>
