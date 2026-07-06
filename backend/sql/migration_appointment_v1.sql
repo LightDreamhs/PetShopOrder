@@ -1,7 +1,8 @@
 -- ============================================
--- 服务预约系统 第1期 数据库迁移脚本
--- 适用场景：在【已存在的】petshop_order 数据库上执行（已部署环境）
--- 全新部署环境直接用 init.sql 即可，无需本脚本。
+-- 【历史迁移脚本】服务预约系统 第1期 数据库迁移
+-- 状态：init.sql 已包含本脚本的全部结构变更，**全新部署无需执行**。
+-- 仅适用：在预约系统上线前已存在的旧 petshop_order 库上，增量补 product.service_category、
+--         sku.duration、orders.cancelled、main_service_addon、appointment 等结构。
 -- 执行方式（docker 环境）：
 --   docker exec -i petorder-mysql mysql -uroot -proot123 petshop_order < backend/sql/migration_appointment_v1.sql
 -- ============================================

@@ -31,3 +31,6 @@
 | system_config_delivery_tier | id, config_id, min_distance_km, max_distance_km, fee, sort, create_time, update_time | 分段运费规则明细 | H5 结算/下单时参与运费计算（后端） | SystemConfigPage 分段规则编辑 |
 | system_config_log | id, config_id, operator_id, operator_name, summary, before_val, after_val, create_time, update_time | 系统配置变更审计日志 | 无直接页面 | SystemConfigPage 下方"配置变更记录" |
 | operation_log | id, user_id, action, target, before_val, after_val, create_time | 通用后台操作日志审计 | 无 | 后端有 /api/admin/logs，admin 前端暂未挂日志页面路由 |
+| appointment | id, order_id, user_id, main_product_id, main_sku_id, start_time, end_time, total_duration, pet_info, status, create_time, update_time | 服务预约记录（与 orders 一对一，order_id 关联） | 预约页创建预约；OrderDetailPage 展示预约信息 | Admin 预约看板与营业时段管理 |
+| main_service_addon | id, main_product_id, addon_product_id, sort, create_time, update_time | 主服务-附加服务绑定关系 | 预约页附加服务选择 | ProductPage/预约配置附加服务关联 |
+| user_address | id, user_id, label, address, detail, lat, lng, is_default, create_time, update_time | 用户收货地址 | CheckoutPage 地址选择与保存 | 无直接页面（C 端维护） |
