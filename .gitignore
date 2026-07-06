@@ -14,8 +14,13 @@ backend/target/
 Thumbs.db
 .DS_Store
 
-# Env
-.env
+# Env（覆盖所有 .env 变体；模板文件 .env.prod.example 仍需入库）
+.env*
+!.env.prod.example
+
+# 敏感凭据（绝不入仓；部署时手动填入 .env.prod，仓库外 ~/.petshop-secrets 已有备份）
+短信验证服务Access key.txt
+飞书订单通知群webhook.txt
 
 # Uploads
 backend/uploads/
