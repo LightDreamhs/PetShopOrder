@@ -1,0 +1,56 @@
+# 备案期间 HTTP 全功能配置（通过 IP 访问用）。
+# 监听 80，服务 H5 + Admin + API 反代 + uploads + 保留 acme 验证，无 SSL、不跳 443。
+# 备案通过、certbot 申证书成功后，切回 nginx.conf（HTTPS）。
+
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name 2zg.site www.2zg.site;
+
+    client_max_body_size 10m;
+
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript image/svg+xml;
+    gzip_min_length 1024;
+
+    # ACME 验证（保留，备案后 certbot 申证书用）
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    # 健康检查
+    location = /health {
+        proxy_pass http://backend:8080/health;
+        access_log off;
+    }
+
+    # 后端 API 反代（保留 /api/ 前缀）
+    location /api/ {
+        proxy_pass http://backend:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # 上传图片（nginx 直读宿主机）
+    location /uploads/ {
+        alias /usr/share/nginx/uploads/;
+        expires 30d;
+        add_header Cache-Control "public";
+        access_log off;
+    }
+
+    # Admin 隐秘路径（Hash 模式 + 静态资源）
+    location /petshop-admin-7x9k2/ {
+        alias /usr/share/nginx/admin/;
+        index index.html;
+        try_files $uri $uri/ /petshop-admin-7x9k2/index.html;
+    }
+
+    # H5 根域（History 模式兜底）
+    location / {
+        root /usr/share/nginx/html;
+        try_files $uri $uri/ /index.html;
+    }
+}
