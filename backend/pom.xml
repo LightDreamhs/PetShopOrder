@@ -97,6 +97,8 @@
     </dependencies>
 
     <build>
+        <!-- 固定产物名 app.jar，Dockerfile COPY 路径稳定（不随 version 变化） -->
+        <finalName>app</finalName>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>

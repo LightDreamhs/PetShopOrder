@@ -2,6 +2,8 @@ server:
   port: 8080
 
 spring:
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
   datasource:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:petshop_order}?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: ${DB_USER:root}
@@ -25,7 +27,7 @@ pagehelper:
 sa-token:
   cookie:
     http-only: true
-    same-site: Lax
+    same-site: ${SATOKEN_SAME_SITE:Lax}
     path: /
   token-name: satoken
   # C 端微信扫码场景需要长时间保持登录态：
@@ -44,7 +46,16 @@ sa-token:
 
 app:
   webhook:
-    aes-key: PetShop2026Order!
+    # 兼容历史已加密的 webhook 数据，保留默认值；生产建议通过环境变量 WEBHOOK_AES_KEY 覆盖
+    aes-key: ${WEBHOOK_AES_KEY:PetShop2026Order!}
+  cors:
+    # 跨域允许来源（支持通配 pattern，如 http://192.168.*.*:3000）。
+    # 默认空：生产同域访问不触发 CORS；具体来源交给 dev/prod profile 覆盖。
+    allowed-origins: []
+  init:
+    # 默认 BOSS 账号初始化口令，生产务必通过 APP_INIT_ADMIN_PASSWORD 覆盖（DataInitializer 会对弱口令打 WARN）
+    admin-username: ${APP_INIT_ADMIN_USERNAME:admin}
+    admin-password: ${APP_INIT_ADMIN_PASSWORD:admin123}
 
 file:
   upload-dir: ${UPLOAD_DIR:./uploads}

@@ -6,6 +6,9 @@ import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig({
+  // 默认根路径（本地开发）；Docker 构建时通过环境变量注入隐秘路径，
+  // 例如 VITE_BASE_URL=/petshop-admin-7x9k2/，避免 admin 入口被直接猜测
+  base: process.env.VITE_BASE_URL || '/',
   plugins: [
     vue(),
     AutoImport({
