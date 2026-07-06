@@ -13,7 +13,9 @@ services:
       MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
       TZ: Asia/Shanghai
     volumes:
-      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      # 用 01/02 数字前缀确保 schema 先于测试种子执行（MySQL 按目录内文件名排序依次执行）
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./sql/init-seed-dev.sql:/docker-entrypoint-initdb.d/02-seed-dev.sql
       - mysql_data:/var/lib/mysql
     command: >
       --default-authentication-plugin=caching_sha2_password

@@ -1,0 +1,25 @@
+# syntax=docker/dockerfile:1
+# 前端镜像：三阶段构建（pnpm 构建 H5 + Admin → nginx 托管静态产物）
+# 构建上下文为项目根（compose 中 build.context 设为 ..），以便 COPY frontend 整个目录。
+
+# ===== 构建阶段 =====
+FROM node:20-alpine AS builder
+RUN npm install -g pnpm
+WORKDIR /build
+# .dockerignore（项目根）已排除 node_modules / dist，仅拷源码
+COPY frontend ./frontend
+
+# 构建 H5（部署在根域 https://2zg.site/，base 默认 /）
+WORKDIR /build/frontend/h5
+RUN pnpm install && pnpm build
+
+# 构建 Admin（隐秘路径，注入 VITE_BASE_URL）
+WORKDIR /build/frontend/admin
+RUN pnpm install && VITE_BASE_URL=/petshop-admin-7x9k2/ pnpm build
+
+# ===== 运行阶段 =====
+FROM nginx:alpine
+# H5 产物 → nginx 根目录；Admin 产物 → 隐秘路径目录（nginx.conf 中 alias 指向）
+COPY --from=builder /build/frontend/h5/dist /usr/share/nginx/html
+COPY --from=builder /build/frontend/admin/dist /usr/share/nginx/admin
+EXPOSE 80

@@ -1,0 +1,25 @@
+# VCS / IDE
+.git
+.idea
+.vscode
+.obsidian
+.claude
+
+# 后端 / 部署 / 文档 / 规划（前端镜像不需要，缩小上下文）
+backend/
+deploy/
+docs/
+backend-planning/
+
+# 依赖与本地构建产物（镜像内重新 pnpm install/build）
+**/node_modules
+**/dist
+
+# 文档
+*.md
+
+# 根目录敏感文件（绝不进镜像）；frontend/.env.production 不在此列，前端构建需要
+/.env
+/.env.prod
+短信验证服务Access key.txt
+飞书订单通知群webhook.txt
