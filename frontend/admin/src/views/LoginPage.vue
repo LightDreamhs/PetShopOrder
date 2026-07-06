@@ -98,10 +98,6 @@ async function handleLogin() {
             </el-button>
           </el-form-item>
         </el-form>
-
-        <div class="card-footer">
-          <span class="mock-hint">演示账号：admin / admin123</span>
-        </div>
       </div>
     </div>
   </div>
@@ -355,14 +351,4 @@ async function handleLogin() {
   }
 }
 
-/* ========== 底部 ========== */
-.card-footer {
-  text-align: center;
-  margin-top: 8px;
-}
-
-.mock-hint {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.25);
-}
 </style>
