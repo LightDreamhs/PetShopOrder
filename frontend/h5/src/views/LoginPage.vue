@@ -24,7 +24,7 @@
           type="digit"
           label="验证码"
           placeholder="请输入验证码"
-          maxlength="4"
+          maxlength="6"
           :error-message="codeError"
         >
           <template #button>
@@ -102,8 +102,8 @@ async function handleLogin() {
     phoneError.value = '请输入正确的手机号'
     valid = false
   }
-  if (!code.value || code.value.length < 4) {
-    codeError.value = '请输入4位验证码'
+  if (!code.value || code.value.length < 6) {
+    codeError.value = '请输入6位验证码'
     valid = false
   }
   if (!valid) return
