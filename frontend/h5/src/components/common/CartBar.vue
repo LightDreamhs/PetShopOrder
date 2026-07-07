@@ -1,24 +1,32 @@
 <template>
   <div v-if="cartStore.totalCount > 0" class="cart-bar">
     <div class="cart-bar-inner safe-area-bottom">
-      <div class="cart-bar-left" @click="router.push('/cart')">
+      <div class="cart-bar-left" @click="drawerVisible = true">
         <div class="cart-icon-wrap">
           <van-icon name="cart-o" size="22" color="#fff" />
           <van-badge v-if="cartStore.totalCount > 0" :content="cartStore.totalCount" class="cart-badge" />
         </div>
         <span class="cart-amount">¥{{ cartStore.totalAmount }}</span>
       </div>
-      <button class="cart-btn" @click="router.push('/cart')">去结算</button>
+      <button class="cart-btn" @click="goCheckout">去结算</button>
     </div>
   </div>
+  <CartDrawer v-model:show="drawerVisible" />
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cart'
+import CartDrawer from './CartDrawer.vue'
 
 const router = useRouter()
 const cartStore = useCartStore()
+const drawerVisible = ref(false)
+
+function goCheckout() {
+  router.push('/checkout')
+}
 </script>
 
 <style scoped lang="scss">

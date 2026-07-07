@@ -13,6 +13,7 @@ declare module 'vue' {
   export interface GlobalComponents {
     AddressPicker: typeof import('./src/components/checkout/AddressPicker.vue')['default']
     CartBar: typeof import('./src/components/common/CartBar.vue')['default']
+    CartDrawer: typeof import('./src/components/common/CartDrawer.vue')['default']
     CategorySidebar: typeof import('./src/components/home/CategorySidebar.vue')['default']
     PriceBreakdown: typeof import('./src/components/checkout/PriceBreakdown.vue')['default']
     ProductCard: typeof import('./src/components/home/ProductCard.vue')['default']

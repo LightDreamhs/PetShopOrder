@@ -16,12 +16,6 @@ const router = createRouter({
       meta: { requiresAuth: true, title: '贰掌柜宠物店' },
     },
     {
-      path: '/cart',
-      name: 'Cart',
-      component: () => import('@/views/CartPage.vue'),
-      meta: { requiresAuth: true, title: '购物车' },
-    },
-    {
       path: '/checkout',
       name: 'Checkout',
       component: () => import('@/views/CheckoutPage.vue'),

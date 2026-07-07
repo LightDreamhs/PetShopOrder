@@ -1,59 +1,77 @@
 <template>
-  <div class="cart-page">
-    <van-nav-bar title="购物车" left-arrow @click-left="router.back()" fixed placeholder />
+  <van-popup v-model:show="visible" position="bottom" round :style="{ maxHeight: '75vh' }">
+    <div class="cart-drawer">
+      <div class="cart-drawer-header">
+        <span class="cart-drawer-title">购物车</span>
+        <van-icon name="cross" size="20" class="cart-drawer-close" @click="visible = false" />
+      </div>
 
-    <div class="cart-content">
       <template v-if="cartStore.items.length > 0">
-        <div class="cart-list">
-          <div v-for="item in cartStore.items" :key="cartStore.cartKey(item.productId, item.skuId)" class="cart-item">
-            <div class="cart-item-info">
-              <div class="cart-item-name">{{ item.productName }}</div>
-              <div v-if="item.skuName" class="cart-item-spec">{{ item.skuName }}</div>
-              <div class="cart-item-price">
-                <span class="price-symbol">¥</span>
-                <span class="price-deal">{{ item.dealPrice }}</span>
-                <span v-if="item.originalPrice !== item.dealPrice" class="price-original">¥{{ item.originalPrice }}</span>
-              </div>
-            </div>
-            <div class="cart-item-qty">
-              <van-stepper
-                :model-value="item.quantity"
-                min="0"
-                max="99"
-                @change="(val: number) => handleQtyChange(item, val)"
-              />
-            </div>
-          </div>
-        </div>
-
         <div v-if="memberStore.isMember" class="member-tip">
           <van-icon name="coupon-o" />
           <span>{{ memberStore.memberLevelName }} · 服务享{{ memberStore.serviceDiscountText }} · 商品享会员价</span>
         </div>
 
-        <div class="cart-footer safe-area-bottom">
+        <div class="cart-drawer-list">
+          <div class="cart-list">
+            <div
+              v-for="item in cartStore.items"
+              :key="cartStore.cartKey(item.productId, item.skuId)"
+              class="cart-item"
+            >
+              <div class="cart-item-info">
+                <div class="cart-item-name">{{ item.productName }}</div>
+                <div v-if="item.skuName" class="cart-item-spec">{{ item.skuName }}</div>
+                <div class="cart-item-price">
+                  <span class="price-symbol">¥</span>
+                  <span class="price-deal">{{ item.dealPrice }}</span>
+                  <span v-if="item.originalPrice !== item.dealPrice" class="price-original">¥{{ item.originalPrice }}</span>
+                </div>
+              </div>
+              <div class="cart-item-qty">
+                <van-stepper
+                  :model-value="item.quantity"
+                  min="0"
+                  max="99"
+                  @change="(val: number) => handleQtyChange(item, val)"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="cart-drawer-footer safe-area-bottom">
           <div class="cart-total">
             <span class="total-label">合计</span>
             <span class="total-amount">¥{{ cartStore.totalAmount }}</span>
           </div>
-          <van-button type="primary" round class="checkout-btn" @click="router.push('/checkout')">
+          <van-button type="primary" round class="checkout-btn" @click="goCheckout">
             去结算（{{ cartStore.totalCount }}件）
           </van-button>
         </div>
       </template>
 
       <van-empty v-else description="购物车空空的" image="https://fastly.jsdelivr.net/npm/@vant/assets/custom-empty-image.png">
-        <van-button type="primary" round class="empty-btn" @click="router.push('/')">去选购</van-button>
+        <van-button type="primary" round class="empty-btn" @click="visible = false">去选购</van-button>
       </van-empty>
     </div>
-  </div>
+  </van-popup>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cart'
 import { useMemberStore } from '@/stores/member'
 import type { CartItem } from '@/types'
+
+const props = defineProps<{ show: boolean }>()
+const emit = defineEmits<{ 'update:show': [value: boolean] }>()
+
+const visible = computed({
+  get: () => props.show,
+  set: (val) => emit('update:show', val),
+})
 
 const router = useRouter()
 const cartStore = useCartStore()
@@ -66,19 +84,43 @@ function handleQtyChange(item: CartItem, val: number) {
     cartStore.updateQuantity(item.productId, item.skuId, val)
   }
 }
+
+function goCheckout() {
+  visible.value = false
+  router.push('/checkout')
+}
 </script>
 
 <style scoped lang="scss">
-.cart-page {
-  min-height: 100vh;
-  background: $bg;
+.cart-drawer {
   display: flex;
   flex-direction: column;
+  max-height: 75vh;
 }
 
-.cart-content {
+.cart-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 12px;
+}
+
+.cart-drawer-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: $text;
+}
+
+.cart-drawer-close {
+  color: $text-muted;
+  padding: 4px;
+  cursor: pointer;
+}
+
+.cart-drawer-list {
   flex: 1;
-  padding-bottom: 80px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .cart-list {
@@ -158,18 +200,13 @@ function handleQtyChange(item: CartItem, val: number) {
   box-shadow: $shadow-sm;
 }
 
-.cart-footer {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
+.cart-drawer-footer {
   background: #fff;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
   box-shadow: 0 -1px 8px rgba(0, 0, 0, 0.06);
-  z-index: 50;
 }
 
 .cart-total {
