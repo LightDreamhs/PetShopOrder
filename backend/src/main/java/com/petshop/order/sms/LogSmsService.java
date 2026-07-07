@@ -15,8 +15,8 @@ import org.springframework.stereotype.Service;
 @ConditionalOnProperty(prefix = "sms", name = "provider", havingValue = "log", matchIfMissing = true)
 public class LogSmsService implements SmsVerifyService {
 
-    /** 开发期固定验证码，前端/联调用 */
-    private static final String DEV_CODE = "1234";
+    /** 开发期固定验证码（6 位，对齐前端 PNVS 输入框），前端/联调用 */
+    private static final String DEV_CODE = "123456";
 
     @Override
     public void send(String phone) {
