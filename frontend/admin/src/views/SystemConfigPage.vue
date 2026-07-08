@@ -19,6 +19,7 @@ const loadFailed = ref(false)
 const saving = ref(false)
 const testingWebhook = ref(false)
 const uploadingQr = ref(false)
+const uploadingAd = ref(false)
 const changeLogs = ref<SystemConfigChangeLog[]>([])
 const initialSnapshot = ref('')
 const webhookEdited = ref(false)
@@ -40,6 +41,10 @@ const form = reactive<UpdateSystemConfigRequest>({
   orderEndTime: '21:00',
   qywxWebhookUrl: '',
   paymentQrUrl: '',
+  adEnabled: false,
+  adImageUrl: '',
+  adLinkType: 'NONE',
+  adLinkTarget: '',
 })
 
 const feeTypeOptions: Array<{ label: string; value: DeliveryFeeType }> = [
@@ -80,6 +85,10 @@ function applyConfig(config: SystemConfig) {
     : ''
   webhookEdited.value = false
   form.paymentQrUrl = config.paymentQrUrl || ''
+  form.adEnabled = !!config.adEnabled
+  form.adImageUrl = config.adImageUrl || ''
+  form.adLinkType = config.adLinkType || 'NONE'
+  form.adLinkTarget = config.adLinkTarget || ''
 }
 
 function normalizeMoney(value: string) {
@@ -175,6 +184,10 @@ function buildSnapshot() {
     orderEndTime: form.orderEndTime,
     qywxWebhookUrl: form.qywxWebhookUrl?.trim() || '',
     paymentQrUrl: form.paymentQrUrl || '',
+    adEnabled: form.adEnabled,
+    adImageUrl: form.adImageUrl || '',
+    adLinkType: form.adLinkType || 'NONE',
+    adLinkTarget: form.adLinkTarget || '',
     webhookEdited: webhookEdited.value,
   })
 }
@@ -309,6 +322,10 @@ async function handleSave(): Promise<boolean> {
       payload.qywxWebhookUrl = webhookValue
     }
     payload.paymentQrUrl = form.paymentQrUrl || ''
+    payload.adEnabled = form.adEnabled
+    payload.adImageUrl = form.adImageUrl || ''
+    payload.adLinkType = form.adLinkType || 'NONE'
+    payload.adLinkTarget = form.adLinkTarget || ''
 
     const res = await updateSystemConfig(payload)
     applyConfig(res.data)
@@ -364,6 +381,23 @@ async function handleQrUpload(options: { file: File }) {
 
 function handleQrRemove() {
   form.paymentQrUrl = ''
+}
+
+async function handleAdUpload(options: { file: File }) {
+  uploadingAd.value = true
+  try {
+    const res = await uploadFile(options.file)
+    form.adImageUrl = res.data.url
+    ElMessage.success('广告图上传成功')
+  } catch {
+    ElMessage.error('上传失败')
+  } finally {
+    uploadingAd.value = false
+  }
+}
+
+function handleAdRemove() {
+  form.adImageUrl = ''
 }
 
 function handleShopLocationConfirm(data: { lat: string; lng: string; address: string }) {
@@ -539,6 +573,30 @@ onMounted(() => {
               <el-button :loading="uploadingQr">上传收款码</el-button>
             </el-upload>
             <p class="qr-tip">顾客下单成功后将展示此收款码，支持随时更换</p>
+          </div>
+        </el-form-item>
+
+        <h4 class="section-title">开屏广告</h4>
+        <p class="section-tip">顾客每天首次进入首页时弹出一张广告图（屏幕中间悬挂，右上角可关闭）。</p>
+        <el-form-item label="启用开屏广告">
+          <el-switch v-model="form.adEnabled" />
+        </el-form-item>
+
+        <el-form-item label="广告图">
+          <div class="qr-upload-area">
+            <div v-if="form.adImageUrl" class="qr-preview">
+              <el-image :src="form.adImageUrl" fit="contain" style="width: 200px; max-height: 240px; border: 1px solid #eee; border-radius: 4px" />
+              <el-button link type="danger" @click="handleAdRemove">删除</el-button>
+            </div>
+            <el-upload
+              v-else
+              :show-file-list="false"
+              accept="image/*"
+              :http-request="handleAdUpload"
+            >
+              <el-button :loading="uploadingAd">上传广告图</el-button>
+            </el-upload>
+            <p class="qr-tip">建议上传活动海报图；关闭开关或删除图片后顾客端不再弹出</p>
           </div>
         </el-form-item>
       </el-form>

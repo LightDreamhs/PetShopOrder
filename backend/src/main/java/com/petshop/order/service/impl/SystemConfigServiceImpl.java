@@ -218,6 +218,34 @@ public class SystemConfigServiceImpl implements SystemConfigService {
             config.setPaymentQrUrl(newQr);
         }
 
+        // ===== 开屏广告 =====
+        if (params.containsKey("adEnabled")) {
+            Integer newEn = Boolean.TRUE.equals(params.get("adEnabled")) ? 1 : 0;
+            Integer oldEn = config.getAdEnabled();
+            if (oldEn == null || !oldEn.equals(newEn)) {
+                changes.add(newEn == 1 ? "开启开屏广告" : "关闭开屏广告");
+            }
+            config.setAdEnabled(newEn);
+        }
+        if (params.containsKey("adImageUrl")) {
+            String newImg = (String) params.get("adImageUrl");
+            String oldImg = config.getAdImageUrl();
+            boolean oldHas = oldImg != null && !oldImg.isEmpty();
+            boolean newHas = newImg != null && !newImg.isEmpty();
+            if (oldHas != newHas || (oldHas && !oldImg.equals(newImg))) {
+                if (!newHas) changes.add("移除开屏广告图");
+                else if (!oldHas) changes.add("设置开屏广告图");
+                else changes.add("更换开屏广告图");
+            }
+            config.setAdImageUrl(newImg);
+        }
+        if (params.containsKey("adLinkType")) {
+            config.setAdLinkType((String) params.get("adLinkType"));
+        }
+        if (params.containsKey("adLinkTarget")) {
+            config.setAdLinkTarget((String) params.get("adLinkTarget"));
+        }
+
         config.setUpdatedBy(operator.getId());
         systemConfigMapper.updateById(config);
 
@@ -337,6 +365,7 @@ public class SystemConfigServiceImpl implements SystemConfigService {
             config.setFixedDeliveryFee(BigDecimal.ZERO);
             config.setOrderTimeEnabled(0);
             config.setHasQywxWebhook(0);
+            config.setAdEnabled(0);
             systemConfigMapper.insert(config);
         }
         return config;
@@ -374,6 +403,10 @@ public class SystemConfigServiceImpl implements SystemConfigService {
         m.put("qywxWebhookUrl", maskedWebhook);
         m.put("hasQywxWebhook", config.getHasQywxWebhook() != null && config.getHasQywxWebhook() == 1);
         m.put("paymentQrUrl", config.getPaymentQrUrl());
+        m.put("adEnabled", config.getAdEnabled() != null && config.getAdEnabled() == 1);
+        m.put("adImageUrl", config.getAdImageUrl());
+        m.put("adLinkType", config.getAdLinkType());
+        m.put("adLinkTarget", config.getAdLinkTarget());
 
         String updatedByName = null;
         if (config.getUpdatedBy() != null) {

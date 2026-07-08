@@ -195,6 +195,10 @@ export interface SystemConfig {
   orderEndTime: string
   qywxWebhookUrl: string | null
   paymentQrUrl: string | null
+  adEnabled: boolean
+  adImageUrl: string | null
+  adLinkType: string | null
+  adLinkTarget: string | null
   updatedBy: string
   updatedAt: string
 }
@@ -219,6 +223,10 @@ export interface UpdateSystemConfigRequest {
   orderEndTime: string
   qywxWebhookUrl?: string
   paymentQrUrl?: string
+  adEnabled?: boolean
+  adImageUrl?: string
+  adLinkType?: string
+  adLinkTarget?: string
 }
 
 // ========== 账号管理 ==========

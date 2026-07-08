@@ -63,6 +63,19 @@ public class AdminSystemConfigController {
             params.put("paymentQrUrl", req.getPaymentQrUrl());
         }
 
+        if (req.getAdEnabled() != null) {
+            params.put("adEnabled", req.getAdEnabled());
+        }
+        if (req.getAdImageUrl() != null) {
+            params.put("adImageUrl", req.getAdImageUrl());
+        }
+        if (req.getAdLinkType() != null) {
+            params.put("adLinkType", req.getAdLinkType());
+        }
+        if (req.getAdLinkTarget() != null) {
+            params.put("adLinkTarget", req.getAdLinkTarget());
+        }
+
         if (req.getTieredDeliveryFeeRules() != null) {
             List<Map<String, Object>> rules = new ArrayList<>();
             for (TierRule tierRule : req.getTieredDeliveryFeeRules()) {
@@ -92,6 +105,10 @@ public class AdminSystemConfigController {
         private String orderEndTime;
         private String qywxWebhookUrl;
         private String paymentQrUrl;
+        private Boolean adEnabled;
+        private String adImageUrl;
+        private String adLinkType;
+        private String adLinkTarget;
     }
 
     @Data

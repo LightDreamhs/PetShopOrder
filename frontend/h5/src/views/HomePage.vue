@@ -83,6 +83,9 @@
       :product="selectedProduct"
     />
 
+    <!-- 开屏广告 -->
+    <AdPopup v-model:show="adVisible" :ad="adConfig" />
+
     <!-- 备案号 -->
     <IcpFooter />
   </div>
@@ -95,12 +98,14 @@ import { useCartStore } from '@/stores/cart'
 import { useAuthStore } from '@/stores/auth'
 import { useMemberStore } from '@/stores/member'
 import { getProductsByType, getProductDetail } from '@/api/product'
+import { getPublicConfig } from '@/api/config'
 import type { Product, ProductDetail } from '@/types'
 import CategorySidebar from '@/components/home/CategorySidebar.vue'
 import ProductCard from '@/components/home/ProductCard.vue'
 import CartBar from '@/components/common/CartBar.vue'
 import IcpFooter from '@/components/common/IcpFooter.vue'
 import SkuSelectorPopup from '@/components/product/SkuSelectorPopup.vue'
+import AdPopup from '@/components/common/AdPopup.vue'
 import shopLogo from '@/assets/shop-logo.jpg'
 
 const router = useRouter()
@@ -168,8 +173,33 @@ function goAddresses() {
   router.push('/address/manage')
 }
 
+// 开屏广告：每天首次进首页弹一次（localStorage 按本地日期去重）
+const adVisible = ref(false)
+const adConfig = ref<{ adImageUrl: string; adLinkType: string; adLinkTarget: string } | null>(null)
+
+async function initAdPopup() {
+  try {
+    const res = await getPublicConfig()
+    const d = res.data
+    if (!d.adEnabled || !d.adImageUrl) return
+    const now = new Date()
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    if (localStorage.getItem(`ad_shown_${today}`)) return
+    adConfig.value = {
+      adImageUrl: d.adImageUrl,
+      adLinkType: d.adLinkType || 'NONE',
+      adLinkTarget: d.adLinkTarget || '',
+    }
+    adVisible.value = true
+    localStorage.setItem(`ad_shown_${today}`, '1')
+  } catch {
+    // 广告加载失败不影响首页使用
+  }
+}
+
 onMounted(() => {
   document.addEventListener('click', closeMineMenu)
+  initAdPopup()
 })
 
 onBeforeUnmount(() => {

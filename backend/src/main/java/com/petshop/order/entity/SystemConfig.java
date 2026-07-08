@@ -23,5 +23,9 @@ public class SystemConfig extends BaseEntity {
     private byte[] qywxWebhookUrlEnc;
     private Integer hasQywxWebhook;
     private String paymentQrUrl;
+    private Integer adEnabled;
+    private String adImageUrl;
+    private String adLinkType;
+    private String adLinkTarget;
     private Long updatedBy;
 }

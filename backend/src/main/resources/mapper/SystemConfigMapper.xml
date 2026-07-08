@@ -7,7 +7,8 @@
         SELECT id, shop_lat, shop_lng, delivery_radius_km, delivery_min_amount,
                delivery_fee_type, fixed_delivery_fee, order_time_enabled,
                order_start_time, order_end_time, qywx_webhook_url_enc,
-               has_qywx_webhook, payment_qr_url, updated_by, create_time, update_time
+               has_qywx_webhook, payment_qr_url, ad_enabled, ad_image_url, ad_link_type, ad_link_target,
+               updated_by, create_time, update_time
         FROM system_config WHERE id = #{id}
     </select>
 
@@ -26,6 +27,10 @@
             qywx_webhook_url_enc = #{qywxWebhookUrlEnc},
             <if test="hasQywxWebhook != null">has_qywx_webhook = #{hasQywxWebhook},</if>
             payment_qr_url = #{paymentQrUrl},
+            ad_enabled = #{adEnabled},
+            ad_image_url = #{adImageUrl},
+            ad_link_type = #{adLinkType},
+            ad_link_target = #{adLinkTarget},
             <if test="updatedBy != null">updated_by = #{updatedBy},</if>
         </set>
         WHERE id = #{id}
@@ -35,11 +40,15 @@
         INSERT INTO system_config (id, shop_lat, shop_lng, delivery_radius_km, delivery_min_amount,
                                    delivery_fee_type, fixed_delivery_fee, order_time_enabled,
                                    order_start_time, order_end_time, qywx_webhook_url_enc,
-                                   has_qywx_webhook, payment_qr_url, updated_by)
+                                   has_qywx_webhook, payment_qr_url,
+                                   ad_enabled, ad_image_url, ad_link_type, ad_link_target,
+                                   updated_by)
         VALUES (#{id}, #{shopLat}, #{shopLng}, #{deliveryRadiusKm}, #{deliveryMinAmount},
                 #{deliveryFeeType}, #{fixedDeliveryFee}, #{orderTimeEnabled},
                 #{orderStartTime}, #{orderEndTime}, #{qywxWebhookUrlEnc},
-                #{hasQywxWebhook}, #{paymentQrUrl}, #{updatedBy})
+                #{hasQywxWebhook}, #{paymentQrUrl},
+                #{adEnabled}, #{adImageUrl}, #{adLinkType}, #{adLinkTarget},
+                #{updatedBy})
     </insert>
 
 </mapper>

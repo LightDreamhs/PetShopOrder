@@ -25,6 +25,10 @@ public class AppSystemConfigController {
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("paymentQrUrl", data.get("paymentQrUrl"));
+        result.put("adEnabled", data.get("adEnabled"));
+        result.put("adImageUrl", data.get("adImageUrl"));
+        result.put("adLinkType", data.get("adLinkType"));
+        result.put("adLinkTarget", data.get("adLinkTarget"));
         return R.ok(result);
     }
 }
