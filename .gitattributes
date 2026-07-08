@@ -1,0 +1,5 @@
+# 强制脚本与 nginx 配置使用 LF 行尾。
+# 避免开发机 Windows 的 core.autocrlf=true 在 git pull 时把 .sh/.conf 转成 CRLF，
+# 导致服务器 bash 脚本（shebang ^M）或 nginx 配置解析异常。
+*.sh   text eol=lf
+*.conf text eol=lf
