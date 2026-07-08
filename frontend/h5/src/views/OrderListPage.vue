@@ -46,6 +46,9 @@
       <van-empty v-if="!loading && orders.length === 0 && initialized" description="暂无订单">
         <van-button type="primary" round @click="router.push('/')">去下单</van-button>
       </van-empty>
+
+      <!-- 备案号 -->
+      <IcpFooter />
     </div>
   </div>
 </template>
@@ -55,6 +58,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getOrders } from '@/api/order'
 import type { AppointmentStatus, OrderListItem } from '@/types'
+import IcpFooter from '@/components/common/IcpFooter.vue'
 
 const router = useRouter()
 const orders = ref<OrderListItem[]>([])

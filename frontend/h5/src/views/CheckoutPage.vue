@@ -101,6 +101,9 @@
           <PriceBreakdown :data="calculateResult" />
         </div>
       </div>
+
+      <!-- 备案号 -->
+      <IcpFooter />
     </div>
 
     <!-- 底部提交栏 -->
@@ -138,6 +141,7 @@ import { createOrder } from '@/api/order'
 import type { CartCalculateResult, UserAddress } from '@/types'
 import AddressPicker from '@/components/checkout/AddressPicker.vue'
 import PriceBreakdown from '@/components/checkout/PriceBreakdown.vue'
+import IcpFooter from '@/components/common/IcpFooter.vue'
 import { dropCheckout, ensureCheckoutCached } from '@/stores/keepAlive'
 
 // 组件名：配合 App.vue 的 keep-alive include="Checkout" 缓存结算页

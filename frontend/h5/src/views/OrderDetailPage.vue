@@ -81,6 +81,9 @@
 
       <!-- 底部占位（取消按钮栏存在时留出空间） -->
       <div v-if="showCancelBtn" class="bottom-placeholder"></div>
+
+      <!-- 备案号 -->
+      <IcpFooter />
     </div>
 
     <!-- 取消预约按钮（仅待服务状态） -->
@@ -103,6 +106,7 @@ import { showConfirmDialog, showSuccessToast, showFailToast } from 'vant'
 import { getOrderDetail } from '@/api/order'
 import { cancelAppointment } from '@/api/appointment'
 import type { AppointmentStatus, OrderDetail } from '@/types'
+import IcpFooter from '@/components/common/IcpFooter.vue'
 
 const router = useRouter()
 const route = useRoute()

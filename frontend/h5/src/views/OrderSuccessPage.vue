@@ -40,6 +40,9 @@
         <van-button type="primary" round block @click="router.push('/orders')">查看订单</van-button>
       </div>
     </div>
+
+    <!-- 备案号 -->
+    <IcpFooter />
   </div>
 </template>
 
@@ -48,6 +51,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useOrderStore } from '@/stores/order'
 import { getPublicConfig } from '@/api/config'
+import IcpFooter from '@/components/common/IcpFooter.vue'
 
 const router = useRouter()
 const orderStore = useOrderStore()

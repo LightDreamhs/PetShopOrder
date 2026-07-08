@@ -99,6 +99,11 @@ async function handleLogin() {
           </el-form-item>
         </el-form>
       </div>
+
+      <!-- 备案号 -->
+      <div class="icp-footer">
+        <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">蜀ICP备2026037772号-1</a>
+      </div>
     </div>
   </div>
 </template>
@@ -348,6 +353,25 @@ async function handleLogin() {
 
   &:active {
     transform: translateY(0);
+  }
+}
+
+/* ========== 备案号 ========== */
+.icp-footer {
+  position: relative;
+  z-index: 1;
+  margin-top: 28px;
+  text-align: center;
+  font-size: 12px;
+
+  a {
+    color: rgba(255, 255, 255, 0.35);
+    text-decoration: none;
+    transition: color 0.2s;
+
+    &:hover {
+      color: rgba(255, 255, 255, 0.6);
+    }
   }
 }
 

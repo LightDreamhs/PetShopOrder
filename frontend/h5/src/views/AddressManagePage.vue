@@ -46,6 +46,9 @@
           </div>
         </div>
       </div>
+
+      <!-- 备案号 -->
+      <IcpFooter />
     </div>
 
     <div v-if="addressStore.list.length > 0" class="footer-bar safe-area-bottom">
@@ -109,6 +112,7 @@ import { showSuccessToast, showToast } from 'vant'
 import { useAddressStore } from '@/stores/address'
 import type { UserAddress } from '@/types'
 import AddressPicker from '@/components/checkout/AddressPicker.vue'
+import IcpFooter from '@/components/common/IcpFooter.vue'
 
 const router = useRouter()
 const addressStore = useAddressStore()

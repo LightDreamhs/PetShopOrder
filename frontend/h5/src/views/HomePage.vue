@@ -82,6 +82,9 @@
       v-model:show="specPickerVisible"
       :product="selectedProduct"
     />
+
+    <!-- 备案号 -->
+    <IcpFooter />
   </div>
 </template>
 
@@ -96,6 +99,7 @@ import type { Product, ProductDetail } from '@/types'
 import CategorySidebar from '@/components/home/CategorySidebar.vue'
 import ProductCard from '@/components/home/ProductCard.vue'
 import CartBar from '@/components/common/CartBar.vue'
+import IcpFooter from '@/components/common/IcpFooter.vue'
 import SkuSelectorPopup from '@/components/product/SkuSelectorPopup.vue'
 import shopLogo from '@/assets/shop-logo.jpg'
 

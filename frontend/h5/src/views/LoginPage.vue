@@ -53,6 +53,11 @@
         </van-button>
       </div>
     </div>
+
+    <!-- 备案号 -->
+    <div class="login-icp">
+      <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">蜀ICP备2026037772号-1</a>
+    </div>
   </div>
 </template>
 
@@ -216,6 +221,19 @@ async function handleLogin() {
     font-size: 16px;
     font-weight: 600;
     letter-spacing: 1px;
+  }
+}
+
+.login-icp {
+  margin-top: 24px;
+  position: relative;
+  z-index: 1;
+  font-size: 11px;
+  text-align: center;
+
+  a {
+    color: $text-muted;
+    text-decoration: none;
   }
 }
 </style>

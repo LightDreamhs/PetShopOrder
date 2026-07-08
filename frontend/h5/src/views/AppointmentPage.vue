@@ -160,6 +160,9 @@
 
       <div class="bottom-placeholder"></div>
 
+      <!-- 备案号 -->
+      <IcpFooter />
+
       <!-- 底部提交栏 -->
       <div class="submit-bar safe-area-bottom">
         <div class="submit-amount">
@@ -191,6 +194,7 @@ import { getProductDetail } from '@/api/product'
 import { getAddons, getSlots, createAppointment } from '@/api/appointment'
 import { useOrderStore } from '@/stores/order'
 import type { AddonService, ProductDetail, TimeSlot } from '@/types'
+import IcpFooter from '@/components/common/IcpFooter.vue'
 
 const route = useRoute()
 const router = useRouter()

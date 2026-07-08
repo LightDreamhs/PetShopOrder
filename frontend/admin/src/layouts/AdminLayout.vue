@@ -138,6 +138,11 @@ async function handleLogout() {
       <!-- Content -->
       <el-main class="main-content">
         <router-view />
+
+        <!-- 备案号 -->
+        <div class="icp-footer">
+          <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">蜀ICP备2026037772号-1</a>
+        </div>
       </el-main>
     </el-container>
   </el-container>
@@ -367,5 +372,24 @@ async function handleLogout() {
   padding: 20px;
   overflow-y: auto;
   background: #f5f5f7;
+}
+
+/* ========== 备案号 ========== */
+.icp-footer {
+  margin-top: 24px;
+  padding: 12px 0;
+  text-align: center;
+  font-size: 12px;
+  color: #999;
+
+  a {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.2s;
+
+    &:hover {
+      color: var(--brand-color);
+    }
+  }
 }
 </style>
