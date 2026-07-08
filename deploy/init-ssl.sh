@@ -36,6 +36,12 @@ step() {
   echo "==> $1"
 }
 
+# 证书是否已存在。/etc/letsencrypt/live 权限 700（root），ubuntu 无权 stat，
+# 借 frontend 容器（挂载 /etc/letsencrypt，容器内 root）检查。
+cert_exists() {
+  docker exec petorder-frontend test -f "${CERT_FILE}" 2>/dev/null
+}
+
 # ---------- 前置自检 ----------
 
 step "0/5 前置自检"
@@ -71,7 +77,7 @@ echo "   自检通过。"
 
 step "1/5 申请证书 ${DOMAIN} + www.${DOMAIN}（webroot 方式，邮箱 ${EMAIL}）"
 
-if [ -f "${CERT_FILE}" ]; then
+if cert_exists; then
   echo "   检测到证书已存在（${CERT_FILE}），跳过申请。"
 else
   docker run --rm \
@@ -85,7 +91,7 @@ else
 fi
 
 # 1b. 证书落地校验（避免无证书却切到 HTTPS 配置，导致 nginx 起不来）
-[ -f "${CERT_FILE}" ] || die "certbot 报告成功，但 ${CERT_FILE} 不存在。检查 /etc/letsencrypt 权限"
+cert_exists || die "certbot 报告成功，但 ${CERT_FILE} 不可访问。检查 frontend 容器是否挂载了 /etc/letsencrypt"
 echo "   证书就位：${CERT_FILE}"
 
 # ---------- 2. 切换 nginx 配置 ----------
