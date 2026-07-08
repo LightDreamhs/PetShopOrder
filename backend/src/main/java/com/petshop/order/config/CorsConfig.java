@@ -7,6 +7,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
+import java.util.List;
+
 @Configuration
 @RequiredArgsConstructor
 public class CorsConfig {
@@ -16,10 +18,16 @@ public class CorsConfig {
     @Bean
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
-        // 从 app.cors.allowed-origins 读取，支持通配 pattern；
-        // 空列表则不放行任何跨域来源（生产同域访问不受影响，浏览器不发起 CORS 预检）。
-        for (String origin : corsProperties.getAllowedOrigins()) {
-            config.addAllowedOriginPattern(origin);
+        List<String> origins = corsProperties.getAllowedOrigins();
+        if (origins == null || origins.isEmpty()) {
+            // 现代浏览器对同源 fetch 也会带 Origin 头，CorsFilter 见 Origin 即校验；
+            // 空白名单会拒绝所有带 Origin 的请求（含同源）。故默认放行所有来源，
+            // 生产如需收敛，经 app.cors.allowed-origins 配置具体域名（非空则按配置）。
+            config.addAllowedOriginPattern("*");
+        } else {
+            for (String origin : origins) {
+                config.addAllowedOriginPattern(origin);
+            }
         }
         config.setAllowCredentials(true);
         config.addAllowedHeader("*");
