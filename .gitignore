@@ -27,5 +27,6 @@ Thumbs.db
 # Uploads
 backend/uploads/
 
-# 临时二维码图片（进店正式版 deploy/shop-qrcode.png 已入库，不入仓同名临时文件）
+# 二维码图片（进店二维码为生成/部署产物，不入仓）
 店铺二维码.png
+shop-qrcode.png
