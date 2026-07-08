@@ -54,7 +54,7 @@
 | `/data/petshop/mysql` | MySQL 数据 | mysql 容器读写 |
 | `/data/petshop/uploads` | 上传图片（H5 与 Admin 共享） | backend 读写、frontend 只读 |
 | `/etc/letsencrypt` | Let's Encrypt 证书 | frontend 容器只读挂载 |
-| `/root/PetShopOrder` | 代码仓库与部署配置 | git 同步 |
+| `/home/ubuntu/PetShopOrder` | 代码仓库与部署配置 | git 同步 |
 
 ---
 
@@ -71,7 +71,7 @@
 
 ## 4. 常用运维命令
 
-> 以下命令在服务器 `/root/PetShopOrder/deploy` 目录下执行，需先准备好 `.env.prod`。
+> 以下命令在服务器 `/home/ubuntu/PetShopOrder/deploy` 目录下执行，需先准备好 `.env.prod`。
 
 ### 查看服务状态
 ```bash
@@ -94,7 +94,7 @@ curl https://2zg.site/health
 
 ### 更新服务（以 backend 为例）
 ```bash
-cd /root/PetShopOrder
+cd /home/ubuntu/PetShopOrder
 git pull
 cd deploy
 docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build backend
@@ -137,7 +137,7 @@ docker run --rm -v /etc/letsencrypt:/etc/letsencrypt certbot/certbot renew --dry
 
 手动续期 + reload nginx：
 ```bash
-bash /root/PetShopOrder/deploy/renew-ssl.sh
+bash /home/ubuntu/PetShopOrder/deploy/renew-ssl.sh
 ```
 
 ---

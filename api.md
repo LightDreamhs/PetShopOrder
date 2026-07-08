@@ -3,6 +3,8 @@
 > 基于 modules.md 生成。统一服务，URL 前缀区分：`/api/app/*`（C 端）、`/api/admin/*`（管理端）。
 >
 > **修订（2026-06-30）**：已与后端代码逐接口核对——移除已废弃的「分类管理」相关接口（子分类功能早已下线，仅保留 GOODS/SERVICE 两类）、移除未实现的 WebSocket 推送章节（实际用 `GET /api/admin/orders/new-count` 轮询替代）、商品列表/详情接口补全 `description` 字段。
+>
+> **修订（2026-07-08）**：新增服务预约系统接口——C 端 6 个（`/api/app/appointments`：附加服务列表、冲突预检、时段网格、创建、取消、我的预约）与管理端 3 个（`/api/admin/appointments`：看板列表、标记完成、取消）；商品列表/详情响应补 `serviceCategory`、SKU 详情补 `duration`。
 
 ---
 
@@ -155,6 +157,7 @@
 | description | String | 商品描述（无则空串） |
 | coverImg | String | 封面图 URL |
 | type | String | `GOODS` / `SERVICE` |
+| serviceCategory | String | 服务子类：`MAIN_SERVICE` / `ADDON_SERVICE`（仅 SERVICE 有值，GOODS 为空串） |
 | supportDelivery | Boolean | 是否支持配送（仅 GOODS 有意义） |
 | price | String | 最低 SKU 原价（如 `"79.00"`） |
 | dealPrice | String | 当前用户的最低 SKU 成交价（已根据会员等级计算） |
@@ -177,6 +180,7 @@
 | description | String | 商品描述 |
 | coverImg | String | 封面图 URL |
 | type | String | `GOODS` / `SERVICE` |
+| serviceCategory | String | 服务子类：`MAIN_SERVICE` / `ADDON_SERVICE`（仅 SERVICE 有值，GOODS 为空串） |
 | supportDelivery | Boolean | 是否支持配送 |
 | skus | List\<SkuPrice\> | SKU 列表（见下方） |
 
@@ -187,6 +191,7 @@
 | id | Long | SKU ID |
 | specName | String | 规格名称，如 `"5kg"` / `"中型犬（10-25kg）"` |
 | price | String | 原价 |
+| duration | Integer | 服务时长（分钟），仅 SERVICE 的 SKU 有，GOODS 为 0 |
 | dealPrice | String | 当前用户成交价（已根据会员等级计算） |
 
 **业务规则**：
@@ -385,6 +390,133 @@
 | dealPrice | String | 成交价 |
 | quantity | Integer | 数量 |
 | subtotal | String | 小计 |
+
+---
+
+### 6. 预约（服务）
+
+> 服务走独立预约入口，仅主服务（`serviceCategory=MAIN_SERVICE`）可发起。全局容量：任意时刻同时进行的服务 ≤ 3 个。
+
+#### GET /api/app/appointments/addons
+
+查询某主服务绑定的附加服务列表。
+
+**Query 参数**：
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| mainProductId | Long | 是 | 主服务商品 ID |
+
+**响应 data**：`List<AddonService>`，每项含 `id`、`name`、`coverImg`、`skus`（`specName`、`price`、`duration`、`dealPrice`）。
+
+---
+
+#### POST /api/app/appointments/check
+
+冲突预检（选时间时实时调用）。
+
+**请求体**：
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| startTime | String | 是 | 开始时间，格式 `yyyy-MM-dd HH:mm` |
+| mainSkuId | Long | 是 | 主服务 SKU ID |
+| addonSkuIds | List\<Long\> | 否 | 附加服务 SKU ID 列表 |
+
+**响应 data**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| available | Boolean | 该时段是否可约 |
+| overlapCount | Integer | 与新预约重叠的已有非取消预约数 |
+| maxConcurrent | Integer | 全局容量上限（3） |
+| totalDuration | Integer | 总占用时长（分钟） |
+| startTime | String | 开始时间 |
+| endTime | String | 结束时间 |
+| message | String | 提示文案 |
+
+---
+
+#### GET /api/app/appointments/slots
+
+某日时段可约状态（时间网格铺开展示用）。
+
+**Query 参数**：
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| date | String | 是 | 日期，`yyyy-MM-dd` |
+| mainSkuId | Long | 是 | 主服务 SKU ID |
+| addonSkuIds | List\<Long\> | 否 | 附加服务 SKU ID 列表 |
+
+**响应 data**：`List<Slot>`，每项 `{ time: "09:00", available: Boolean }`，半小时步进。
+
+---
+
+#### POST /api/app/appointments
+
+创建预约（同事务生成订单 + 预约）。
+
+**请求体**：
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| mainProductId | Long | 是 | 主服务商品 ID |
+| mainSkuId | Long | 是 | 主服务 SKU ID |
+| addonSkuIds | List\<Long\> | 否 | 附加服务 SKU ID 列表 |
+| startTime | String | 是 | 开始时间，`yyyy-MM-dd HH:mm` |
+| petInfo | String | 否 | 宠物信息（文本） |
+| customerName | String | 否 | 联系人姓名 |
+| remark | String | 否 | 备注 |
+
+**响应 data**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| appointmentId | Long | 预约 ID |
+| orderId | Long | 关联订单 ID |
+| orderNo | String | 订单号 |
+| startTime | String | 预约开始时间 |
+| endTime | String | 预约结束时间 |
+| totalDuration | Integer | 总占用时长（分钟） |
+| totalAmount | String | 合计金额 |
+
+**业务规则**：
+- 主服务 SKU 必须已配 `duration`（>0），否则拒绝并提示「联系店主配置」
+- 营业时段开启时，开始时间须落在 `[order_start_time, order_end_time)` 内
+- 冲突校验：重叠数 ≥ 3 拒绝，提示「该时段已约满」
+- 服务强制到店（`needDelivery=false`），复用订单算价与通知
+
+---
+
+#### POST /api/app/appointments/{id}/cancel
+
+取消自己的预约。
+
+**Path 参数**：`id`（预约 ID）
+
+**响应 data**：`null`
+
+**业务规则**：
+- 仅 PENDING 可取消；SERVICED 不可取消
+- 校验归属，越权返回错误
+- 取消后联动订单 `cancelled=1`，时段释放
+
+---
+
+#### GET /api/app/appointments/mine
+
+我的预约列表（分页）。
+
+**Query 参数**：
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| page | Integer | 否 | 页码，默认 1 |
+| size | Integer | 否 | 每页条数，默认 10 |
+| status | String | 否 | 按状态筛选：`PENDING` / `SERVICED` / `CANCELLED` |
+
+**响应 data**：`Paginated<AppointmentItem>`，每项含预约 ID、状态、开始/结束时间、总时长、宠物信息、主服务与附加服务明细、关联订单号与金额。
 
 ---
 
@@ -1158,6 +1290,52 @@
 
 ---
 
+### 11. 预约管理
+
+> 权限：看板查看 — 全角色；标记完成/取消 — BOSS + MANAGER
+
+#### GET /api/admin/appointments
+
+预约看板列表（分页）。
+
+**Query 参数**：
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| page | Integer | 否 | 页码，默认 1 |
+| size | Integer | 否 | 每页条数，默认 20 |
+| date | String | 否 | 按预约开始时间所在的日期筛选，`yyyy-MM-dd` |
+| status | String | 否 | `PENDING` / `SERVICED` / `CANCELLED` |
+| keyword | String | 否 | 关键词（联系人/宠物/商品） |
+
+**响应 data**：`Paginated<AdminAppointmentItem>`，每项含预约 ID、状态、开始/结束时间、总时长、宠物信息、联系人、主服务与附加服务明细、关联订单号与金额、订单是否已取消。
+
+---
+
+#### PUT /api/admin/appointments/{id}/serviced
+
+标记预约完成（PENDING → SERVICED）。
+
+**Path 参数**：`id`（预约 ID）
+
+**响应 data**：`null`
+
+**业务规则**：仅 PENDING 状态可标记完成。
+
+---
+
+#### PUT /api/admin/appointments/{id}/cancel
+
+取消预约（→ CANCELLED，联动订单 `cancelled=1`）。
+
+**Path 参数**：`id`（预约 ID）
+
+**响应 data**：`null`
+
+**业务规则**：仅 PENDING 状态可取消。
+
+---
+
 ## 三、接口总览
 
 ### C 端（/api/app）
@@ -1175,6 +1353,12 @@
 | POST | /api/app/orders | 下单 | 是 |
 | GET | /api/app/orders | 我的订单列表 | 是 |
 | GET | /api/app/orders/{id} | 订单详情 | 是 |
+| GET | /api/app/appointments/addons | 主服务的附加服务列表 | 是 |
+| POST | /api/app/appointments/check | 预约冲突预检 | 是 |
+| GET | /api/app/appointments/slots | 某日时段可约状态 | 是 |
+| POST | /api/app/appointments | 创建预约 | 是 |
+| POST | /api/app/appointments/{id}/cancel | 取消预约 | 是 |
+| GET | /api/app/appointments/mine | 我的预约列表 | 是 |
 
 ### 管理端（/api/admin）
 
@@ -1217,3 +1401,6 @@
 | POST | /api/admin/files/upload | 上传图片 | BOSS/MANAGER |
 | DELETE | /api/admin/files/{key} | 删除图片 | BOSS/MANAGER |
 | GET | /api/admin/orders/new-count | 新订单计数（轮询） | ALL |
+| GET | /api/admin/appointments | 预约看板列表 | ALL |
+| PUT | /api/admin/appointments/{id}/serviced | 标记预约完成 | BOSS/MANAGER |
+| PUT | /api/admin/appointments/{id}/cancel | 取消预约 | BOSS/MANAGER |

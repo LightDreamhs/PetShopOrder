@@ -3,6 +3,8 @@
 > 基于 plan.md 整理，参考 MVP 原型补充交互细节。面向开发自用，按后端/前端拆分。
 >
 > **修订（2026-06-30）**：已与代码实现核对并标注现状差异：① 商品「分类子分类」功能已下线，仅保留固定 GOODS/SERVICE 两类（无分类 CRUD）；② 新订单通知改用 `GET /api/admin/orders/new-count` 轮询替代 WebSocket；③ 运费策略仅实现 FREE/TIERED，FIXED 未实现；④ 配送费改为按 `system_config` 运费策略计算，不再是「≤3km 免费/超距电话确认」。下方涉及处以「现状」标注。权威实现以代码为准。
+>
+> **修订（2026-07-08）**：补充服务预约系统（已上线）。服务不再像商品一样直接下单，改为走独立预约入口——主服务 + 附加服务 + 选开始时间，并带全局容量冲突检测（任意时刻同时进行的服务 ≤ 3 个）。涉及 `product.service_category`、`sku.duration`、`orders.cancelled` 字段及 `appointment`、`main_service_addon` 两张新表，详见「12. 服务预约系统模块」与「三、数据库设计 → 预约体系」。
 
 ---
 
@@ -41,7 +43,9 @@
 
 **业务规则**：
 - ~~商品 type 不可跨分类混用（分类的 type 决定商品的 type）~~ → **现状**：商品直接归属 GOODS/SERVICE 类型
+- SERVICE 类型商品用 `service_category` 区分两类：`MAIN_SERVICE`（主服务，可预约，走预约入口）与 `ADDON_SERVICE`（附加服务，随主服务多选，不单独售卖）；GOODS 该字段为 NULL
 - SERVICE 类型商品 `support_delivery` 强制为否，SKU 的 `member_price` 字段忽略
+- SERVICE 的 SKU 配 `duration`（分钟，店主自填），用于预约总时长计算；GOODS 该字段为 NULL
 - GOODS 类型 SKU 的 `stock` 必填，SERVICE 可为 -1（不限）
 - 商品下架后用户端不可见，但历史订单不受影响
 
@@ -226,6 +230,33 @@
 
 ---
 
+### 12. 服务预约系统模块
+
+**功能点**：
+- 服务走独立预约入口（首页点主服务「去预约」），不再混入购物车流程
+- 预约 = 1 个主服务 SKU + N 个附加服务 SKU + 选开始时间（精确到分钟）
+- 全局容量冲突检测：任意时刻同时进行的服务 ≤ 3 个，约满则拒绝
+- 实时算价（复用价格引擎，会员按等级折扣）+ 选时间时的时段可约状态预检
+- 预约状态流转：PENDING（待服务）→ SERVICED（已完成）/ CANCELLED（已取消，时段释放）
+- C 端「我的预约」列表 + 取消；Admin 预约看板（按日/状态/关键词）+ 标记完成 + 取消
+- 预约下单复用订单体系（`orders` + `order_item`），额外挂一条 `appointment` 记录；通知带预约时间、总时长、宠物信息
+
+**业务规则**：
+- `product.service_category` 区分主服务（`MAIN_SERVICE`）与附加服务（`ADDON_SERVICE`）；仅主服务可发起预约
+- 总占用时长 = 主服务 SKU `duration` + Σ 附加服务 SKU `duration`（附加服务 `duration` 缺省 0，表示只加钱不占时间）
+- 冲突算法采用区间重叠计数：统计与新预约 `[start, end)` 重叠且非取消的已有预约数，≥ 3 即满；应用层检查即可，单店低流量不加 DB 锁
+- 营业时间：`system_config.order_time_enabled = 1` 时，预约开始时间必须落在 `[order_start_time, order_end_time)` 内（仅约束开始时间；实物商品下单不受此字段约束）
+- 取消预约联动订单 `cancelled = 1`，商家后台据此识别；时段随之释放，可被他人预约
+
+**边界条件**：
+- 主服务 SKU 未配 `duration`（≤0 或 NULL）→ 拒绝预约，提示「联系店主配置」
+- 仅 PENDING 状态可取消或标记完成；SERVICED 不可取消
+- C 端跨账号取消需校验归属，只能取消自己的预约
+
+**接口**：见 `api.md`「预约模块」C 端 6 个 + 管理端 3 个。
+
+---
+
 ## 二、前端模块
 
 ### A. 用户端 H5（Vue 3 + Vant 4 + 腾讯地图）
@@ -330,6 +361,33 @@
 
 ---
 
+#### H5-7. 预约页（服务）
+
+**功能点**：
+- 独立预约入口 `/appointment/:productId`，仅主服务（`serviceCategory=MAIN_SERVICE`）进入
+- 宠物信息文本填写（名字/种类/体重/性格等，不建宠物档案表）
+- 主服务 SKU 选择（带 `duration` 时长展示）
+- 附加服务多选（按主服务在 `main_service_addon` 中绑定的列表）
+- 选开始时间：按营业时段生成半小时步进的时间网格，约满时段置灰
+- 实时算价 + 冲突预检（选时间即查可约状态）
+- 提交 → 生成订单 + 预约，订单详情/成功页展示预约时间与总时长
+
+**交互细节**：
+- 首页主服务卡片按钮显示「去预约」，点击跳转预约页（替代加购）
+- 实物商品（GOODS）购物车流程不受影响
+- 预约信息以备注形式写入订单（`预约 yyyy-MM-dd HH:mm（N分钟）；宠物：…`），订单详情、Admin、通知均可见
+
+---
+
+#### H5-8. 我的预约
+
+**功能点**：
+- 按状态筛选（待服务/已完成/已取消）查看自己的预约
+- PENDING 状态可取消，取消后时段释放
+- 预约详情展示主服务、附加服务、时间、宠物信息
+
+---
+
 ### B. 管理端（Vue 3 + Element Plus）
 
 #### Admin-1. 登录页
@@ -417,6 +475,22 @@
 
 ---
 
+#### Admin-9. 预约看板
+
+**功能点**：
+- 预约列表按日（预约开始时间）+ 状态 + 关键词筛选
+- 标记预约完成（PENDING → SERVICED）
+- 取消预约（联动订单 `cancelled = 1`）
+- 商品管理中配置 `service_category`（主服务/附加服务）与 SKU `duration`
+- 主服务-附加服务绑定管理
+- 营业时段配置（复用系统配置 `order_time_enabled/start/end_time`）
+
+**权限**：
+- 看板查看：所有角色
+- 标记完成/取消：BOSS + MANAGER
+
+---
+
 ## 三、数据库设计
 
 > 所有表均包含 `id`（BIGINT 自增主键）、`create_time`、`update_time` 三个必备字段。更新操作必须同步更新 `update_time`。
@@ -433,12 +507,14 @@ CREATE TABLE product (
   description       TEXT         NULL,
   cover_img         VARCHAR(255) NULL,
   type              VARCHAR(16)  NOT NULL COMMENT 'GOODS / SERVICE',
+  service_category  VARCHAR(16)  NULL COMMENT '服务子类 MAIN_SERVICE/ADDON_SERVICE，仅 type=SERVICE 有效',
   status            VARCHAR(16)  NOT NULL DEFAULT 'ON_SALE' COMMENT 'ON_SALE / OFF_SALE',
   support_delivery  TINYINT      NOT NULL DEFAULT 0 COMMENT '仅 GOODS 有效，SERVICE 强制为 0',
   sort              INT          NOT NULL DEFAULT 0,
   create_time       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   update_time       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX idx_product_type_status(type, status)
+  INDEX idx_product_type_status(type, status),
+  INDEX idx_product_service_category(type, service_category, status)
 );
 
 -- SKU（多规格）
@@ -448,6 +524,7 @@ CREATE TABLE sku (
   spec_name     VARCHAR(64)   NOT NULL COMMENT '如 "5kg" / "中型犬（10-25kg）"',
   price         DECIMAL(10,2) NOT NULL COMMENT '原价',
   member_price  DECIMAL(10,2) NULL COMMENT '会员价（仅 GOODS 用，SERVICE 忽略）',
+  duration      INT           NULL COMMENT '服务时长（分钟），仅 SERVICE 的 SKU 用，GOODS 为 NULL',
   stock         INT           NOT NULL DEFAULT 0 COMMENT 'SERVICE 可为 -1 表示不限',
   sort          INT           NOT NULL DEFAULT 0,
   create_time   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -526,6 +603,7 @@ CREATE TABLE orders (
   delivery_lng           DECIMAL(10,7) NULL,
   delivery_distance      INT           NULL COMMENT '与店铺直线距离，单位米',
   processed              TINYINT       NOT NULL DEFAULT 0 COMMENT '0 未处理 / 1 已处理（管理端标记）',
+  cancelled              TINYINT       NOT NULL DEFAULT 0 COMMENT '0 正常 / 1 已取消（取消预约时联动置 1，商家据此识别）',
   remark                 VARCHAR(255)  NULL,
   create_time            DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   update_time            DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -552,6 +630,42 @@ CREATE TABLE order_item (
   create_time    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   update_time    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_order_item_order(order_id)
+);
+```
+
+### 预约体系
+
+```sql
+-- 主服务与附加服务的绑定关系（每个主服务单独绑定可选附加服务）
+CREATE TABLE main_service_addon (
+  id               BIGINT AUTO_INCREMENT PRIMARY KEY,
+  main_product_id  BIGINT NOT NULL COMMENT '主服务 product.id（service_category=MAIN_SERVICE）',
+  addon_product_id BIGINT NOT NULL COMMENT '附加服务 product.id（service_category=ADDON_SERVICE）',
+  sort             INT    NOT NULL DEFAULT 0,
+  create_time      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  update_time      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE INDEX uk_main_addon(main_product_id, addon_product_id),
+  INDEX idx_addon_main(addon_product_id)
+);
+
+-- 预约记录（与 orders 一对一，order_id 关联）
+CREATE TABLE appointment (
+  id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+  order_id        BIGINT      NOT NULL COMMENT '关联 orders.id（一笔预约对应一个订单）',
+  user_id         BIGINT      NOT NULL COMMENT 'app_user.id',
+  main_product_id BIGINT      NOT NULL COMMENT '主服务 product.id 快照',
+  main_sku_id     BIGINT      NOT NULL COMMENT '主服务 sku.id 快照',
+  start_time      DATETIME    NOT NULL COMMENT '预约开始时间（顾客到店/服务开始）',
+  end_time        DATETIME    NOT NULL COMMENT 'start_time + total_duration 分钟',
+  total_duration  INT         NOT NULL COMMENT '总占用时长（分钟）= 主 + Σ附加',
+  pet_info        VARCHAR(255) NULL COMMENT '宠物信息（文本：名字/种类/体重/性格等）',
+  status          VARCHAR(16) NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING 待服务 / SERVICED 已完成 / CANCELLED 已取消',
+  create_time     DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  update_time     DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE INDEX uk_appointment_order(order_id),
+  INDEX idx_appointment_user(user_id),
+  INDEX idx_appointment_status_time(status, start_time, end_time),
+  INDEX idx_appointment_time_range(start_time, end_time)
 );
 ```
 

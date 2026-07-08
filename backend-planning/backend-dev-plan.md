@@ -1,10 +1,14 @@
 # PetShopOrder 后端开发规划
 
+> ✅ **历史档案**：Phase 0–14 已全部完成并上线（2026-07-08）。本文档为开发期规划，保留作为历史参考；当前系统能力以 `modules.md` / `api.md` 为准，进度以 `progress.md` 为准。
+>
+> 本规划之后的演进（如服务预约系统）未含在内，见 [`docs/appointment-system-plan.md`](../docs/appointment-system-plan.md)。
+
 ## Context
 
 项目前端 H5（7 页面）和 Admin（6 页面）已基本完成，使用 MSW Mock 数据层运行。后端完全未实现。需要基于 `modules.md`（业务规范）和 `api.md`（接口规范）开发 Spring Boot 后端，使前端切换到真实 API。
 
-**权威文档**：`modules.md` > `api.md` > `backend-implementation-notes.md`（plan.md 中部分设计已过时，以 modules.md 为准）
+**权威文档**：`modules.md` > `api.md`（原 `backend-implementation-notes.md`、`plan.md` 已删除，历史保留在 git 中）
 
 **API 规模**：C 端 13 个接口 + Admin 38 个接口 + 1 个 WebSocket，共约 52 个端点
 
@@ -450,7 +454,7 @@ Phase 0 (基础设施 + Docker MySQL)
 |------|------|
 | `modules.md` | 权威业务规范（数据库设计、业务规则） |
 | `api.md` | 权威接口规范（请求/响应格式） |
-| `backend-implementation-notes.md` | 系统配置安全要求 |
+| ~~`backend-implementation-notes.md`~~ | 已删除；系统配置安全要求（AES 派生密钥、Webhook SSRF 防护）见 `modules.md` 系统配置章节与 `deploy/` |
 | `frontend/admin/src/types/index.ts` | Admin 前端 TypeScript 类型定义 |
 | `frontend/h5/src/types/index.ts` | H5 前端 TypeScript 类型定义 |
 | `frontend/admin/src/api/*.ts` | Admin 前端 API 调用实现 |

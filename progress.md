@@ -1,6 +1,6 @@
 # PetShopOrder 开发进度
 
-> 更新时间：2026-07-03
+> 更新时间：2026-07-08
 
 ## 项目概况
 
@@ -157,6 +157,18 @@ export ALIYUN_SMS_SK=<AccessKey Secret>
 - [ ] 真实手机号端到端验证（`provider=aliyun`：发码→收码→正/误码登录）
 - [ ] `短信验证服务Access key.txt` 现含明文 Secret，仅本地 `.git/info/exclude` 忽略；建议另存密码管理器，避免单点丢失
 
+## 上线与近期改动（2026-07-08）
+
+| 类别 | 改动 | 说明 |
+|------|------|------|
+| 上线 | 容器化部署 + HTTPS | 单机 Docker 三容器（mysql + backend + frontend/nginx）部署到 `2zg.site`，Let's Encrypt 证书，备案后 HTTPS 正式上线。详见 `deploy/` |
+| 部署产物 | `deploy/` 目录 | `docker-compose.prod.yml`、`Dockerfile.frontend`、`nginx.conf` / `nginx.http-only.conf` / `nginx.conf.ip`、`init-ssl.sh` / `renew-ssl.sh`、`.env.prod.example` |
+| 鉴权 | C 端登录态保持 30 天 | 持久化 Cookie + 滑动续期 + 修复 401 跳转 |
+| 短信 | 验证码 4 位 → 6 位 | 适配阿里云 PNVS（`LoginPage` 输入框、`LogSmsService` 固定码同步改 `123456`） |
+| 修复 | H5/Admin 打包白屏 | 降级 vite 8→6，规避 rolldown 打包问题 |
+| 安全 | `.gitignore` 补全 | 忽略 `.env*` 与凭据 txt；已 tracked 的生产 env 移除追踪 |
+| 体验 | 购物车改为底部抽屉 | 新增 `CartDrawer`，CartBar 图标点击弹底部抽屉查看清单/改数量；去结算按钮直跳结算页两区分流；移除 `/cart` 整页 |
+
 ## 已知问题 & 待开发
 
 | 优先级 | 项目 | 说明 |
@@ -164,7 +176,7 @@ export ALIYUN_SMS_SK=<AccessKey Secret>
 | ~~高~~ | ~~地址选择器~~ | ✅ 已完成（2026-06-01）：接入腾讯地图 JS API GL，H5 地图选点+搜索+定位，Admin 店铺坐标配置 |
 | ~~中~~ | ~~用户收货地址管理~~ | ✅ 已完成（2026-06-04）：新增 `user_address` 表 + CRUD 接口，CheckoutPage 改为地址列表选择（省地图 API 调用），AddressPicker 增加保存常用地址+标签，新增地址管理页（设默认/删除） |
 | ~~高~~ | ~~起送金额硬编码~~ | ✅ 已修复（2026-06-01）：改用 calculate 接口返回的 `deliveryCheck.reachedMinAmount` / `gap` |
-| 中 | 购物车改为底部弹窗 | CartBar 点购物车图标应弹出底部抽屉而非跳转页面 |
+| ~~中~~ | ~~购物车改为底部弹窗~~ | ✅ 已完成（2026-07-08）：新增 `CartDrawer`，图标点击弹底部抽屉看清单/改数量、去结算直跳结算页两区分流、删除 `/cart` 与 `CartPage`。详见下文「购物车抽屉化」段 |
 | 中 | ~~下单成功页加收款码~~ | ✅ 已完成（2026-06-01），二维码已放大至 260×260 |
 | ~~中~~ | ~~配送规则联调~~ | ✅ 已完成（2026-06-03）：收款码持久化、地图选点、通知推送全链路联调通过 |
 | ~~低~~ | ~~短信验证码~~ | ✅ 已接入阿里云号码认证服务（PNVS）（2026-06-30）：默认 `provider=log` 兜底（`1234` 仍可用），真实核验待环境变量切换 + 端到端验证，详见下文「短信认证服务接入」段 |
@@ -172,11 +184,26 @@ export ALIYUN_SMS_SK=<AccessKey Secret>
 | 低 | Admin 操作日志页 | 后端接口已有，前端未挂路由 |
 | ~~低~~ | ~~WebSocket~~ | ✅ 已用轻量轮询方案替代（2026-06-03）：15s 间隔查询新订单计数 + ElNotification 弹窗提醒 + 自动刷新列表 |
 | ~~中~~ | ~~H5 商品简介（描述）展示~~ | ✅ 已完成（2026-06-30）：后端 `GET /api/app/products` 列表接口 `toAppMap()` 回传 `description`；H5 首页 `ProductCard` 商品名下加描述（单行省略）、SKU 弹窗 `SkuSelectorPopup` 填充原预留 `.sku-desc` 占位（2 行省略）；`Product` 类型补字段。 |
-| 🔴 高 | 服务预约系统 | 📋 **方案已定稿待执行（2026-07-03）**。当前服务像商品一样直接下单、无时间维度。新方案：**主服务+附加服务+选时间**的独立预约入口，带**时间冲突检测**（任意时刻同时进行 ≤3 个）。完整方案见 [`docs/appointment-system-plan.md`](docs/appointment-system-plan.md)，分 4 期实施，第 1 期（数据层+后端核心闭环）即可形成最小可用闭环。 |
+| ~~🔴 高~~ | ~~服务预约系统~~ | ✅ **已完成并上线（2026-07-08）**：主服务 + 附加服务 + 选时间的独立预约入口，全局容量冲突检测（任意时刻同时进行 ≤3 个），含取消/状态流转/我的预约/Admin 看板。方案与实施差异见 [`docs/appointment-system-plan.md`](docs/appointment-system-plan.md)。 |
 
-## 服务预约系统（规划中，2026-07-03）
+## 购物车抽屉化（2026-07-08）
 
-> 📋 **状态：方案已定稿，待分期执行**。完整方案见 [`docs/appointment-system-plan.md`](docs/appointment-system-plan.md)。
+> ✅ **状态：已完成**。购物车从整页 `/cart` 改为 CartBar 点击图标就地弹出的底部抽屉。
+
+### 改动
+- 新增 `frontend/h5/src/components/common/CartDrawer.vue`（van-popup 底部抽屉：头部+叉号、会员提示、可滚列表、van-stepper 改数量、底部去结算、空态），骨架照抄 `SkuSelectorPopup`，视觉/逻辑搬自 `CartPage`。
+- `CartBar.vue` 两区分流：左侧图标+金额区点击开抽屉；右侧「去结算」按钮直跳 `/checkout`（不再先跳购物车页）。`drawerVisible` 自管。
+- 删除 `/cart` 路由（`router/index.ts`）与 `CartPage.vue`。`HomePage`、cart store、后端、CheckoutPage 不动。
+
+### 实施期修复
+- **CartDrawer 挂载位置**：初版把 `<CartDrawer>` 放在 `<div v-if="cartStore.totalCount > 0">` 根 div 内，导致在抽屉里把商品减到 0 时整个 CartBar 卸载、抽屉被强制关闭、空态无法显示。改为 Vue 3 多根节点——`CartDrawer` 移到 `v-if` 之外，视觉栏仍随空车隐藏，抽屉由 `drawerVisible` 独立控制，空态正常显示。
+
+### 验证
+build（含 vue-tsc）通过；浏览器实测：加购开抽屉、改数量联动、减到 0 显示空态、去结算双通道、返回首页不自动弹、12 项长列表滚动 + 底部按钮贴底、`/cart` 已无路由。会员提示未实测（代码同 CartPage）。
+
+## 服务预约系统（已完成，2026-07-08）
+
+> ✅ **状态：已实施完成并上线**（后端 + H5 + Admin 三端，含冲突检测、取消与状态流转）。完整方案与实施差异见 [`docs/appointment-system-plan.md`](docs/appointment-system-plan.md)。
 
 ### 背景
 
@@ -214,20 +241,23 @@ WHERE status <> 'CANCELLED'
 -- 结果 >= 3 即满，拒绝
 ```
 
-### 分期实施计划
+### 实施记录（4 期均已完成）
 
-| 期 | 范围 | 产出 |
-|---|---|---|
-| 第 1 期 | 数据层 + 后端预约核心闭环 | DDL 加字段+2 张新表、`AppointmentService`（冲突检测+下单复用订单）、App 接口。**最小可用闭环** |
-| 第 2 期 | 前端预约页 + 首页入口 | `/appointment/:productId`、`AppointmentPage.vue`、ProductCard 改"去预约" |
-| 第 3 期 | 取消 / 状态流转 / 我的预约页 | 预约列表、取消按钮、状态联动 |
-| 第 4 期 | Admin 配置 + 预约看板 | service_category/duration/绑定配置 UI、营业时间配置、当日预约时间线可视化 |
+| 期 | 范围 | 产出 | 状态 |
+|---|---|---|---|
+| 第 1 期 | 数据层 + 后端预约核心闭环 | DDL 加字段+2 张新表（已并入 `init.sql`，旧库用 `migration_appointment_v1.sql` 增量）、`AppointmentService`（冲突检测+下单复用订单）、App 接口 | ✅ |
+| 第 2 期 | 前端预约页 + 首页入口 | `/appointment/:productId`、`AppointmentPage.vue`、ProductCard 改「去预约」 | ✅ |
+| 第 3 期 | 取消 / 状态流转 / 我的预约 | `mine` 接口、取消按钮（联动订单 `cancelled=1`）、PENDING/SERVICED/CANCELLED 状态流转 | ✅ |
+| 第 4 期 | Admin 配置 + 预约看板 | ProductPage 配 `service_category`/`duration`、绑定管理、SystemConfig 营业时段、`BookingBoardPage.vue` 看板 | ✅ |
 
-### 待改造的关键点（详见方案文档）
+> 方案外补充实现：`GET /api/app/appointments/slots`（半小时步进时段网格，方案原定「精确任意时间」，实际改为网格方便选点）；附加服务 `duration` 缺省 0（只加钱不占时间）；预约通知复用 `NotificationService` 并带预约时间/总时长/宠物信息。
 
-- `OrderServiceImpl.createOrder`（`OrderServiceImpl.java:52-208`）返回结果需带出 `orderId`，供 `appointment.order_id` 关联（第 1 期唯一侵入性改动）。
-- `system_config.order_start/end_time` 从"预留接单时段"语义复用为"可预约开始时间范围"，需更新注释。
-- `ProductCard.vue:22-42` 对 `MAIN_SERVICE` 改"去预约"按钮跳转预约页。
+### 已落地的改造点
+
+- ✅ `OrderServiceImpl.createOrder` 结果带出 `orderId`，供 `appointment.order_id` 关联。
+- ✅ `system_config.order_start/end_time` 语义从「预留接单时段」复用为「可预约开始时间范围」，`migration_appointment_v1.sql` 已同步更新注释。
+- ✅ `ProductCard.vue` 对 `MAIN_SERVICE` 显示「去预约」按钮跳转预约页。
+- ✅ `appointment` 表 `idx_appointment_time_range` 索引承接冲突区间查询。
 
 ## 本地启动
 
@@ -247,4 +277,4 @@ cd frontend/admin && pnpm dev
 
 ## 权威文档
 
-`modules.md` > `api.md` > `backend-implementation-notes.md` > `联调指南.md`
+`modules.md` > `api.md`（原 `backend-implementation-notes.md`、`联调指南.md`、`plan.md` 已删除，历史保留在 git 中）

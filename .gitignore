@@ -21,6 +21,7 @@ Thumbs.db
 # 敏感凭据（绝不入仓；部署时手动填入 .env.prod，仓库外 ~/.petshop-secrets 已有备份）
 短信验证服务Access key.txt
 飞书订单通知群webhook.txt
+密钥.txt
 
 # Uploads
 backend/uploads/

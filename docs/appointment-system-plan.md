@@ -1,9 +1,9 @@
 # 服务预约系统 - 实施方案
 
-> 📋 **状态**：方案已定稿，待分期执行
-> 📅 **定稿日期**：2026-06-30
-> 🎯 **目标**：把当前"像商品一样直接下单"的服务，改造为"主服务 + 附加服务 + 选时间"的**预约系统**，并支持**时间段冲突检测**。
-> 📎 本文档为**实施手册**，已逐条与产品方确认全部需求边界。执行时按 [五、分阶段实施步骤](#五分阶段实施步骤) 推进即可。
+> ✅ **状态**：已实施完成并上线（2026-07-08，后端 + H5 + Admin 三端）
+> 📅 **定稿日期**：2026-06-30 ｜ **完成日期**：2026-07-08
+> 🎯 **目标**：把"像商品一样直接下单"的服务，改造为"主服务 + 附加服务 + 选时间"的**预约系统**，并支持**时间段冲突检测**。
+> 📎 本文档原为**实施手册**，现已全部落地。下方分阶段步骤的 checkbox 反映实际完成情况，文末「八、实施差异」记录与原方案的偏差。
 
 ---
 
@@ -364,42 +364,42 @@ public class AppAppointmentController {
 > 建议按顺序推进，每期独立可测、可上线。**第 1+2 期即可形成最小可用闭环**。
 
 ### 第 1 期：数据层 + 后端预约核心闭环（后端）
-- [ ] 执行 [2.1](#21-改动现有表) / [2.2](#22-新增表) DDL（product、sku 加字段 + 2 张新表）
-- [ ] 新增/改动实体类（`Product.serviceCategory`、`Sku.duration`、`MainServiceAddon`、`Appointment`）
-- [ ] 新增 Mapper + XML（含 `AppointmentMapper.countOverlap` 冲突查询）
-- [ ] 实现 `AppointmentService`（getAddons / isSlotAvailable / createAppointment / previewConflict / cancel / myAppointments）
-- [ ] 改造 `OrderServiceImpl.createOrder`：结果 Map 带出 `orderId`
-- [ ] 新增 `AppAppointmentController`
-- [ ] 补充 `init.sql`：给现有服务数据初始化 `service_category` + `duration` + 一组绑定示例
-- [ ] Postman / 联调验证：建预约→冲突→取消→释放
+- [x] 执行 [2.1](#21-改动现有表) / [2.2](#22-新增表) DDL（product、sku 加字段 + 2 张新表）
+- [x] 新增/改动实体类（`Product.serviceCategory`、`Sku.duration`、`MainServiceAddon`、`Appointment`）
+- [x] 新增 Mapper + XML（含 `AppointmentMapper.countOverlap` 冲突查询）
+- [x] 实现 `AppointmentService`（getAddons / isSlotAvailable / createAppointment / previewConflict / cancel / myAppointments）
+- [x] 改造 `OrderServiceImpl.createOrder`：结果 Map 带出 `orderId`
+- [x] 新增 `AppAppointmentController`
+- [x] 补充 `init.sql`：给现有服务数据初始化 `service_category` + `duration` + 一组绑定示例
+- [x] Postman / 联调验证：建预约→冲突→取消→释放
 
 **验收**：能通过接口完成"选主服务+附加+时间→下单→生成订单+预约"，同时间段第 4 次被拒。
 
 ### 第 2 期：前端预约页 + 首页入口（H5）
-- [ ] 新增类型定义（`types/index.ts`：Appointment、AppointmentCreateReq 等）
-- [ ] 新增 API 封装（`api/appointment.ts`）
-- [ ] 新增路由 `/appointment/:productId`（`router/index.ts`）
-- [ ] 新增 `views/AppointmentPage.vue`：宠物信息→主服务SKU(带duration)→附加服务多选(按绑定)→时间选择(限营业时间)→实时算价+冲突预检→提交
-- [ ] 改造 `components/home/ProductCard.vue`：`type==='SERVICE' && serviceCategory==='MAIN_SERVICE'` 时按钮显示"去预约"，点击 `router.push('/appointment/'+id)`
-- [ ] 改造 `views/HomePage.vue`：处理新的"去预约"事件（替代/并存于现有 selectSpec）
-- [ ] 订单详情 `OrderDetailPage.vue` / 下单成功 `OrderSuccessPage.vue`：展示预约时间、宠物信息
+- [x] 新增类型定义（`types/index.ts`：Appointment、AppointmentCreateReq 等）
+- [x] 新增 API 封装（`api/appointment.ts`）
+- [x] 新增路由 `/appointment/:productId`（`router/index.ts`）
+- [x] 新增 `views/AppointmentPage.vue`：宠物信息→主服务SKU(带duration)→附加服务多选(按绑定)→时间选择(限营业时间)→实时算价+冲突预检→提交
+- [x] 改造 `components/home/ProductCard.vue`：`type==='SERVICE' && serviceCategory==='MAIN_SERVICE'` 时按钮显示"去预约"，点击 `router.push('/appointment/'+id)`
+- [x] 改造 `views/HomePage.vue`：处理新的"去预约"事件（替代/并存于现有 selectSpec）
+- [x] 订单详情 `OrderDetailPage.vue` / 下单成功 `OrderSuccessPage.vue`：展示预约时间、宠物信息
 
 **验收**：首页点服务→进预约页→选时间下单→订单详情看到预约时间；冲突时实时提示。
 
 ### 第 3 期：取消 / 状态流转 / 我的预约页（H5 + 后端）
-- [ ] 新增 `views/AppointmentListPage.vue`（我的预约，按状态筛选）
-- [ ] 预约详情：取消按钮（状态 PENDING 可取消）
-- [ ] 后端 `cancel` 联动订单状态/通知
-- [ ] 状态流转：PENDING → SERVICED（店主手动标记完成，第4期 Admin 做）
+- [x] 新增 `views/AppointmentListPage.vue`（我的预约，按状态筛选）
+- [x] 预约详情：取消按钮（状态 PENDING 可取消）
+- [x] 后端 `cancel` 联动订单状态/通知
+- [x] 状态流转：PENDING → SERVICED（店主手动标记完成，第4期 Admin 做）
 
 **验收**：用户可查看/取消自己的预约；取消后该时段重新可约。
 
 ### 第 4 期：Admin 配置 + 预约看板（后台）
-- [ ] 商品管理：service_category 配置 UI
-- [ ] SKU 管理：duration 配置 UI
-- [ ] 主服务-附加服务绑定管理 UI
-- [ ] 营业时间配置（复用现有 system_config 编辑）
-- [ ] 预约看板：按日期展示当日预约时间线（可视化重叠/容量）
+- [x] 商品管理：service_category 配置 UI
+- [x] SKU 管理：duration 配置 UI
+- [x] 主服务-附加服务绑定管理 UI
+- [x] 营业时间配置（复用现有 system_config 编辑）
+- [x] 预约看板：按日期展示当日预约时间线（可视化重叠/容量）
 
 **验收**：店主无需改库即可完成全部配置。
 
@@ -447,4 +447,19 @@ public class AppAppointmentController {
 
 ---
 
-*本文档为执行手册，按"分阶段实施步骤"逐期推进即可。每期完成后可勾选对应 checkbox。*
+*本文档原为执行手册，现已全部落地，保留作为设计参考。*
+
+---
+
+## 八、实施差异（2026-07-08 上线后回填）
+
+实际落地与原方案的偏差：
+
+| 项 | 方案 | 实际 | 原因 |
+|---|---|---|---|
+| 时段选择 | 精确任意时间（如 09:33） | 半小时步进网格（`GET /slots`） | 方便用户选点，UI 用时间网格铺开展示 |
+| 附加服务时长 | 全部累加进 `total_duration` | `duration` 缺省 0 表示只加钱不占时间 | 部分附加项（如加香波）不应占用时间段 |
+| Admin 标记完成 / 取消 | 第 4 期做 | 已实现（`PUT /{id}/serviced`、`PUT /{id}/cancel`），看板 `BookingBoardPage.vue` | — |
+| 订单取消联动 | 未在方案明列 | 取消预约联动 `orders.cancelled = 1` | 商家后台据此识别已取消的预约单 |
+| 预约通知 | 复用订单通知 | 复用 `NotificationService`，通知体带预约时间、总时长、宠物信息 | 新增 `AppointmentNotifyInfo` |
+| 迁移脚本 | 直接改 `init.sql` | `init.sql` 已含全部结构，另保留 `migration_appointment_v1.sql` 供旧库增量 | 双轨：全新部署 vs 已有库 |
