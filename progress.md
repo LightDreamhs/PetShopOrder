@@ -168,6 +168,7 @@ export ALIYUN_SMS_SK=<AccessKey Secret>
 | 修复 | H5/Admin 打包白屏 | 降级 vite 8→6，规避 rolldown 打包问题 |
 | 安全 | `.gitignore` 补全 | 忽略 `.env*` 与凭据 txt；已 tracked 的生产 env 移除追踪 |
 | 体验 | 购物车改为底部抽屉 | 新增 `CartDrawer`，CartBar 图标点击弹底部抽屉查看清单/改数量；去结算按钮直跳结算页两区分流；移除 `/cart` 整页 |
+| 营销 | 首页开屏广告 | `system_config` 加 4 广告字段；H5 `AdPopup`（中间悬挂 + 右上角圆形×）每天首次弹一次（localStorage 按天去重）；Admin 系统配置加开关+上传图区块。详见下文「开屏广告」段 |
 
 ## 已知问题 & 待开发
 
@@ -200,6 +201,25 @@ export ALIYUN_SMS_SK=<AccessKey Secret>
 
 ### 验证
 build（含 vue-tsc）通过；浏览器实测：加购开抽屉、改数量联动、减到 0 显示空态、去结算双通道、返回首页不自动弹、12 项长列表滚动 + 底部按钮贴底、`/cart` 已无路由。会员提示未实测（代码同 CartPage）。
+
+## 开屏广告（2026-07-09）
+
+> ✅ **状态：已完成**。首页每天首次进入弹一张中间悬挂广告图，右上角圆形按钮可关；老板在 Admin 上传图 + 开关控制。
+
+### 改动
+- 后端 `system_config` 加 4 字段（照 `payment_qr_url` 套路）：`ad_enabled`/`ad_image_url`/`ad_link_type`/`ad_link_target`，覆盖实体/Mapper SQL(select+update+insert)/service(buildConfigMap+updateConfig)/Admin Ctrl(buildUpdateParams+DTO)/App Ctrl(`/api/app/system-config/public` 出参)，含 `init.sql` 与 `migration_ad_v1.sql`。
+- H5 新增 `components/common/AdPopup.vue`（`van-popup position=center`，宽 78vw + 图片 `max-height:65vh` 按比例缩放不超屏；右上角 32px 圆形半透明×按钮，`overflow:visible` 让按钮外露）；`HomePage` `onMounted` 拉 `/public`，`adEnabled && adImageUrl` 且当天未弹过则弹 + 写 `localStorage` `ad_shown_YYYY-MM-DD`（本地日期）。
+- Admin `SystemConfigPage` 加「开屏广告」区块（开关 + 上传图，照搬收款码上传）。
+- C 端复用已放行的 `/api/app/system-config/public` 拿配置，不新建接口。
+
+### 需求决策
+- 频次：每天首次弹一次（localStorage 按本地日期去重）。
+- 位置：仅首页（HomePage 不缓存，每次进都走 onMounted）。
+- 关闭：右上角圆形× + 点图 + 点遮罩，立即关、无倒计时。
+- 点击：当前纯展示（点图即关）；**预留跳转字段**（`ad_link_type`/`ad_link_target`，当前 `NONE`），未来加跳转（商品/预约/外链）前端无需改结构。
+
+### 验证
+后端 compile + 三端 build 通过；开发库执行 migration；浏览器实测：弹窗弹出、点×/点图/点遮罩三种关闭、当天再进不弹、清 localStorage 重弹、关开关/删图不弹、Admin 区块（开关+图预览+删除）正常。
 
 ## 服务预约系统（已完成，2026-07-08）
 
