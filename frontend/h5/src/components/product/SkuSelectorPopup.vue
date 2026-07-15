@@ -177,10 +177,7 @@ function handleAddToCart() {
   color: $text-muted;
   line-height: 1.4;
   word-break: break-all;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
+  white-space: pre-wrap;
 }
 
 .sku-close {

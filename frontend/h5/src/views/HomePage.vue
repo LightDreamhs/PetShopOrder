@@ -66,7 +66,6 @@
             :key="p.id"
             :product="p"
             @select-spec="openSpecPicker"
-            @change-qty="handleDirectQty"
             @go-appointment="goAppointment"
           />
           <van-empty v-if="filteredProducts.length === 0" description="暂无商品" />
@@ -94,7 +93,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
-import { useCartStore } from '@/stores/cart'
 import { useAuthStore } from '@/stores/auth'
 import { useMemberStore } from '@/stores/member'
 import { getProductsByType, getProductDetail } from '@/api/product'
@@ -109,7 +107,6 @@ import AdPopup from '@/components/common/AdPopup.vue'
 import shopLogo from '@/assets/shop-logo.jpg'
 
 const router = useRouter()
-const cartStore = useCartStore()
 const authStore = useAuthStore()
 const memberStore = useMemberStore()
 
@@ -224,31 +221,7 @@ async function openSpecPicker(product: Product) {
 
 function goAppointment(product: Product) {
   router.push(`/appointment/${product.id}`)
-}
-
-function handleDirectQty(product: Product, delta: number) {
-  const currentQty = cartStore.getItemQty(product.id, null)
-  const newQty = currentQty + delta
-
-  if (newQty <= 0) {
-    cartStore.removeItem(product.id, null)
-  } else if (currentQty === 0 && delta > 0) {
-    cartStore.addItem({
-      productId: product.id,
-      skuId: null,
-      quantity: 1,
-      productName: product.name,
-      productCoverImg: product.coverImg,
-      skuName: null,
-      type: product.type,
-      originalPrice: product.price,
-      dealPrice: product.dealPrice,
-    })
-  } else {
-    cartStore.updateQuantity(product.id, null, newQty)
-  }
-}
-</script>
+}</script>
 
 <style scoped lang="scss">
 .home-page {

@@ -26,26 +26,11 @@
               去预约
             </button>
           </template>
-          <!-- 其他：有规格选规格，无规格加减 -->
-          <template v-else-if="product.hasSpec">
-            <button class="spec-btn" @click="$emit('selectSpec', product)">
-              选规格
-            </button>
-          </template>
+          <!-- 其他（多规格/单规格）：统一走弹窗选购，弹窗内查看完整描述并加购 -->
           <template v-else>
-            <div class="qty-control">
-              <button
-                v-if="cartQty > 0"
-                class="qty-btn qty-minus"
-                @click="$emit('changeQty', product, -1)"
-              >
-                −
-              </button>
-              <span v-if="cartQty > 0" class="qty-num">{{ cartQty }}</span>
-              <button class="qty-btn qty-add" @click="$emit('changeQty', product, 1)">
-                +
-              </button>
-            </div>
+            <button class="spec-btn" @click="$emit('selectSpec', product)">
+              {{ product.hasSpec ? '选规格' : '选购' }}
+            </button>
           </template>
         </div>
       </div>
@@ -57,7 +42,6 @@
 import type { Product } from '@/types'
 import { computed } from 'vue'
 import { usePriceDisplay } from '@/composables/usePriceDisplay'
-import { useCartStore } from '@/stores/cart'
 
 const props = defineProps<{
   product: Product
@@ -65,14 +49,10 @@ const props = defineProps<{
 
 defineEmits<{
   selectSpec: [product: Product]
-  changeQty: [product: Product, delta: number]
   goAppointment: [product: Product]
 }>()
 
 const { hasDiscount } = usePriceDisplay()
-const cartStore = useCartStore()
-
-const cartQty = computed(() => cartStore.getItemQty(props.product.id, null))
 
 // 主服务走预约入口（serviceCategory=MAIN_SERVICE），优先于 hasSpec
 const isMainService = computed(
@@ -206,43 +186,5 @@ const isMainService = computed(
   cursor: pointer;
   min-width: 44px;
   min-height: 28px;
-}
-
-.qty-control {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.qty-btn {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: none;
-  font-size: 16px;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-
-  &.qty-add {
-    background: $primary;
-    color: #fff;
-  }
-
-  &.qty-minus {
-    background: #f0f0f0;
-    color: $text-secondary;
-  }
-}
-
-.qty-num {
-  font-size: 14px;
-  font-weight: 600;
-  min-width: 18px;
-  text-align: center;
-  color: $text;
 }
 </style>
