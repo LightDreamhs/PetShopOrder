@@ -17,6 +17,10 @@ public class StpInterfaceImpl implements StpInterface {
 
     @Override
     public List<String> getRoleList(Object loginId, String loginType) {
+        // 仅 admin 体系（StpAdminUtil）解析角色；C 端等其他体系一律无角色，防止跨体系提权
+        if (!StpAdminUtil.stpLogic.getLoginType().equals(loginType)) {
+            return Collections.emptyList();
+        }
         AdminUser user = adminUserMapper.selectById(Long.parseLong(loginId.toString()));
         if (user == null) {
             return Collections.emptyList();

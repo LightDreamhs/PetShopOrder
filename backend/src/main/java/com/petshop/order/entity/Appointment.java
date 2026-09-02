@@ -11,6 +11,8 @@ import java.time.LocalDateTime;
 public class Appointment extends BaseEntity {
 
     private Long orderId;
+    /** 归属门店 */
+    private Long shopId;
     private Long userId;
     private Long mainProductId;
     private Long mainSkuId;

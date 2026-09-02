@@ -8,9 +8,9 @@ import java.math.BigDecimal;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class SystemConfigDeliveryTier extends BaseEntity {
+public class ShopDeliveryTier extends BaseEntity {
 
-    private Long configId;
+    private Long shopId;
     private BigDecimal minDistanceKm;
     private BigDecimal maxDistanceKm;
     private BigDecimal fee;

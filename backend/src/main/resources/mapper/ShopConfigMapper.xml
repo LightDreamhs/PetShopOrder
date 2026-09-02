@@ -1,27 +1,26 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.petshop.order.mapper.SystemConfigMapper">
+<mapper namespace="com.petshop.order.mapper.ShopConfigMapper">
 
-    <select id="selectById" resultType="com.petshop.order.entity.SystemConfig">
-        SELECT id, shop_lat, shop_lng, delivery_radius_km, delivery_min_amount,
-               delivery_fee_type, fixed_delivery_fee, order_time_enabled,
+    <select id="selectByShopId" resultType="com.petshop.order.entity.ShopConfig">
+        SELECT id, shop_id, shop_lat, shop_lng, delivery_radius_km, delivery_min_amount,
+               delivery_fee_type, order_time_enabled,
                order_start_time, order_end_time, qywx_webhook_url_enc,
                has_qywx_webhook, payment_qr_url, ad_enabled, ad_image_url, ad_link_type, ad_link_target,
                updated_by, create_time, update_time
-        FROM system_config WHERE id = #{id}
+        FROM shop_config WHERE shop_id = #{shopId}
     </select>
 
-    <update id="updateById" parameterType="com.petshop.order.entity.SystemConfig">
-        UPDATE system_config
+    <update id="updateById" parameterType="com.petshop.order.entity.ShopConfig">
+        UPDATE shop_config
         <set>
             <if test="shopLat != null">shop_lat = #{shopLat},</if>
             <if test="shopLng != null">shop_lng = #{shopLng},</if>
             <if test="deliveryRadiusKm != null">delivery_radius_km = #{deliveryRadiusKm},</if>
             <if test="deliveryMinAmount != null">delivery_min_amount = #{deliveryMinAmount},</if>
             <if test="deliveryFeeType != null">delivery_fee_type = #{deliveryFeeType},</if>
-            <if test="fixedDeliveryFee != null">fixed_delivery_fee = #{fixedDeliveryFee},</if>
-            <if test="orderTimeEnabled != null">order_time_enabled = #{orderTimeEnabled},</if>
+            order_time_enabled = #{orderTimeEnabled},
             order_start_time = #{orderStartTime},
             order_end_time = #{orderEndTime},
             qywx_webhook_url_enc = #{qywxWebhookUrlEnc},
@@ -33,18 +32,18 @@
             ad_link_target = #{adLinkTarget},
             <if test="updatedBy != null">updated_by = #{updatedBy},</if>
         </set>
-        WHERE id = #{id}
+        WHERE id = #{id} AND shop_id = #{shopId}
     </update>
 
-    <insert id="insert" parameterType="com.petshop.order.entity.SystemConfig">
-        INSERT INTO system_config (id, shop_lat, shop_lng, delivery_radius_km, delivery_min_amount,
-                                   delivery_fee_type, fixed_delivery_fee, order_time_enabled,
-                                   order_start_time, order_end_time, qywx_webhook_url_enc,
-                                   has_qywx_webhook, payment_qr_url,
-                                   ad_enabled, ad_image_url, ad_link_type, ad_link_target,
-                                   updated_by)
-        VALUES (#{id}, #{shopLat}, #{shopLng}, #{deliveryRadiusKm}, #{deliveryMinAmount},
-                #{deliveryFeeType}, #{fixedDeliveryFee}, #{orderTimeEnabled},
+    <insert id="insert" parameterType="com.petshop.order.entity.ShopConfig" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO shop_config (shop_id, shop_lat, shop_lng, delivery_radius_km, delivery_min_amount,
+                                 delivery_fee_type, order_time_enabled,
+                                 order_start_time, order_end_time, qywx_webhook_url_enc,
+                                 has_qywx_webhook, payment_qr_url,
+                                 ad_enabled, ad_image_url, ad_link_type, ad_link_target,
+                                 updated_by)
+        VALUES (#{shopId}, #{shopLat}, #{shopLng}, #{deliveryRadiusKm}, #{deliveryMinAmount},
+                #{deliveryFeeType}, #{orderTimeEnabled},
                 #{orderStartTime}, #{orderEndTime}, #{qywxWebhookUrlEnc},
                 #{hasQywxWebhook}, #{paymentQrUrl},
                 #{adEnabled}, #{adImageUrl}, #{adLinkType}, #{adLinkTarget},

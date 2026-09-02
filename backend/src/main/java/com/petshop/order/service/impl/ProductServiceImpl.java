@@ -4,6 +4,7 @@ import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import com.petshop.order.common.BusinessException;
 import com.petshop.order.common.PageResult;
+import com.petshop.order.common.ShopContext;
 import com.petshop.order.entity.Product;
 import com.petshop.order.entity.Sku;
 import com.petshop.order.mapper.ProductMapper;
@@ -25,19 +26,20 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public PageResult<Product> getList(int page, int size, String keyword, String type, String status) {
         PageHelper.startPage(page, size);
-        List<Product> list = productMapper.selectPageList(keyword, type, status);
+        // 商品目录平台级；SKU 聚合值（数量/最低价）按当前店统计
+        List<Product> list = productMapper.selectPageList(keyword, type, status, ShopContext.require());
         PageInfo<Product> pageInfo = new PageInfo<>(list);
         return new PageResult<>(pageInfo.getList(), pageInfo.getTotal(), page, size);
     }
 
     @Override
     public Product getDetail(Long id) {
-        Product product = productMapper.selectById(id);
+        Product product = productMapper.selectById(id, ShopContext.require(), false);
         if (product == null) {
             throw new BusinessException("商品不存在");
         }
         if (product.getSkus() == null || product.getSkus().isEmpty()) {
-            product.setSkus(skuMapper.selectByProductId(id));
+            product.setSkus(skuMapper.selectByProductId(id, ShopContext.require()));
         }
         return product;
     }
@@ -56,8 +58,10 @@ public class ProductServiceImpl implements ProductService {
 
         List<Sku> skus = product.getSkus();
         if (skus != null && !skus.isEmpty()) {
+            Long shopId = ShopContext.require();
             for (Sku sku : skus) {
                 sku.setProductId(product.getId());
+                sku.setShopId(shopId);
             }
             skuMapper.insertBatch(skus);
         }
@@ -68,7 +72,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public Product update(Long id, Product product) {
-        Product existing = productMapper.selectById(id);
+        Product existing = productMapper.selectById(id, ShopContext.require(), false);
         if (existing == null) {
             throw new BusinessException("商品不存在");
         }
@@ -81,10 +85,13 @@ public class ProductServiceImpl implements ProductService {
 
         List<Sku> skus = product.getSkus();
         if (skus != null) {
-            skuMapper.deleteByProductId(id);
+            // SKU 店铺级：只重建当前店的 SKU，其他店价格不受影响
+            Long shopId = ShopContext.require();
+            skuMapper.deleteByProductIdAndShop(id, shopId);
             if (!skus.isEmpty()) {
                 for (Sku sku : skus) {
                     sku.setProductId(id);
+                    sku.setShopId(shopId);
                 }
                 skuMapper.insertBatch(skus);
             }
@@ -109,7 +116,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public void updateStatus(Long id, String status) {
-        Product existing = productMapper.selectById(id);
+        Product existing = productMapper.selectById(id, ShopContext.require(), false);
         if (existing == null) {
             throw new BusinessException("商品不存在");
         }
@@ -118,7 +125,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public void delete(Long id) {
-        Product existing = productMapper.selectById(id);
+        Product existing = productMapper.selectById(id, ShopContext.require(), false);
         if (existing == null) {
             throw new BusinessException("商品不存在");
         }
@@ -126,6 +133,7 @@ public class ProductServiceImpl implements ProductService {
         if (count > 0) {
             throw new BusinessException("该商品已被订单引用，无法删除");
         }
+        // 目录删除：清掉该商品在所有店的 SKU
         skuMapper.deleteByProductId(id);
         productMapper.deleteById(id);
     }

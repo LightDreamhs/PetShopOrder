@@ -24,8 +24,10 @@ public interface AppointmentMapper {
     /** 单条订单的预约信息（用于订单详情补全），返回 Map */
     Map<String, Object> selectMapByOrderId(@Param("orderId") Long orderId);
 
-    /** 冲突检测核心：数与新预约区间 [start,end) 重叠的、非取消的已有预约数 */
-    int countOverlap(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+    /** 冲突检测核心：数与新预约区间 [start,end) 重叠的、非取消的已有预约数（按店） */
+    int countOverlap(@Param("start") LocalDateTime start,
+                     @Param("end") LocalDateTime end,
+                     @Param("shopId") Long shopId);
 
     /** 我的预约分页列表（含订单快照信息） */
     List<Map<String, Object>> selectPageListByUserId(@Param("userId") Long userId,
@@ -33,13 +35,15 @@ public interface AppointmentMapper {
 
     int updateStatus(@Param("id") Long id, @Param("status") String status);
 
-    /** Admin 看板：按日期范围 + 状态 + 关键词（订单号/电话/联系人）分页查询 */
+    /** Admin 看板：按当前店 + 日期范围 + 状态 + 关键词（订单号/电话/联系人）分页查询 */
     List<Map<String, Object>> selectPageListForAdmin(@Param("startTime") LocalDateTime startTime,
                                                      @Param("endTime") LocalDateTime endTime,
                                                      @Param("status") String status,
-                                                     @Param("keyword") String keyword);
+                                                     @Param("keyword") String keyword,
+                                                     @Param("shopId") Long shopId);
 
-    /** 查某时间区间内非取消的预约 [start,end) 列表（用于时段可约判断，只取区间字段） */
+    /** 查某店某时间区间内非取消的预约 [start,end) 列表（用于时段可约判断，只取区间字段） */
     List<Appointment> selectActiveInRange(@Param("startTime") LocalDateTime startTime,
-                                          @Param("endTime") LocalDateTime endTime);
+                                          @Param("endTime") LocalDateTime endTime,
+                                          @Param("shopId") Long shopId);
 }

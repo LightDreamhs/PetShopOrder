@@ -15,9 +15,12 @@ public interface MemberPhoneMapper {
 
     int deleteByMemberId(@Param("memberId") Long memberId);
 
-    int countByPhone(@Param("phone") String phone, @Param("excludeMemberId") Long excludeMemberId);
+    int countByPhone(@Param("phone") String phone,
+                     @Param("excludeMemberId") Long excludeMemberId,
+                     @Param("shopId") Long shopId);
 
-    Long selectMemberIdByPhone(@Param("phone") String phone);
+    /** 按店命中会员（会员体系店铺级） */
+    Long selectMemberIdByShopAndPhone(@Param("shopId") Long shopId, @Param("phone") String phone);
 
     List<String> selectPhonesByMemberId(@Param("memberId") Long memberId);
 }

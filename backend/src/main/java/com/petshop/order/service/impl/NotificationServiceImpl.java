@@ -5,8 +5,8 @@ import cn.hutool.crypto.symmetric.AES;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.petshop.order.entity.OrderItem;
 import com.petshop.order.entity.Orders;
-import com.petshop.order.entity.SystemConfig;
-import com.petshop.order.mapper.SystemConfigMapper;
+import com.petshop.order.entity.ShopConfig;
+import com.petshop.order.mapper.ShopConfigMapper;
 import com.petshop.order.service.NotificationService;
 import com.petshop.order.service.dto.AppointmentNotifyInfo;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +33,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 @RequiredArgsConstructor
 public class NotificationServiceImpl implements NotificationService {
 
-    private final SystemConfigMapper systemConfigMapper;
+    private final ShopConfigMapper shopConfigMapper;
     private final ObjectMapper objectMapper;
 
     @Value("${app.webhook.aes-key:PetShop2026Order!}")
@@ -62,7 +62,8 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public void sendNewOrderNotification(Orders order, List<OrderItem> items, AppointmentNotifyInfo appointmentInfo) {
         try {
-            SystemConfig config = systemConfigMapper.selectById(1L);
+            // @Async 线程读不到 ShopContext（ThreadLocal），用订单自身携带的 shopId 定位本店 webhook
+            ShopConfig config = shopConfigMapper.selectByShopId(order.getShopId());
             if (config == null || config.getHasQywxWebhook() == null || config.getHasQywxWebhook() != 1) {
                 return;
             }

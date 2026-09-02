@@ -10,5 +10,6 @@ public interface DeliveryService {
 
     Map<String, Object> checkDelivery(List<DeliveryItem> items, String lat, String lng);
 
-    BigDecimal calculateDeliveryFee(BigDecimal distanceKm, Long configId);
+    /** 按店铺查分段运费；距离不在任何分段内返回 null */
+    BigDecimal calculateDeliveryFee(BigDecimal distanceKm, Long shopId);
 }

@@ -1,6 +1,7 @@
 package com.petshop.order.controller.app;
 
 import com.petshop.order.common.R;
+import com.petshop.order.common.ShopContext;
 import com.petshop.order.entity.AppUser;
 import com.petshop.order.entity.Product;
 import com.petshop.order.entity.Sku;
@@ -60,9 +61,9 @@ public class AppCartController {
             cartItem.setQuantity(quantity);
             cartItems.add(cartItem);
 
-            Product product = productMapper.selectById(productId);
+            Product product = productMapper.selectById(productId, ShopContext.require(), true);
             if (product != null) {
-                List<Sku> skus = skuMapper.selectByProductId(productId);
+                List<Sku> skus = skuMapper.selectByProductId(productId, ShopContext.require());
                 Sku sku;
                 if (skuId != null) {
                     sku = skus.stream()

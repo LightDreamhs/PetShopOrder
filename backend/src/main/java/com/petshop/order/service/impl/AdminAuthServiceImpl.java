@@ -1,6 +1,6 @@
 package com.petshop.order.service.impl;
 
-import cn.dev33.satoken.stp.StpUtil;
+import com.petshop.order.config.StpAdminUtil;
 import cn.hutool.crypto.digest.BCrypt;
 import com.petshop.order.common.BusinessException;
 import com.petshop.order.entity.AdminUser;
@@ -30,19 +30,22 @@ public class AdminAuthServiceImpl implements AdminAuthService {
             throw new BusinessException("用户名或密码错误");
         }
 
-        StpUtil.login(user.getId(), "admin");
+        StpAdminUtil.login(user.getId(), "admin");
+        // 员工归属店写入会话，ShopResolveInterceptor 据此限制数据范围。
+        // 0=总部（session 底层是 ConcurrentHashMap，不接受 null）
+        StpAdminUtil.getSession().set("shopId", user.getShopId() != null ? user.getShopId() : 0L);
         adminUserMapper.updateLastLoginTime(user.getId(), LocalDateTime.now());
         return user;
     }
 
     @Override
     public void logout() {
-        StpUtil.logout();
+        StpAdminUtil.logout();
     }
 
     @Override
     public AdminUser getCurrentAdmin() {
-        Long userId = StpUtil.getLoginIdAsLong();
+        Long userId = StpAdminUtil.getLoginIdAsLong();
         AdminUser user = adminUserMapper.selectById(userId);
         if (user == null) {
             throw new BusinessException(401, "管理员不存在");

@@ -5,6 +5,7 @@
 
     <resultMap id="BaseResultMap" type="com.petshop.order.entity.Member">
         <id property="id" column="id"/>
+        <result property="shopId" column="shop_id"/>
         <result property="name" column="name"/>
         <result property="levelId" column="level_id"/>
         <result property="remark" column="remark"/>
@@ -24,6 +25,7 @@
         FROM member m
         LEFT JOIN member_level ml ON m.level_id = ml.id
         <where>
+            AND m.shop_id = #{shopId}
             <if test="keyword != null and keyword != ''">
                 AND m.name LIKE CONCAT('%', #{keyword}, '%')
             </if>
@@ -43,8 +45,8 @@
     </select>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO member (name, level_id, remark)
-        VALUES (#{name}, #{levelId}, #{remark})
+        INSERT INTO member (shop_id, name, level_id, remark)
+        VALUES (#{shopId}, #{name}, #{levelId}, #{remark})
     </insert>
 
     <update id="updateById">

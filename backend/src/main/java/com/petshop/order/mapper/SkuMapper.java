@@ -9,7 +9,7 @@ import java.util.List;
 @Mapper
 public interface SkuMapper {
 
-    List<Sku> selectByProductId(@Param("productId") Long productId);
+    List<Sku> selectByProductId(@Param("productId") Long productId, @Param("shopId") Long shopId);
 
     Sku selectById(@Param("id") Long id);
 
@@ -18,4 +18,6 @@ public interface SkuMapper {
     int insertBatch(@Param("list") List<Sku> list);
 
     int deleteByProductId(@Param("productId") Long productId);
+
+    int deleteByProductIdAndShop(@Param("productId") Long productId, @Param("shopId") Long shopId);
 }

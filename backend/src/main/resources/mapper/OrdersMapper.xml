@@ -4,18 +4,18 @@
 <mapper namespace="com.petshop.order.mapper.OrdersMapper">
 
     <insert id="insert" parameterType="com.petshop.order.entity.Orders" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO orders (order_no, user_id, customer_phone_snapshot, customer_name,
+        INSERT INTO orders (order_no, shop_id, user_id, customer_phone_snapshot, customer_name,
                             member_id, member_level_snapshot, goods_amount, service_amount,
                             delivery_fee, total_amount, need_delivery, delivery_address,
                             delivery_lat, delivery_lng, delivery_distance, processed, cancelled, remark)
-        VALUES (#{orderNo}, #{userId}, #{customerPhoneSnapshot}, #{customerName},
+        VALUES (#{orderNo}, #{shopId}, #{userId}, #{customerPhoneSnapshot}, #{customerName},
                 #{memberId}, #{memberLevelSnapshot}, #{goodsAmount}, #{serviceAmount},
                 #{deliveryFee}, #{totalAmount}, #{needDelivery}, #{deliveryAddress},
                 #{deliveryLat}, #{deliveryLng}, #{deliveryDistance}, #{processed}, #{cancelled}, #{remark})
     </insert>
 
     <select id="selectById" resultType="com.petshop.order.entity.Orders">
-        SELECT id, order_no, user_id, customer_phone_snapshot, customer_name,
+        SELECT id, order_no, shop_id, user_id, customer_phone_snapshot, customer_name,
                member_id, member_level_snapshot, goods_amount, service_amount,
                delivery_fee, total_amount, need_delivery, delivery_address,
                delivery_lat, delivery_lng, delivery_distance, processed, cancelled, remark,
@@ -24,7 +24,7 @@
     </select>
 
     <select id="selectPageListByUserId" resultType="com.petshop.order.entity.Orders">
-        SELECT id, order_no, user_id, customer_phone_snapshot, customer_name,
+        SELECT id, order_no, shop_id, user_id, customer_phone_snapshot, customer_name,
                member_id, member_level_snapshot, goods_amount, service_amount,
                delivery_fee, total_amount, need_delivery, delivery_address,
                delivery_lat, delivery_lng, delivery_distance, processed, cancelled, remark,
@@ -34,13 +34,14 @@
     </select>
 
     <select id="selectPageListAdmin" resultType="com.petshop.order.entity.Orders">
-        SELECT id, order_no, user_id, customer_phone_snapshot, customer_name,
+        SELECT id, order_no, shop_id, user_id, customer_phone_snapshot, customer_name,
                member_id, member_level_snapshot, goods_amount, service_amount,
                delivery_fee, total_amount, need_delivery, delivery_address,
                delivery_lat, delivery_lng, delivery_distance, processed, cancelled, remark,
                create_time, update_time
         FROM orders
         <where>
+            AND shop_id = #{shopId}
             <if test="keyword != null and keyword != ''">
                 AND (order_no LIKE CONCAT('%', #{keyword}, '%')
                      OR customer_phone_snapshot LIKE CONCAT('%', #{keyword}, '%')
@@ -71,7 +72,7 @@
     </update>
 
     <select id="countNewOrders" resultType="int">
-        SELECT COUNT(*) FROM orders WHERE create_time > #{since}
+        SELECT COUNT(*) FROM orders WHERE create_time > #{since} AND shop_id = #{shopId}
     </select>
 
 </mapper>

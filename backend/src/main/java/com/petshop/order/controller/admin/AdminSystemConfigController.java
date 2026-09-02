@@ -1,10 +1,10 @@
 package com.petshop.order.controller.admin;
 
-import cn.dev33.satoken.stp.StpUtil;
+import com.petshop.order.config.StpAdminUtil;
 import com.petshop.order.common.R;
 import com.petshop.order.entity.AdminUser;
 import com.petshop.order.service.AdminAuthService;
-import com.petshop.order.service.SystemConfigService;
+import com.petshop.order.service.ShopConfigService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -20,27 +20,27 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AdminSystemConfigController {
 
-    private final SystemConfigService systemConfigService;
+    private final ShopConfigService shopConfigService;
     private final AdminAuthService adminAuthService;
 
     @GetMapping
     public R<Map<String, Object>> getConfig() {
-        StpUtil.checkRole("BOSS");
-        return R.ok(systemConfigService.getConfig());
+        StpAdminUtil.checkRole("BOSS");
+        return R.ok(shopConfigService.getConfig());
     }
 
     @PutMapping
     public R<Map<String, Object>> updateConfig(@RequestBody UpdateConfigRequest req) {
-        StpUtil.checkRole("BOSS");
+        StpAdminUtil.checkRole("BOSS");
         AdminUser operator = adminAuthService.getCurrentAdmin();
         Map<String, Object> params = buildUpdateParams(req);
-        return R.ok(systemConfigService.updateConfig(params, operator));
+        return R.ok(shopConfigService.updateConfig(params, operator));
     }
 
     @PostMapping("/test-webhook")
     public R<Map<String, Object>> testWebhook(@RequestBody TestWebhookRequest req) {
-        StpUtil.checkRole("BOSS");
-        return R.ok(systemConfigService.testWebhook(req.getWebhookUrl()));
+        StpAdminUtil.checkRole("BOSS");
+        return R.ok(shopConfigService.testWebhook(req.getWebhookUrl()));
     }
 
     private Map<String, Object> buildUpdateParams(UpdateConfigRequest req) {

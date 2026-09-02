@@ -8,8 +8,8 @@
     </select>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO member_phone (member_id, phone)
-        VALUES (#{memberId}, #{phone})
+        INSERT INTO member_phone (shop_id, member_id, phone)
+        VALUES (#{shopId}, #{memberId}, #{phone})
     </insert>
 
     <delete id="deleteByMemberId">
@@ -17,14 +17,15 @@
     </delete>
 
     <select id="countByPhone" resultType="int">
-        SELECT COUNT(*) FROM member_phone WHERE phone = #{phone}
+        SELECT COUNT(*) FROM member_phone
+        WHERE phone = #{phone} AND shop_id = #{shopId}
         <if test="excludeMemberId != null">
             AND member_id != #{excludeMemberId}
         </if>
     </select>
 
-    <select id="selectMemberIdByPhone" resultType="java.lang.Long">
-        SELECT member_id FROM member_phone WHERE phone = #{phone} LIMIT 1
+    <select id="selectMemberIdByShopAndPhone" resultType="java.lang.Long">
+        SELECT member_id FROM member_phone WHERE shop_id = #{shopId} AND phone = #{phone} LIMIT 1
     </select>
 
     <select id="selectPhonesByMemberId" resultType="java.lang.String">

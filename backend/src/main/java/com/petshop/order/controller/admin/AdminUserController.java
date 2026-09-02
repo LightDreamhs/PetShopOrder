@@ -1,6 +1,6 @@
 package com.petshop.order.controller.admin;
 
-import cn.dev33.satoken.stp.StpUtil;
+import com.petshop.order.config.StpAdminUtil;
 import com.petshop.order.common.R;
 import com.petshop.order.entity.AdminUser;
 import com.petshop.order.service.AdminUserService;
@@ -30,7 +30,7 @@ public class AdminUserController {
 
     @GetMapping
     public R<List<Map<String, Object>>> list() {
-        StpUtil.checkRole("BOSS");
+        StpAdminUtil.checkRole("BOSS");
         List<AdminUser> users = adminUserService.getList();
         List<Map<String, Object>> result = users.stream().map(this::toMap).toList();
         return R.ok(result);
@@ -38,7 +38,7 @@ public class AdminUserController {
 
     @PostMapping
     public R<Map<String, Object>> create(@Valid @RequestBody CreateUserRequest req) {
-        StpUtil.checkRole("BOSS");
+        StpAdminUtil.checkRole("BOSS");
         AdminUser user = new AdminUser();
         user.setUsername(req.getUsername());
         user.setPasswordHash(req.getPassword());
@@ -50,7 +50,7 @@ public class AdminUserController {
 
     @PutMapping("/{id}")
     public R<Map<String, Object>> update(@PathVariable Long id, @Valid @RequestBody UpdateUserRequest req) {
-        StpUtil.checkRole("BOSS");
+        StpAdminUtil.checkRole("BOSS");
         AdminUser user = new AdminUser();
         user.setRealName(req.getRealName());
         user.setRole(req.getRole());
@@ -60,7 +60,7 @@ public class AdminUserController {
 
     @PutMapping("/{id}/status")
     public R<Void> updateStatus(@PathVariable Long id, @Valid @RequestBody StatusRequest req) {
-        StpUtil.checkRole("BOSS");
+        StpAdminUtil.checkRole("BOSS");
         Integer status = "ENABLED".equals(req.getStatus()) ? 1 : 0;
         adminUserService.updateStatus(id, status);
         return R.ok();
@@ -68,14 +68,14 @@ public class AdminUserController {
 
     @PutMapping("/{id}/password")
     public R<Void> resetPassword(@PathVariable Long id, @Valid @RequestBody ResetPasswordRequest req) {
-        StpUtil.checkRole("BOSS");
+        StpAdminUtil.checkRole("BOSS");
         adminUserService.resetPassword(id, req.getNewPassword());
         return R.ok();
     }
 
     @DeleteMapping("/{id}")
     public R<Void> delete(@PathVariable Long id) {
-        StpUtil.checkRole("BOSS");
+        StpAdminUtil.checkRole("BOSS");
         adminUserService.delete(id);
         return R.ok();
     }

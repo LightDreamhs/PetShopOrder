@@ -9,9 +9,10 @@
             IFNULL(SUM(CASE WHEN DATE(create_time) = CURDATE() THEN total_amount ELSE 0 END), 0) as todayAmount,
             COUNT(*) as totalOrderCount,
             IFNULL(SUM(total_amount), 0) as totalAmount,
-            (SELECT COUNT(*) FROM member) as totalMemberCount,
+            (SELECT COUNT(*) FROM member WHERE shop_id = #{shopId}) as totalMemberCount,
             COUNT(CASE WHEN processed = 0 THEN 1 END) as unprocessedCount
         FROM orders
+        WHERE shop_id = #{shopId}
     </select>
 
     <select id="selectOrderTrends" resultType="map">
@@ -20,7 +21,8 @@
                    COUNT(*) as orderCount,
                    IFNULL(SUM(total_amount), 0) as amount
             FROM orders
-            WHERE create_time &gt;= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+            WHERE shop_id = #{shopId}
+              AND create_time &gt;= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
             GROUP BY DATE(create_time)
             ORDER BY DATE(create_time)
         </if>
@@ -29,7 +31,8 @@
                    COUNT(*) as orderCount,
                    IFNULL(SUM(total_amount), 0) as amount
             FROM orders
-            WHERE create_time &gt;= DATE_SUB(CURDATE(), INTERVAL 12 WEEK)
+            WHERE shop_id = #{shopId}
+              AND create_time &gt;= DATE_SUB(CURDATE(), INTERVAL 12 WEEK)
             GROUP BY YEAR(create_time), WEEK(create_time, 1)
             ORDER BY YEAR(create_time), WEEK(create_time, 1)
         </if>
@@ -38,7 +41,8 @@
                    COUNT(*) as orderCount,
                    IFNULL(SUM(total_amount), 0) as amount
             FROM orders
-            WHERE create_time &gt;= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+            WHERE shop_id = #{shopId}
+              AND create_time &gt;= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
             GROUP BY DATE_FORMAT(create_time, '%Y-%m')
             ORDER BY DATE_FORMAT(create_time, '%Y-%m')
         </if>
@@ -50,7 +54,8 @@
         FROM member m
         LEFT JOIN member_phone mp ON mp.member_id = m.id AND mp.id = (SELECT MIN(id) FROM member_phone WHERE member_id = m.id)
         LEFT JOIN member_level ml ON ml.id = m.level_id
-        LEFT JOIN orders o ON o.member_id = m.id
+        LEFT JOIN orders o ON o.member_id = m.id AND o.shop_id = #{shopId}
+        WHERE m.shop_id = #{shopId}
         GROUP BY m.id
         HAVING orderCount &gt; 0
         ORDER BY totalAmount DESC

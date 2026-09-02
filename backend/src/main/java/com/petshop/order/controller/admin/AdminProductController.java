@@ -1,6 +1,6 @@
 package com.petshop.order.controller.admin;
 
-import cn.dev33.satoken.stp.StpUtil;
+import com.petshop.order.config.StpAdminUtil;
 import com.petshop.order.common.BusinessException;
 import com.petshop.order.common.PageResult;
 import com.petshop.order.common.R;
@@ -32,7 +32,7 @@ public class AdminProductController {
     private final MainServiceAddonMapper mainServiceAddonMapper;
 
     private void checkManager() {
-        if (!StpUtil.hasRole("BOSS") && !StpUtil.hasRole("MANAGER")) {
+        if (!StpAdminUtil.hasRole("BOSS") && !StpAdminUtil.hasRole("MANAGER")) {
             throw new BusinessException(403, "无权限访问");
         }
     }

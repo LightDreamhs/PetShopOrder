@@ -1,6 +1,5 @@
 package com.petshop.order.controller.admin;
 
-import cn.dev33.satoken.stp.StpUtil;
 import com.petshop.order.common.R;
 import com.petshop.order.entity.AdminUser;
 import com.petshop.order.service.AdminAuthService;

@@ -2,6 +2,7 @@ package com.petshop.order.controller.app;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.petshop.order.common.R;
+import com.petshop.order.common.ShopContext;
 import com.petshop.order.entity.*;
 import com.petshop.order.mapper.MemberLevelMapper;
 import com.petshop.order.mapper.MemberMapper;
@@ -32,7 +33,8 @@ public class AppProductController {
 
     @GetMapping("/products")
     public R<List<Map<String, Object>>> getProductList(@RequestParam(required = false) String type) {
-        List<Product> list = productMapper.selectPageList(null, type, "ON_SALE");
+        // 按当前店取在售商品（EXISTS 本店在售 SKU）
+        List<Product> list = productMapper.selectAppPageList(type, ShopContext.require());
         BigDecimal discountRate = getMemberDiscountRate();
         List<Map<String, Object>> result = list.stream().map(p -> toAppMap(p, discountRate)).toList();
         return R.ok(result);
@@ -40,11 +42,13 @@ public class AppProductController {
 
     @GetMapping("/products/{id}")
     public R<Map<String, Object>> getDetail(@PathVariable Long id) {
-        Product product = productMapper.selectById(id);
-        if (product == null || !"ON_SALE".equals(product.getStatus())) {
+        Product product = productMapper.selectById(id, ShopContext.require(), true);
+        // 商品目录平台级；本店无在售 SKU 视同未上架
+        if (product == null || !"ON_SALE".equals(product.getStatus())
+                || product.getSkus() == null || product.getSkus().isEmpty()) {
             return R.fail("商品不存在");
         }
-        List<Sku> skus = skuMapper.selectByProductId(id);
+        List<Sku> skus = product.getSkus();
         BigDecimal discountRate = getMemberDiscountRate();
 
         String price = "0.00";
@@ -99,7 +103,7 @@ public class AppProductController {
             if (user == null || user.getPhone() == null || user.getPhone().isEmpty()) {
                 return null;
             }
-            Long memberId = memberPhoneMapper.selectMemberIdByPhone(user.getPhone());
+            Long memberId = memberPhoneMapper.selectMemberIdByShopAndPhone(ShopContext.require(), user.getPhone());
             if (memberId == null) {
                 return null;
             }
@@ -138,7 +142,7 @@ public class AppProductController {
 
         String dealPrice = price;
         if (discountRate != null && p.getMinPrice() != null) {
-            List<Sku> skus = skuMapper.selectByProductId(p.getId());
+            List<Sku> skus = skuMapper.selectByProductId(p.getId(), ShopContext.require());
             if (!skus.isEmpty()) {
                 Sku cheapest = skus.stream()
                         .min(Comparator.comparing(Sku::getPrice))

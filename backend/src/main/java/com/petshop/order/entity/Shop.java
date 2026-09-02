@@ -8,13 +8,15 @@ import java.math.BigDecimal;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class MemberLevel extends BaseEntity {
+public class Shop extends BaseEntity {
 
-    /** 归属门店（等级体系店铺级） */
-    private Long shopId;
+    private String code;
     private String name;
-    private BigDecimal discountRate;
+    private String phone;
+    private String address;
+    private BigDecimal shopLat;
+    private BigDecimal shopLng;
+    /** OPEN 营业 / CLOSED 歇业 */
+    private String status;
     private Integer sort;
-    private Integer status;
-    private Integer memberCount;
 }

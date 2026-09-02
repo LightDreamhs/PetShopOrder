@@ -22,22 +22,25 @@
     <resultMap id="productDetailResultMap" type="com.petshop.order.entity.Product" extends="productResultMap">
         <collection property="skus" ofType="com.petshop.order.entity.Sku">
             <id property="id" column="sku_id"/>
+            <result property="shopId" column="sku_shop_id"/>
             <result property="productId" column="sku_product_id"/>
             <result property="specName" column="sku_spec_name"/>
             <result property="price" column="sku_price"/>
             <result property="memberPrice" column="sku_member_price"/>
             <result property="duration" column="sku_duration"/>
             <result property="stock" column="sku_stock"/>
+            <result property="status" column="sku_status"/>
             <result property="sort" column="sku_sort"/>
             <result property="createTime" column="sku_create_time"/>
             <result property="updateTime" column="sku_update_time"/>
         </collection>
     </resultMap>
 
+    <!-- Admin 商品目录列表：商品平台级，SKU 聚合值按当前店统计 -->
     <select id="selectPageList" resultMap="productResultMap">
         SELECT p.*,
-               (SELECT COUNT(*) FROM sku WHERE product_id = p.id) AS sku_count,
-               (SELECT MIN(price) FROM sku WHERE product_id = p.id) AS min_price
+               (SELECT COUNT(*) FROM sku WHERE product_id = p.id AND shop_id = #{shopId}) AS sku_count,
+               (SELECT MIN(price) FROM sku WHERE product_id = p.id AND shop_id = #{shopId}) AS min_price
         FROM product p
         <where>
             <if test="keyword != null and keyword != ''">
@@ -53,20 +56,42 @@
         ORDER BY p.sort ASC, p.id DESC
     </select>
 
+    <!-- C 端商品列表：商品在售 且 当前店存在在售 SKU -->
+    <select id="selectAppPageList" resultMap="productResultMap">
+        SELECT p.*,
+               (SELECT COUNT(*) FROM sku s WHERE s.product_id = p.id AND s.shop_id = #{shopId} AND s.status = 'ON_SALE') AS sku_count,
+               (SELECT MIN(price) FROM sku s WHERE s.product_id = p.id AND s.shop_id = #{shopId} AND s.status = 'ON_SALE') AS min_price
+        FROM product p
+        WHERE p.status = 'ON_SALE'
+        <if test="type != null and type != ''">
+            AND p.type = #{type}
+        </if>
+        AND EXISTS (
+            SELECT 1 FROM sku s2
+            WHERE s2.product_id = p.id AND s2.shop_id = #{shopId} AND s2.status = 'ON_SALE'
+        )
+        ORDER BY p.sort ASC, p.id DESC
+    </select>
+
     <select id="selectById" resultMap="productDetailResultMap">
         SELECT p.*,
                s.id AS sku_id,
+               s.shop_id AS sku_shop_id,
                s.product_id AS sku_product_id,
                s.spec_name AS sku_spec_name,
                s.price AS sku_price,
                s.member_price AS sku_member_price,
                s.duration AS sku_duration,
                s.stock AS sku_stock,
+               s.status AS sku_status,
                s.sort AS sku_sort,
                s.create_time AS sku_create_time,
                s.update_time AS sku_update_time
         FROM product p
-        LEFT JOIN sku s ON p.id = s.product_id
+        LEFT JOIN sku s ON p.id = s.product_id AND s.shop_id = #{shopId}
+        <if test="onlyOnSale">
+            AND s.status = 'ON_SALE'
+        </if>
         WHERE p.id = #{id}
         ORDER BY s.sort ASC, s.id ASC
     </select>

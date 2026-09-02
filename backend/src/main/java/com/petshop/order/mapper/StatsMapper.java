@@ -9,9 +9,9 @@ import java.util.Map;
 @Mapper
 public interface StatsMapper {
 
-    Map<String, Object> selectOverview();
+    Map<String, Object> selectOverview(@Param("shopId") Long shopId);
 
-    List<Map<String, Object>> selectOrderTrends(@Param("period") String period);
+    List<Map<String, Object>> selectOrderTrends(@Param("period") String period, @Param("shopId") Long shopId);
 
-    List<Map<String, Object>> selectMemberRanking(@Param("limit") int limit);
+    List<Map<String, Object>> selectMemberRanking(@Param("limit") int limit, @Param("shopId") Long shopId);
 }

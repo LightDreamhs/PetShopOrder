@@ -27,20 +27,23 @@ CREATE TABLE IF NOT EXISTS product (
     INDEX idx_product_service_category (type, service_category, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='商品/服务';
 
--- SKU（多规格）
+-- SKU（多规格，店铺级价格/库存/上下架；商品目录为平台级）
 CREATE TABLE IF NOT EXISTS sku (
     id           BIGINT AUTO_INCREMENT PRIMARY KEY,
     product_id   BIGINT        NOT NULL,
+    shop_id      BIGINT        NOT NULL DEFAULT 1 COMMENT '归属门店',
     spec_name    VARCHAR(64)   NOT NULL COMMENT '如 "5kg" / "中型犬（10-25kg）"',
     price        DECIMAL(10,2) NOT NULL COMMENT '原价',
     member_price DECIMAL(10,2) NULL COMMENT '会员价（仅 GOODS 用，SERVICE 忽略）',
     duration     INT           NULL COMMENT '服务时长（分钟）。仅 SERVICE 的 SKU 用，GOODS 为 NULL',
     stock        INT           NOT NULL DEFAULT 0 COMMENT 'SERVICE 可为 -1 表示不限',
+    status       VARCHAR(16)   NOT NULL DEFAULT 'ON_SALE' COMMENT 'ON_SALE / OFF_SALE（店铺级上下架）',
     sort         INT           NOT NULL DEFAULT 0,
     create_time  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_time  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_sku_product (product_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='SKU';
+    INDEX idx_sku_shop_product (shop_id, product_id),
+    UNIQUE KEY uk_sku_shop_spec (shop_id, product_id, spec_name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='SKU（店铺级）';
 
 -- ============================================
 -- 会员体系
@@ -57,36 +60,41 @@ CREATE TABLE IF NOT EXISTS app_user (
     UNIQUE INDEX uk_phone (phone)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='C端用户';
 
--- 会员等级
+-- 会员等级（店铺级）
 CREATE TABLE IF NOT EXISTS member_level (
     id            BIGINT AUTO_INCREMENT PRIMARY KEY,
+    shop_id       BIGINT       NOT NULL DEFAULT 1 COMMENT '归属门店',
     name          VARCHAR(32)  NOT NULL COMMENT '如 "500档会员"',
     discount_rate DECIMAL(5,4) NOT NULL COMMENT '服务折扣率，0.85 = 8.5折',
     sort          INT          NOT NULL DEFAULT 0,
     status        TINYINT      NOT NULL DEFAULT 1 COMMENT '0 停用 / 1 启用',
     create_time   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    update_time   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='会员等级';
+    update_time   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_member_level_shop (shop_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='会员等级（店铺级）';
 
--- 会员
+-- 会员（店铺级）
 CREATE TABLE IF NOT EXISTS member (
     id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    shop_id     BIGINT       NOT NULL DEFAULT 1 COMMENT '归属门店',
     name        VARCHAR(32)  NOT NULL,
     level_id    BIGINT       NOT NULL,
     remark      VARCHAR(255) NULL,
     create_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_member_level (level_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='会员';
+    INDEX idx_member_level (level_id),
+    INDEX idx_member_shop (shop_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='会员（店铺级）';
 
--- 会员手机号映射（一个会员可绑定多个手机号）
+-- 会员手机号映射（一个会员可绑定多个手机号；同一手机号在不同店可对应不同会员）
 CREATE TABLE IF NOT EXISTS member_phone (
     id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    shop_id     BIGINT      NOT NULL DEFAULT 1 COMMENT '归属门店',
     member_id   BIGINT      NOT NULL,
     phone       VARCHAR(16) NOT NULL COMMENT '与 app_user.phone 对应',
     create_time DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_time DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE INDEX uk_member_phone (phone),
+    UNIQUE INDEX uk_member_phone_shop (shop_id, phone),
     INDEX idx_member_phone_member (member_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='会员手机号映射';
 
@@ -98,6 +106,7 @@ CREATE TABLE IF NOT EXISTS member_phone (
 CREATE TABLE IF NOT EXISTS orders (
     id                      BIGINT AUTO_INCREMENT PRIMARY KEY,
     order_no                VARCHAR(32)    NOT NULL COMMENT '日期+雪花算法',
+    shop_id                 BIGINT         NOT NULL DEFAULT 1 COMMENT '归属门店',
     user_id                 BIGINT         NOT NULL COMMENT 'app_user.id',
     customer_phone_snapshot VARCHAR(16)    NOT NULL COMMENT '下单时手机号快照',
     customer_name           VARCHAR(32)    NULL COMMENT '联系人',
@@ -121,13 +130,16 @@ CREATE TABLE IF NOT EXISTS orders (
     INDEX idx_orders_user (user_id),
     INDEX idx_orders_member (member_id),
     INDEX idx_orders_create_time (create_time),
-    INDEX idx_orders_processed (processed)
+    INDEX idx_orders_processed (processed),
+    INDEX idx_orders_shop_create (shop_id, create_time),
+    INDEX idx_orders_shop_processed (shop_id, processed)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='订单';
 
 -- 订单明细
 CREATE TABLE IF NOT EXISTS order_item (
     id             BIGINT AUTO_INCREMENT PRIMARY KEY,
     order_id       BIGINT        NOT NULL,
+    shop_id        BIGINT        NOT NULL DEFAULT 1 COMMENT '归属门店（冗余，便于按店统计）',
     product_id     BIGINT        NOT NULL,
     sku_id         BIGINT        NULL,
     type           VARCHAR(16)   NOT NULL COMMENT 'GOODS / SERVICE',
@@ -158,6 +170,7 @@ CREATE TABLE IF NOT EXISTS main_service_addon (
 CREATE TABLE IF NOT EXISTS appointment (
     id              BIGINT AUTO_INCREMENT PRIMARY KEY,
     order_id        BIGINT      NOT NULL COMMENT '关联 orders.id（一笔预约对应一个订单）',
+    shop_id         BIGINT      NOT NULL DEFAULT 1 COMMENT '归属门店',
     user_id         BIGINT      NOT NULL COMMENT 'app_user.id',
     main_product_id BIGINT      NOT NULL COMMENT '主服务 product.id 快照',
     main_sku_id     BIGINT      NOT NULL COMMENT '主服务 sku.id 快照',
@@ -171,7 +184,8 @@ CREATE TABLE IF NOT EXISTS appointment (
     UNIQUE INDEX uk_appointment_order (order_id),
     INDEX idx_appointment_user (user_id),
     INDEX idx_appointment_status_time (status, start_time, end_time),
-    INDEX idx_appointment_time_range (start_time, end_time)
+    INDEX idx_appointment_time_range (start_time, end_time),
+    INDEX idx_appointment_shop_time (shop_id, start_time, end_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='服务预约';
 
 -- ============================================
@@ -185,6 +199,7 @@ CREATE TABLE IF NOT EXISTS admin_user (
     password_hash   VARCHAR(255)  NOT NULL,
     real_name       VARCHAR(32)   NOT NULL,
     role            VARCHAR(16)   NOT NULL COMMENT 'BOSS / MANAGER / STAFF',
+    shop_id         BIGINT        NULL COMMENT '归属门店；NULL=总部（BOSS）',
     status          TINYINT       NOT NULL DEFAULT 1 COMMENT '0 禁用 / 1 启用',
     last_login_time DATETIME      NULL,
     create_time     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -196,6 +211,7 @@ CREATE TABLE IF NOT EXISTS admin_user (
 CREATE TABLE IF NOT EXISTS operation_log (
     id          BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id     BIGINT       NOT NULL,
+    shop_id     BIGINT       NULL COMMENT '操作发生门店；NULL=总部操作',
     action      VARCHAR(32)  NOT NULL COMMENT '如 UPDATE_PRODUCT / UPDATE_CONFIG',
     target      VARCHAR(128) NOT NULL COMMENT '如 "商品:金毛粮5kg"',
     before_val  TEXT         NULL COMMENT '修改前值 JSON',
@@ -205,42 +221,59 @@ CREATE TABLE IF NOT EXISTS operation_log (
     INDEX idx_log_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='操作日志';
 
--- 系统配置（单行表，ID=1）
-CREATE TABLE IF NOT EXISTS system_config (
-    id                   BIGINT AUTO_INCREMENT PRIMARY KEY,
-    shop_lat             DECIMAL(10,7)  NULL COMMENT '店铺纬度',
-    shop_lng             DECIMAL(10,7)  NULL COMMENT '店铺经度',
-    delivery_radius_km   DECIMAL(6,2)   NOT NULL DEFAULT 5.00 COMMENT '配送半径（km）',
-    delivery_min_amount  DECIMAL(10,2)  NOT NULL DEFAULT 20.00 COMMENT '起送价',
-    delivery_fee_type    VARCHAR(16)    NOT NULL DEFAULT 'FREE' COMMENT 'FREE / TIERED',
-    fixed_delivery_fee   DECIMAL(10,2)  NOT NULL DEFAULT 0.00 COMMENT '保留字段（当前不使用）',
-    order_time_enabled   TINYINT        NOT NULL DEFAULT 0 COMMENT '预约营业时段开关：1=限制预约开始时间在 order_start/end_time 内；实物商品下单不受此字段约束',
-    order_start_time     TIME           NULL COMMENT '可预约开始时间下限（如 09:00）',
-    order_end_time       TIME           NULL COMMENT '可预约开始时间上限（如 21:00，开区间）',
-    qywx_webhook_url_enc VARBINARY(1024) NULL COMMENT '企微 Webhook URL 加密存储',
-    has_qywx_webhook     TINYINT        NOT NULL DEFAULT 0 COMMENT '是否已配置 Webhook',
-    payment_qr_url       VARCHAR(255)   NULL COMMENT '收款二维码图片地址',
-    ad_enabled           TINYINT        NOT NULL DEFAULT 0 COMMENT '开屏广告开关：1=开',
-    ad_image_url         VARCHAR(512)   NULL COMMENT '开屏广告图地址',
-    ad_link_type         VARCHAR(16)    NULL COMMENT '开屏广告跳转类型：NONE/PRODUCT/URL',
-    ad_link_target       VARCHAR(255)   NULL COMMENT '开屏广告跳转目标（productId 或外链）',
-    updated_by           BIGINT         NULL COMMENT 'admin_user.id',
-    create_time          DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    update_time          DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='系统配置';
+-- 门店
+CREATE TABLE IF NOT EXISTS shop (
+    id            BIGINT AUTO_INCREMENT PRIMARY KEY,
+    code          VARCHAR(32)   NOT NULL COMMENT '店铺编码，二维码/URL 识别用',
+    name          VARCHAR(64)   NOT NULL COMMENT '店铺名称',
+    phone         VARCHAR(20)   NULL COMMENT '门店电话',
+    address       VARCHAR(255)  NULL COMMENT '门店地址（展示用）',
+    shop_lat      DECIMAL(10,7) NOT NULL COMMENT '纬度（配送中心）',
+    shop_lng      DECIMAL(10,7) NOT NULL COMMENT '经度',
+    status        VARCHAR(16)   NOT NULL DEFAULT 'OPEN' COMMENT 'OPEN 营业 / CLOSED 歇业',
+    sort          INT           NOT NULL DEFAULT 0,
+    create_time   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_shop_code (code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='门店';
 
--- 分段运费配置
-CREATE TABLE IF NOT EXISTS system_config_delivery_tier (
+-- 店铺配置（每店一行，店铺级配送规则/预约时段/通知/收款码/开屏广告）
+CREATE TABLE IF NOT EXISTS shop_config (
+    id                   BIGINT AUTO_INCREMENT PRIMARY KEY,
+    shop_id              BIGINT        NOT NULL,
+    shop_lat             DECIMAL(10,7) NULL COMMENT '店铺纬度',
+    shop_lng             DECIMAL(10,7) NULL COMMENT '店铺经度',
+    delivery_radius_km   DECIMAL(6,2)  NOT NULL DEFAULT 5.00 COMMENT '配送半径（km）',
+    delivery_min_amount  DECIMAL(10,2) NOT NULL DEFAULT 20.00 COMMENT '起送价',
+    delivery_fee_type    VARCHAR(16)   NOT NULL DEFAULT 'FREE' COMMENT 'FREE / TIERED',
+    order_time_enabled   TINYINT       NOT NULL DEFAULT 0 COMMENT '预约营业时段开关：1=限制预约开始时间在 order_start/end_time 内；实物商品下单不受此字段约束',
+    order_start_time     TIME          NULL COMMENT '可预约开始时间下限（如 09:00）',
+    order_end_time       TIME          NULL COMMENT '可预约开始时间上限（如 21:00，开区间）',
+    qywx_webhook_url_enc VARBINARY(1024) NULL COMMENT '本店订单通知 Webhook URL 加密存储',
+    has_qywx_webhook     TINYINT       NOT NULL DEFAULT 0 COMMENT '是否已配置 Webhook',
+    payment_qr_url       VARCHAR(255)  NULL COMMENT '本店收款二维码图片地址',
+    ad_enabled           TINYINT       NOT NULL DEFAULT 0 COMMENT '开屏广告开关：1=开',
+    ad_image_url         VARCHAR(512)  NULL COMMENT '开屏广告图地址',
+    ad_link_type         VARCHAR(16)   NULL COMMENT '开屏广告跳转类型：NONE/PRODUCT/URL',
+    ad_link_target       VARCHAR(255)  NULL COMMENT '开屏广告跳转目标（productId 或外链）',
+    updated_by           BIGINT        NULL COMMENT 'admin_user.id',
+    create_time          DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time          DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_shop_config (shop_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='店铺配置';
+
+-- 店铺分段运费配置
+CREATE TABLE IF NOT EXISTS shop_delivery_tier (
     id              BIGINT AUTO_INCREMENT PRIMARY KEY,
-    config_id       BIGINT       NOT NULL,
-    min_distance_km DECIMAL(6,2) NOT NULL,
-    max_distance_km DECIMAL(6,2) NOT NULL,
+    shop_id         BIGINT        NOT NULL,
+    min_distance_km DECIMAL(6,2)  NOT NULL,
+    max_distance_km DECIMAL(6,2)  NOT NULL,
     fee             DECIMAL(10,2) NOT NULL,
-    sort            INT          NOT NULL DEFAULT 0,
-    create_time     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    update_time     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_tier_config (config_id, sort)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='分段运费配置';
+    sort            INT           NOT NULL DEFAULT 0,
+    create_time     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_tier_shop (shop_id, sort)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='店铺分段运费配置';
 
 -- 系统配置变更日志
 CREATE TABLE IF NOT EXISTS system_config_log (
@@ -274,15 +307,19 @@ CREATE TABLE IF NOT EXISTS user_address (
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ============================================
--- 系统默认配置（生产必需，admin 后台可改）
+-- 默认门店与店铺配置（生产必需，admin 后台可改）
 -- ============================================
 
--- 系统配置（单行，ID=1）
-INSERT INTO system_config (id, shop_lat, shop_lng, delivery_radius_km, delivery_min_amount, delivery_fee_type, fixed_delivery_fee, order_time_enabled, order_start_time, order_end_time)
-VALUES (1, 31.2304000, 121.4737000, 6.00, 30.00, 'TIERED', 0.00, 1, '09:00:00', '21:00:00');
+-- 默认门店（id=1，code=main）
+INSERT INTO shop (id, code, name, shop_lat, shop_lng, status, sort)
+VALUES (1, 'main', '总店', 31.2304000, 121.4737000, 'OPEN', 0);
 
--- 分段运费
-INSERT INTO system_config_delivery_tier (config_id, min_distance_km, max_distance_km, fee, sort) VALUES
+-- 店铺配置（每店一行）
+INSERT INTO shop_config (shop_id, shop_lat, shop_lng, delivery_radius_km, delivery_min_amount, delivery_fee_type, order_time_enabled, order_start_time, order_end_time)
+VALUES (1, 31.2304000, 121.4737000, 6.00, 30.00, 'TIERED', 1, '09:00:00', '21:00:00');
+
+-- 店铺分段运费
+INSERT INTO shop_delivery_tier (shop_id, min_distance_km, max_distance_km, fee, sort) VALUES
 (1, 0.00, 2.00, 3.00, 1),
 (1, 2.00, 4.00, 5.00, 2),
 (1, 4.00, 6.00, 8.00, 3);

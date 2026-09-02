@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.petshop.order.mapper.ShopMapper">
+
+    <select id="selectById" resultType="com.petshop.order.entity.Shop">
+        SELECT * FROM shop WHERE id = #{id}
+    </select>
+
+    <select id="selectByCode" resultType="com.petshop.order.entity.Shop">
+        SELECT * FROM shop WHERE code = #{code}
+    </select>
+
+    <select id="selectDefault" resultType="com.petshop.order.entity.Shop">
+        SELECT * FROM shop ORDER BY sort ASC, id ASC LIMIT 1
+    </select>
+
+    <select id="selectAll" resultType="com.petshop.order.entity.Shop">
+        SELECT * FROM shop ORDER BY sort ASC, id ASC
+    </select>
+
+</mapper>

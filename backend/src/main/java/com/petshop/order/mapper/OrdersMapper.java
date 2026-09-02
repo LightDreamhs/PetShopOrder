@@ -19,11 +19,12 @@ public interface OrdersMapper {
                                      @Param("processed") Integer processed,
                                      @Param("needDelivery") Integer needDelivery,
                                      @Param("startTime") String startTime,
-                                     @Param("endTime") String endTime);
+                                     @Param("endTime") String endTime,
+                                     @Param("shopId") Long shopId);
 
     int updateProcessed(@Param("id") Long id, @Param("processed") Integer processed);
 
     int updateCancelled(@Param("id") Long id, @Param("cancelled") Integer cancelled);
 
-    int countNewOrders(@Param("since") String since);
+    int countNewOrders(@Param("since") String since, @Param("shopId") Long shopId);
 }

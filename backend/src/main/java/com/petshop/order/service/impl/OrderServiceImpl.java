@@ -5,6 +5,7 @@ import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import com.petshop.order.common.BusinessException;
 import com.petshop.order.common.PageResult;
+import com.petshop.order.common.ShopContext;
 import com.petshop.order.entity.*;
 import com.petshop.order.mapper.MemberLevelMapper;
 import com.petshop.order.mapper.MemberMapper;
@@ -18,6 +19,7 @@ import com.petshop.order.service.DeliveryService;
 import com.petshop.order.service.NotificationService;
 import com.petshop.order.service.OrderService;
 import com.petshop.order.service.PriceCalculationService;
+import com.petshop.order.service.ShopService;
 import com.petshop.order.service.dto.CalculatedItemResult;
 import com.petshop.order.service.dto.CartItemInput;
 import com.petshop.order.service.dto.DeliveryItem;
@@ -47,6 +49,7 @@ public class OrderServiceImpl implements OrderService {
     private final MemberLevelMapper memberLevelMapper;
     private final NotificationService notificationService;
     private final ProductMapper productMapper;
+    private final ShopService shopService;
 
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final DateTimeFormatter ORDER_NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
@@ -60,6 +63,10 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> createOrder(Map<String, Object> req, boolean suppressNotification) {
+        // 当前店（拦截器按 X-Shop-Code/员工归属解析）；写路径要求门店存在且营业中
+        Long shopId = ShopContext.require();
+        shopService.requireOpenShop(shopId);
+
         AppUser currentUser = appAuthService.getCurrentUser();
         Long userId = currentUser.getId();
         String phone = currentUser.getPhone();
@@ -97,7 +104,7 @@ public class OrderServiceImpl implements OrderService {
         if (needDelivery) {
             List<DeliveryItem> deliveryItems = new ArrayList<>();
             for (CalculatedItemResult ci : calculatedItems) {
-                Product product = productMapper.selectById(ci.getProductId());
+                Product product = productMapper.selectById(ci.getProductId(), ShopContext.require(), false);
                 DeliveryItem di = new DeliveryItem();
                 di.setProductId(ci.getProductId());
                 di.setSkuId(ci.getSkuId());
@@ -126,7 +133,7 @@ public class OrderServiceImpl implements OrderService {
                 deliveryDistance = ((Number) distMeterObj).intValue();
                 BigDecimal distanceKm = new BigDecimal(deliveryDistance)
                         .divide(new BigDecimal("1000"), 2, RoundingMode.HALF_UP);
-                deliveryFee = deliveryService.calculateDeliveryFee(distanceKm, 1L);
+                deliveryFee = deliveryService.calculateDeliveryFee(distanceKm, shopId);
                 if (deliveryFee == null) {
                     deliveryFee = BigDecimal.ZERO;
                 }
@@ -148,10 +155,11 @@ public class OrderServiceImpl implements OrderService {
         Long memberId = null;
         String memberLevelSnapshot = null;
         if (phone != null && !phone.isEmpty()) {
-            memberId = memberPhoneMapper.selectMemberIdByPhone(phone);
+            // 会员体系店铺级：按当前店命中
+            memberId = memberPhoneMapper.selectMemberIdByShopAndPhone(shopId, phone);
             if (memberId != null) {
                 Member member = memberMapper.selectById(memberId);
-                if (member != null && member.getLevelId() != null) {
+                if (member != null && shopId.equals(member.getShopId()) && member.getLevelId() != null) {
                     MemberLevel level = memberLevelMapper.selectById(member.getLevelId());
                     if (level != null) {
                         memberLevelSnapshot = level.getName();
@@ -164,6 +172,7 @@ public class OrderServiceImpl implements OrderService {
 
         Orders order = new Orders();
         order.setOrderNo(orderNo);
+        order.setShopId(shopId);
         order.setUserId(userId);
         order.setCustomerPhoneSnapshot(phone);
         order.setCustomerName(customerName);
@@ -187,6 +196,7 @@ public class OrderServiceImpl implements OrderService {
         for (CalculatedItemResult ci : calculatedItems) {
             OrderItem oi = new OrderItem();
             oi.setOrderId(order.getId());
+            oi.setShopId(shopId);
             oi.setProductId(ci.getProductId());
             oi.setSkuId(ci.getSkuId());
             oi.setType(ci.getType());
@@ -278,7 +288,8 @@ public class OrderServiceImpl implements OrderService {
                                                           Integer processed, Integer needDelivery,
                                                           String startTime, String endTime) {
         PageHelper.startPage(page, size);
-        List<Orders> orders = ordersMapper.selectPageListAdmin(keyword, processed, needDelivery, startTime, endTime);
+        List<Orders> orders = ordersMapper.selectPageListAdmin(keyword, processed, needDelivery,
+                startTime, endTime, ShopContext.require());
         PageInfo<Orders> pageInfo = new PageInfo<>(orders);
 
         List<Map<String, Object>> list = pageInfo.getList().stream().map(order -> {
@@ -312,25 +323,31 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Map<String, Object> getAdminOrderDetail(Long orderId) {
-        Orders order = ordersMapper.selectById(orderId);
-        if (order == null) {
-            throw new BusinessException("订单不存在");
-        }
+        Orders order = requireShopOrder(orderId);
         return buildDetailMap(order, true);
     }
 
     @Override
     public void updateProcessed(Long orderId, boolean processed) {
-        Orders order = ordersMapper.selectById(orderId);
-        if (order == null) {
-            throw new BusinessException("订单不存在");
-        }
-        ordersMapper.updateProcessed(orderId, processed ? 1 : 0);
+        Orders order = requireShopOrder(orderId);
+        ordersMapper.updateProcessed(order.getId(), processed ? 1 : 0);
     }
 
     @Override
     public int getNewOrderCount(String since) {
-        return ordersMapper.countNewOrders(since);
+        return ordersMapper.countNewOrders(since, ShopContext.require());
+    }
+
+    /** Admin 侧取订单并校验归属当前店（店长/店员不可跨店操作） */
+    private Orders requireShopOrder(Long orderId) {
+        Orders order = ordersMapper.selectById(orderId);
+        if (order == null) {
+            throw new BusinessException("订单不存在");
+        }
+        if (!order.getShopId().equals(ShopContext.require())) {
+            throw new BusinessException("无权操作其他门店的订单");
+        }
+        return order;
     }
 
     private Map<String, Object> buildDetailMap(Orders order, boolean isAdmin) {

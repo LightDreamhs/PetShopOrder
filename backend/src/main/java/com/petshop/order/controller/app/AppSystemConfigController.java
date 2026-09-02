@@ -1,7 +1,7 @@
 package com.petshop.order.controller.app;
 
 import com.petshop.order.common.R;
-import com.petshop.order.service.SystemConfigService;
+import com.petshop.order.service.ShopConfigService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,11 +15,11 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AppSystemConfigController {
 
-    private final SystemConfigService systemConfigService;
+    private final ShopConfigService shopConfigService;
 
     @GetMapping("/public")
     public R<Map<String, Object>> getPublicConfig() {
-        Map<String, Object> config = systemConfigService.getConfig();
+        Map<String, Object> config = shopConfigService.getConfig();
         @SuppressWarnings("unchecked")
         Map<String, Object> data = (Map<String, Object>) config.get("config");
 

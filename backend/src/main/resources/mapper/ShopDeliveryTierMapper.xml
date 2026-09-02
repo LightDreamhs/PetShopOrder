@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.petshop.order.mapper.ShopDeliveryTierMapper">
+
+    <select id="selectByShopId" resultType="com.petshop.order.entity.ShopDeliveryTier">
+        SELECT id, shop_id, min_distance_km, max_distance_km, fee, sort,
+               create_time, update_time
+        FROM shop_delivery_tier
+        WHERE shop_id = #{shopId}
+        ORDER BY sort ASC
+    </select>
+
+    <insert id="insertBatch">
+        INSERT INTO shop_delivery_tier (shop_id, min_distance_km, max_distance_km, fee, sort)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.shopId}, #{item.minDistanceKm}, #{item.maxDistanceKm}, #{item.fee}, #{item.sort})
+        </foreach>
+    </insert>
+
+    <delete id="deleteByShopId">
+        DELETE FROM shop_delivery_tier WHERE shop_id = #{shopId}
+    </delete>
+
+</mapper>

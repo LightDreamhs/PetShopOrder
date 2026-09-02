@@ -4,9 +4,9 @@
 <mapper namespace="com.petshop.order.mapper.AppointmentMapper">
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO appointment (order_id, user_id, main_product_id, main_sku_id,
+        INSERT INTO appointment (order_id, shop_id, user_id, main_product_id, main_sku_id,
                                  start_time, end_time, total_duration, pet_info, status)
-        VALUES (#{orderId}, #{userId}, #{mainProductId}, #{mainSkuId},
+        VALUES (#{orderId}, #{shopId}, #{userId}, #{mainProductId}, #{mainSkuId},
                 #{startTime}, #{endTime}, #{totalDuration}, #{petInfo}, #{status})
     </insert>
 
@@ -47,11 +47,12 @@
         WHERE a.order_id = #{orderId}
     </select>
 
-    <!-- 冲突检测核心：数与新预约区间 [start,end) 重叠的、非取消的已有预约数。
+    <!-- 冲突检测核心（按店）：数与新预约区间 [start,end) 重叠的、非取消的已有预约数。
          两区间 [s1,e1) 与 [s2,e2) 重叠 ⟺ s1 < e2 AND s2 < e1 -->
     <select id="countOverlap" resultType="int">
         SELECT COUNT(*) FROM appointment
-        WHERE status &lt;&gt; 'CANCELLED'
+        WHERE shop_id = #{shopId}
+          AND status &lt;&gt; 'CANCELLED'
           AND start_time &lt; #{end}
           AND end_time   &gt; #{start}
     </select>
@@ -114,6 +115,7 @@
         LEFT JOIN sku s ON s.id = a.main_sku_id
         JOIN orders o ON o.id = a.order_id
         <where>
+            AND a.shop_id = #{shopId}
             <if test="startTime != null">
                 AND a.start_time &gt;= #{startTime}
             </if>
@@ -132,10 +134,11 @@
         ORDER BY a.start_time ASC, a.id ASC
     </select>
 
-    <!-- 查某区间内非取消的预约（只取 id/start/end，用于时段可约判断） -->
+    <!-- 查某店某区间内非取消的预约（只取 id/start/end，用于时段可约判断） -->
     <select id="selectActiveInRange" resultType="com.petshop.order.entity.Appointment">
         SELECT id, start_time, end_time FROM appointment
-        WHERE status &lt;&gt; 'CANCELLED'
+        WHERE shop_id = #{shopId}
+          AND status &lt;&gt; 'CANCELLED'
           AND start_time &lt; #{endTime}
           AND end_time   &gt; #{startTime}
         ORDER BY start_time ASC

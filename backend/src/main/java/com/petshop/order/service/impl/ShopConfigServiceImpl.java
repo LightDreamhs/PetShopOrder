@@ -4,14 +4,15 @@ import cn.hutool.crypto.SecureUtil;
 import cn.hutool.crypto.symmetric.AES;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.petshop.order.common.BusinessException;
+import com.petshop.order.common.ShopContext;
 import com.petshop.order.entity.AdminUser;
-import com.petshop.order.entity.SystemConfig;
-import com.petshop.order.entity.SystemConfigDeliveryTier;
+import com.petshop.order.entity.ShopConfig;
+import com.petshop.order.entity.ShopDeliveryTier;
 import com.petshop.order.entity.SystemConfigLog;
-import com.petshop.order.mapper.SystemConfigDeliveryTierMapper;
+import com.petshop.order.mapper.ShopConfigMapper;
+import com.petshop.order.mapper.ShopDeliveryTierMapper;
 import com.petshop.order.mapper.SystemConfigLogMapper;
-import com.petshop.order.mapper.SystemConfigMapper;
-import com.petshop.order.service.SystemConfigService;
+import com.petshop.order.service.ShopConfigService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -28,14 +29,13 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class SystemConfigServiceImpl implements SystemConfigService {
+public class ShopConfigServiceImpl implements ShopConfigService {
 
-    private static final Long CONFIG_ID = 1L;
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
     private static final DateTimeFormatter DATETIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
-    private final SystemConfigMapper systemConfigMapper;
-    private final SystemConfigDeliveryTierMapper tierMapper;
+    private final ShopConfigMapper shopConfigMapper;
+    private final ShopDeliveryTierMapper tierMapper;
     private final SystemConfigLogMapper logMapper;
     private final ObjectMapper objectMapper;
 
@@ -56,9 +56,10 @@ public class SystemConfigServiceImpl implements SystemConfigService {
 
     @Override
     public Map<String, Object> getConfig() {
-        SystemConfig config = getOrCreateConfig();
-        List<SystemConfigDeliveryTier> tiers = tierMapper.selectByConfigId(CONFIG_ID);
-        List<SystemConfigLog> logs = logMapper.selectRecentByConfigId(CONFIG_ID, 20);
+        Long shopId = ShopContext.require();
+        ShopConfig config = getOrCreateConfig(shopId);
+        List<ShopDeliveryTier> tiers = tierMapper.selectByShopId(shopId);
+        List<SystemConfigLog> logs = logMapper.selectRecentByConfigId(config.getId(), 20);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("config", buildConfigMap(config, tiers));
@@ -69,8 +70,9 @@ public class SystemConfigServiceImpl implements SystemConfigService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> updateConfig(Map<String, Object> params, AdminUser operator) {
-        SystemConfig config = getOrCreateConfig();
-        List<SystemConfigDeliveryTier> oldTiers = tierMapper.selectByConfigId(CONFIG_ID);
+        Long shopId = ShopContext.require();
+        ShopConfig config = getOrCreateConfig(shopId);
+        List<ShopDeliveryTier> oldTiers = tierMapper.selectByShopId(shopId);
         String beforeJson = toJson(config);
         List<String> changes = new ArrayList<>();
 
@@ -142,15 +144,6 @@ public class SystemConfigServiceImpl implements SystemConfigService {
             if (!feeType.equals(config.getDeliveryFeeType())) {
                 changes.add("修改运费策略（" + feeTypeLabel(config.getDeliveryFeeType()) + " → " + feeTypeLabel(feeType) + "）");
                 config.setDeliveryFeeType(feeType);
-            }
-        }
-
-        // ===== 固定运费（保留处理逻辑以兼容历史，前端已无入口）=====
-        if (params.containsKey("fixedDeliveryFee")) {
-            BigDecimal fixedFee = toBigDecimal(params.get("fixedDeliveryFee"));
-            if (!bdEquals(config.getFixedDeliveryFee(), fixedFee)) {
-                changes.add("修改固定运费（" + bdLabel(config.getFixedDeliveryFee()) + " 元 → " + bdLabel(fixedFee) + " 元）");
-                config.setFixedDeliveryFee(fixedFee);
             }
         }
 
@@ -247,7 +240,7 @@ public class SystemConfigServiceImpl implements SystemConfigService {
         }
 
         config.setUpdatedBy(operator.getId());
-        systemConfigMapper.updateById(config);
+        shopConfigMapper.updateById(config);
 
         // ===== 分段运费规则（独立表，段数与区间均参与 diff）=====
         if (tierRules != null && "TIERED".equals(config.getDeliveryFeeType())) {
@@ -256,13 +249,13 @@ public class SystemConfigServiceImpl implements SystemConfigService {
             if (!oldSig.equals(newSig)) {
                 changes.add("修改分段运费规则（" + oldTiers.size() + " 段 → " + tierRules.size() + " 段）");
             }
-            tierMapper.deleteByConfigId(CONFIG_ID);
+            tierMapper.deleteByShopId(shopId);
             if (!tierRules.isEmpty()) {
-                List<SystemConfigDeliveryTier> tiers = new ArrayList<>();
+                List<ShopDeliveryTier> tiers = new ArrayList<>();
                 for (int i = 0; i < tierRules.size(); i++) {
                     Map<String, Object> rule = tierRules.get(i);
-                    SystemConfigDeliveryTier tier = new SystemConfigDeliveryTier();
-                    tier.setConfigId(CONFIG_ID);
+                    ShopDeliveryTier tier = new ShopDeliveryTier();
+                    tier.setShopId(shopId);
                     tier.setMinDistanceKm(toBigDecimal(rule.get("minDistanceKm")));
                     tier.setMaxDistanceKm(toBigDecimal(rule.get("maxDistanceKm")));
                     tier.setFee(toBigDecimal(rule.get("fee")));
@@ -276,7 +269,7 @@ public class SystemConfigServiceImpl implements SystemConfigService {
         String summary = changes.isEmpty() ? "无变更" : String.join("；", changes);
 
         SystemConfigLog configLog = new SystemConfigLog();
-        configLog.setConfigId(CONFIG_ID);
+        configLog.setConfigId(config.getId());
         configLog.setOperatorId(operator.getId());
         configLog.setOperatorName(operator.getRealName() != null ? operator.getRealName() : operator.getUsername());
         configLog.setSummary(summary);
@@ -284,7 +277,7 @@ public class SystemConfigServiceImpl implements SystemConfigService {
         configLog.setAfterVal(toJson(config));
         logMapper.insert(configLog);
 
-        List<SystemConfigDeliveryTier> updatedTiers = tierMapper.selectByConfigId(CONFIG_ID);
+        List<ShopDeliveryTier> updatedTiers = tierMapper.selectByShopId(shopId);
         return buildConfigMap(config, updatedTiers);
     }
 
@@ -320,7 +313,7 @@ public class SystemConfigServiceImpl implements SystemConfigService {
 
     @Override
     public Map<String, Object> getShopLocation() {
-        SystemConfig config = getOrCreateConfig();
+        ShopConfig config = getOrCreateConfig(ShopContext.require());
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("shopLat", config.getShopLat());
         result.put("shopLng", config.getShopLng());
@@ -329,12 +322,11 @@ public class SystemConfigServiceImpl implements SystemConfigService {
 
     @Override
     public Map<String, Object> getDeliveryConfig() {
-        SystemConfig config = getOrCreateConfig();
+        ShopConfig config = getOrCreateConfig(ShopContext.require());
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("deliveryRadiusKm", config.getDeliveryRadiusKm());
         result.put("deliveryMinAmount", config.getDeliveryMinAmount());
         result.put("deliveryFeeType", config.getDeliveryFeeType());
-        result.put("fixedDeliveryFee", config.getFixedDeliveryFee());
         result.put("orderTimeEnabled", config.getOrderTimeEnabled());
         result.put("orderStartTime", config.getOrderStartTime() != null ? config.getOrderStartTime().format(TIME_FMT) : null);
         result.put("orderEndTime", config.getOrderEndTime() != null ? config.getOrderEndTime().format(TIME_FMT) : null);
@@ -342,8 +334,8 @@ public class SystemConfigServiceImpl implements SystemConfigService {
     }
 
     @Override
-    public List<Map<String, Object>> getTierRules(Long configId) {
-        List<SystemConfigDeliveryTier> tiers = tierMapper.selectByConfigId(configId);
+    public List<Map<String, Object>> getTierRules(Long shopId) {
+        List<ShopDeliveryTier> tiers = tierMapper.selectByShopId(shopId);
         return tiers.stream().map(t -> {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("minDistanceKm", t.getMinDistanceKm() != null ? t.getMinDistanceKm().toPlainString() : null);
@@ -354,31 +346,31 @@ public class SystemConfigServiceImpl implements SystemConfigService {
         }).collect(Collectors.toList());
     }
 
-    private SystemConfig getOrCreateConfig() {
-        SystemConfig config = systemConfigMapper.selectById(CONFIG_ID);
+    private ShopConfig getOrCreateConfig(Long shopId) {
+        ShopConfig config = shopConfigMapper.selectByShopId(shopId);
         if (config == null) {
-            config = new SystemConfig();
-            config.setId(CONFIG_ID);
+            config = new ShopConfig();
+            config.setShopId(shopId);
             config.setDeliveryRadiusKm(new BigDecimal("5.00"));
             config.setDeliveryMinAmount(new BigDecimal("20.00"));
             config.setDeliveryFeeType("FREE");
-            config.setFixedDeliveryFee(BigDecimal.ZERO);
             config.setOrderTimeEnabled(0);
             config.setHasQywxWebhook(0);
             config.setAdEnabled(0);
-            systemConfigMapper.insert(config);
+            shopConfigMapper.insert(config);
+            config = shopConfigMapper.selectByShopId(shopId);
         }
         return config;
     }
 
-    private Map<String, Object> buildConfigMap(SystemConfig config, List<SystemConfigDeliveryTier> tiers) {
+    private Map<String, Object> buildConfigMap(ShopConfig config, List<ShopDeliveryTier> tiers) {
         Map<String, Object> m = new LinkedHashMap<>();
+        m.put("shopId", config.getShopId());
         m.put("shopLat", config.getShopLat());
         m.put("shopLng", config.getShopLng());
         m.put("deliveryRadiusKm", config.getDeliveryRadiusKm());
         m.put("deliveryMinAmount", config.getDeliveryMinAmount() != null ? config.getDeliveryMinAmount().toPlainString() : null);
         m.put("deliveryFeeType", config.getDeliveryFeeType());
-        m.put("fixedDeliveryFee", config.getFixedDeliveryFee() != null ? config.getFixedDeliveryFee().toPlainString() : null);
         m.put("tieredDeliveryFeeRules", tiers.stream().map(t -> {
             Map<String, Object> rule = new LinkedHashMap<>();
             rule.put("minDistanceKm", t.getMinDistanceKm() != null ? t.getMinDistanceKm().toPlainString() : null);
@@ -543,7 +535,7 @@ public class SystemConfigServiceImpl implements SystemConfigService {
     }
 
     /** 分段规则的"归一签名"：按 min 排序后拼成 min~max=fee，用于检测是否真的变了 */
-    private String tierSignature(List<SystemConfigDeliveryTier> tiers) {
+    private String tierSignature(List<ShopDeliveryTier> tiers) {
         if (tiers == null || tiers.isEmpty()) return "";
         return tiers.stream()
                 .sorted(Comparator.comparing(t -> t.getMinDistanceKm() == null ? BigDecimal.ZERO : t.getMinDistanceKm()))
@@ -566,7 +558,7 @@ public class SystemConfigServiceImpl implements SystemConfigService {
     }
 
     /** 解密当前存储的 webhook 明文（用于 diff），失败/空返回 null */
-    private String decryptWebhook(SystemConfig config) {
+    private String decryptWebhook(ShopConfig config) {
         if (config.getHasQywxWebhook() == null || config.getHasQywxWebhook() == 0
                 || config.getQywxWebhookUrlEnc() == null) {
             return null;

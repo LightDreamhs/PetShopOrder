@@ -1,6 +1,6 @@
 package com.petshop.order.controller.admin;
 
-import cn.dev33.satoken.stp.StpUtil;
+import com.petshop.order.config.StpAdminUtil;
 import com.petshop.order.common.PageResult;
 import com.petshop.order.common.R;
 import com.petshop.order.entity.OperationLog;

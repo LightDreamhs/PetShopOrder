@@ -1,9 +1,10 @@
 package com.petshop.order.service.impl;
 
-import com.petshop.order.entity.SystemConfigDeliveryTier;
-import com.petshop.order.mapper.SystemConfigDeliveryTierMapper;
+import com.petshop.order.common.ShopContext;
+import com.petshop.order.entity.ShopDeliveryTier;
+import com.petshop.order.mapper.ShopDeliveryTierMapper;
 import com.petshop.order.service.DeliveryService;
-import com.petshop.order.service.SystemConfigService;
+import com.petshop.order.service.ShopConfigService;
 import com.petshop.order.service.dto.DeliveryItem;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,13 +19,14 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class DeliveryServiceImpl implements DeliveryService {
 
-    private final SystemConfigService systemConfigService;
-    private final SystemConfigDeliveryTierMapper deliveryTierMapper;
+    private final ShopConfigService shopConfigService;
+    private final ShopDeliveryTierMapper deliveryTierMapper;
 
     @Override
     public Map<String, Object> checkDelivery(List<DeliveryItem> items, String lat, String lng) {
-        Map<String, Object> shopLocation = systemConfigService.getShopLocation();
-        Map<String, Object> deliveryConfig = systemConfigService.getDeliveryConfig();
+        // 配送范围/起送价按当前店（ShopContext）配置
+        Map<String, Object> shopLocation = shopConfigService.getShopLocation();
+        Map<String, Object> deliveryConfig = shopConfigService.getDeliveryConfig();
 
         BigDecimal shopLat = (BigDecimal) shopLocation.get("shopLat");
         BigDecimal shopLng = (BigDecimal) shopLocation.get("shopLng");
@@ -79,7 +81,7 @@ public class DeliveryServiceImpl implements DeliveryService {
         if (canDeliver && withinRadius && "FREE".equals(deliveryFeeType)) {
             deliveryFee = BigDecimal.ZERO;
         } else if (canDeliver && withinRadius && "TIERED".equals(deliveryFeeType) && distanceKm != null) {
-            deliveryFee = calculateDeliveryFee(distanceKm, 1L);
+            deliveryFee = calculateDeliveryFee(distanceKm, ShopContext.require());
             if (deliveryFee == null) {
                 canDeliver = false;
             }
@@ -98,9 +100,9 @@ public class DeliveryServiceImpl implements DeliveryService {
     }
 
     @Override
-    public BigDecimal calculateDeliveryFee(BigDecimal distanceKm, Long configId) {
-        List<SystemConfigDeliveryTier> tiers = deliveryTierMapper.selectByConfigId(configId);
-        for (SystemConfigDeliveryTier tier : tiers) {
+    public BigDecimal calculateDeliveryFee(BigDecimal distanceKm, Long shopId) {
+        List<ShopDeliveryTier> tiers = deliveryTierMapper.selectByShopId(shopId);
+        for (ShopDeliveryTier tier : tiers) {
             int minCmp = distanceKm.compareTo(tier.getMinDistanceKm());
             int maxCmp = distanceKm.compareTo(tier.getMaxDistanceKm());
             if (minCmp >= 0 && maxCmp < 0) {

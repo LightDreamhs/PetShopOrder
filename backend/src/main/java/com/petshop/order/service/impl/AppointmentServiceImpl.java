@@ -4,19 +4,20 @@ import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import com.petshop.order.common.BusinessException;
 import com.petshop.order.common.PageResult;
+import com.petshop.order.common.ShopContext;
 import com.petshop.order.entity.Appointment;
 import com.petshop.order.entity.AppUser;
 import com.petshop.order.entity.Orders;
 import com.petshop.order.entity.Product;
+import com.petshop.order.entity.ShopConfig;
 import com.petshop.order.entity.Sku;
-import com.petshop.order.entity.SystemConfig;
 import com.petshop.order.mapper.AppointmentMapper;
 import com.petshop.order.mapper.MainServiceAddonMapper;
 import com.petshop.order.mapper.OrderItemMapper;
 import com.petshop.order.mapper.OrdersMapper;
 import com.petshop.order.mapper.ProductMapper;
+import com.petshop.order.mapper.ShopConfigMapper;
 import com.petshop.order.mapper.SkuMapper;
-import com.petshop.order.mapper.SystemConfigMapper;
 import com.petshop.order.service.AppAuthService;
 import com.petshop.order.service.AppointmentService;
 import com.petshop.order.service.NotificationService;
@@ -46,7 +47,7 @@ public class AppointmentServiceImpl implements AppointmentService {
     private final OrderItemMapper orderItemMapper;
     private final ProductMapper productMapper;
     private final SkuMapper skuMapper;
-    private final SystemConfigMapper systemConfigMapper;
+    private final ShopConfigMapper shopConfigMapper;
     private final AppAuthService appAuthService;
     private final OrderService orderService;
     private final NotificationService notificationService;
@@ -63,7 +64,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         if (mainProductId == null) {
             throw new BusinessException("主服务 ID 不能为空");
         }
-        Product main = productMapper.selectById(mainProductId);
+        Product main = productMapper.selectById(mainProductId, ShopContext.require(), false);
         if (main == null || !"SERVICE".equals(main.getType())) {
             throw new BusinessException("主服务不存在");
         }
@@ -84,7 +85,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         int totalDuration = calcTotalDuration(mainSkuId, addonSkuIds);
         LocalDateTime endTime = startTime.plusMinutes(totalDuration);
-        int overlap = appointmentMapper.countOverlap(startTime, endTime);
+        int overlap = appointmentMapper.countOverlap(startTime, endTime, ShopContext.require());
 
         result.put("available", overlap < MAX_CONCURRENT);
         result.put("overlapCount", overlap);
@@ -114,8 +115,8 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         int totalDuration = calcTotalDuration(mainSkuId, addonSkuIds);
 
-        // 营业时段（默认 09:00-21:00 开区间）
-        SystemConfig cfg = systemConfigMapper.selectById(1L);
+        // 营业时段（按当前店配置；缺省 09:00-21:00 开区间）
+        ShopConfig cfg = shopConfigMapper.selectByShopId(ShopContext.require());
         LocalTime bStart = LocalTime.of(9, 0);
         LocalTime bEnd = LocalTime.of(21, 0);
         if (cfg != null && cfg.getOrderTimeEnabled() != null && cfg.getOrderTimeEnabled() == 1
@@ -124,10 +125,10 @@ public class AppointmentServiceImpl implements AppointmentService {
             bEnd = cfg.getOrderEndTime();
         }
 
-        // 一次查出当天（含溢出缓冲）所有非取消预约区间
+        // 一次查出当天（含溢出缓冲）本店所有非取消预约区间
         LocalDateTime rangeStart = d.atTime(bStart);
         LocalDateTime rangeEnd = d.atTime(bEnd).plusMinutes(totalDuration);
-        List<Appointment> active = appointmentMapper.selectActiveInRange(rangeStart, rangeEnd);
+        List<Appointment> active = appointmentMapper.selectActiveInRange(rangeStart, rangeEnd, ShopContext.require());
 
         List<Map<String, Object>> slots = new ArrayList<>();
         // 半小时步进生成候选起点，最后一个起点必须满足 start + totalDuration <= 营业结束
@@ -199,7 +200,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         }
 
         // 2. 校验主服务是 MAIN_SERVICE
-        Product mainProduct = productMapper.selectById(mainProductId);
+        Product mainProduct = productMapper.selectById(mainProductId, ShopContext.require(), false);
         if (mainProduct == null || !"SERVICE".equals(mainProduct.getType())) {
             throw new BusinessException("主服务不存在");
         }
@@ -217,8 +218,8 @@ public class AppointmentServiceImpl implements AppointmentService {
         // 4. 营业时间校验（仅约束预约开始时间）
         checkBusinessHours(startTime);
 
-        // 5. 冲突校验
-        int overlap = appointmentMapper.countOverlap(startTime, endTime);
+        // 5. 冲突校验（按店）
+        int overlap = appointmentMapper.countOverlap(startTime, endTime, ShopContext.require());
         if (overlap >= MAX_CONCURRENT) {
             throw new BusinessException("该时段已约满，请选择其他时间");
         }
@@ -269,6 +270,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         // 7. 插入预约记录
         Appointment appt = new Appointment();
         appt.setOrderId(orderId);
+        appt.setShopId(ShopContext.require());
         appt.setUserId(currentUser.getId());
         appt.setMainProductId(mainProductId);
         appt.setMainSkuId(mainSkuId);
@@ -360,7 +362,8 @@ public class AppointmentServiceImpl implements AppointmentService {
             }
         }
         PageHelper.startPage(page, size);
-        List<Map<String, Object>> list = appointmentMapper.selectPageListForAdmin(startTime, endTime, status, keyword);
+        List<Map<String, Object>> list = appointmentMapper.selectPageListForAdmin(startTime, endTime, status, keyword,
+                ShopContext.require());
         PageInfo<Map<String, Object>> pageInfo = new PageInfo<>(list);
         return new PageResult<>(pageInfo.getList(), pageInfo.getTotal(), page, size);
     }
@@ -368,13 +371,7 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void adminMarkServiced(Long appointmentId) {
-        if (appointmentId == null) {
-            throw new BusinessException("参数缺失");
-        }
-        Appointment appt = appointmentMapper.selectById(appointmentId);
-        if (appt == null) {
-            throw new BusinessException("预约不存在");
-        }
+        Appointment appt = requireShopAppointment(appointmentId);
         if (!"PENDING".equals(appt.getStatus())) {
             throw new BusinessException("仅待服务状态的预约可标记完成");
         }
@@ -384,6 +381,16 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void adminCancel(Long appointmentId) {
+        Appointment appt = requireShopAppointment(appointmentId);
+        if (!"PENDING".equals(appt.getStatus())) {
+            throw new BusinessException("仅待服务状态的预约可取消");
+        }
+        appointmentMapper.updateStatus(appointmentId, "CANCELLED");
+        ordersMapper.updateCancelled(appt.getOrderId(), 1);
+    }
+
+    /** Admin 侧取预约并校验归属当前店（店长/店员不可跨店操作） */
+    private Appointment requireShopAppointment(Long appointmentId) {
         if (appointmentId == null) {
             throw new BusinessException("参数缺失");
         }
@@ -391,11 +398,10 @@ public class AppointmentServiceImpl implements AppointmentService {
         if (appt == null) {
             throw new BusinessException("预约不存在");
         }
-        if (!"PENDING".equals(appt.getStatus())) {
-            throw new BusinessException("仅待服务状态的预约可取消");
+        if (!appt.getShopId().equals(ShopContext.require())) {
+            throw new BusinessException("无权操作其他门店的预约");
         }
-        appointmentMapper.updateStatus(appointmentId, "CANCELLED");
-        ordersMapper.updateCancelled(appt.getOrderId(), 1);
+        return appt;
     }
 
     // ============================== 内部工具 ==============================
@@ -406,15 +412,17 @@ public class AppointmentServiceImpl implements AppointmentService {
      * - 附加服务：duration 缺省 0（不占时间，只加钱）；仅 duration > 0 的附加项才额外累加时长。
      */
     private int calcTotalDuration(Long mainSkuId, List<Long> addonSkuIds) {
+        Long shopId = ShopContext.require();
         Sku mainSku = skuMapper.selectById(mainSkuId);
-        if (mainSku == null || mainSku.getDuration() == null || mainSku.getDuration() <= 0) {
+        if (mainSku == null || !shopId.equals(mainSku.getShopId())
+                || mainSku.getDuration() == null || mainSku.getDuration() <= 0) {
             throw new BusinessException("主服务未配置时长，请联系店主");
         }
         int total = mainSku.getDuration();
         if (addonSkuIds != null) {
             for (Long addonSkuId : addonSkuIds) {
                 Sku addonSku = skuMapper.selectById(addonSkuId);
-                if (addonSku == null) {
+                if (addonSku == null || !shopId.equals(addonSku.getShopId())) {
                     throw new BusinessException("附加服务规格不存在");
                 }
                 // duration <= 0 或 null：不占时间，跳过
@@ -426,9 +434,9 @@ public class AppointmentServiceImpl implements AppointmentService {
         return total;
     }
 
-    /** 营业时间校验：仅约束预约开始时间落在 [start, end) 内 */
+    /** 营业时间校验（按当前店配置）：仅约束预约开始时间落在 [start, end) 内 */
     private void checkBusinessHours(LocalDateTime startTime) {
-        SystemConfig cfg = systemConfigMapper.selectById(1L);
+        ShopConfig cfg = shopConfigMapper.selectByShopId(ShopContext.require());
         if (cfg == null || cfg.getOrderTimeEnabled() == null || cfg.getOrderTimeEnabled() != 1) {
             return;
         }

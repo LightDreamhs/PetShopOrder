@@ -16,8 +16,13 @@
 
 ## 数据库表结构
 
+> **多店改造（2026-09，Phase 1 已落地）**：系统支持连锁多店。业务表带 `shop_id`：`sku`（店铺级价格/库存/上下架，含 `status` 列）、`orders`、`order_item`、`appointment`、`member`、`member_level`、`member_phone`（唯一约束 `(shop_id, phone)`）；`admin_user.shop_id` NULL=总部；`operation_log.shop_id` NULL=总部操作。`product`/`app_user`/`user_address`/`main_service_addon` 为平台级。当前店铺由 `ShopResolveInterceptor` 写入 `ShopContext`（C 端请求头 `X-Shop-Code`，管理端员工归属/BOSS 可用 `X-Shop-Id` 切店）。原 `system_config`/`system_config_delivery_tier` 已被 `shop_config`/`shop_delivery_tier` 替代（旧表保留一个版本周期；`system_config_log.config_id` 现指向 `shop_config.id`）。
+
 | 表 | 全部字段 | 业务意义 | H5 作用 | Admin 作用 |
 |---|---|---|---|---|
+| shop | id, code, name, phone, address, shop_lat, shop_lng, status(OPEN/CLOSED), sort, create_time, update_time | 门店（code 用于二维码/URL 识别，坐标为配送中心） | /api/app/shops 换店 | 店铺管理（Phase 2 加 CRUD UI） |
+| shop_config | id, shop_id, shop_lat, shop_lng, delivery_radius_km, delivery_min_amount, delivery_fee_type, order_time_enabled, order_start_time, order_end_time, qywx_webhook_url_enc, has_qywx_webhook, payment_qr_url, ad_enabled, ad_image_url, ad_link_type, ad_link_target, updated_by, create_time, update_time | 店铺配置（每店一行，承接原 system_config；fixed_delivery_fee 已移除） | 结算配送/收款码/开屏广告（按当前店） | 系统配置页（当前店） |
+| shop_delivery_tier | id, shop_id, min_distance_km, max_distance_km, fee, sort, create_time, update_time | 店铺分段运费 | 下单运费计算（按当前店） | 系统配置页分段编辑 |
 | admin_user | id, username, password_hash, real_name, role, status, last_login_time, create_time, update_time | 管理端账号与角色（BOSS/MANAGER/STAFF） | 无直接使用 | LoginPage 登录鉴权；AdminUserPage 账号增删改、启停用、重置密码；路由菜单权限控制 |
 | app_user | id, phone, status, last_login_time, create_time, update_time | C 端手机号登录用户 | LoginPage 验证码登录；全站登录态（首页/购物车/结算/订单） | 无直接页面 |
 | product | id, name, description, cover_img, type, service_category, status, support_delivery, sort, create_time, update_time | 商品/服务主表（service_category 仅 SERVICE 有效：MAIN_SERVICE/ADDON_SERVICE） | HomePage 列表展示；CheckoutPage 下单计算时按类型/配送属性参与规则 | ProductPage 商品列表、上下架、编辑、新增、删除 |

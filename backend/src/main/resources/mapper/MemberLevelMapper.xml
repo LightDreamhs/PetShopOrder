@@ -5,6 +5,7 @@
 
     <resultMap id="BaseResultMap" type="com.petshop.order.entity.MemberLevel">
         <id property="id" column="id"/>
+        <result property="shopId" column="shop_id"/>
         <result property="name" column="name"/>
         <result property="discountRate" column="discount_rate"/>
         <result property="sort" column="sort"/>
@@ -21,6 +22,7 @@
         SELECT ml.*,
                (SELECT COUNT(*) FROM member m WHERE m.level_id = ml.id) AS member_count
         FROM member_level ml
+        WHERE ml.shop_id = #{shopId}
         ORDER BY ml.sort ASC, ml.id ASC
     </select>
 
@@ -29,8 +31,8 @@
     </select>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO member_level (name, discount_rate, sort, status)
-        VALUES (#{name}, #{discountRate}, #{sort}, #{status})
+        INSERT INTO member_level (shop_id, name, discount_rate, sort, status)
+        VALUES (#{shopId}, #{name}, #{discountRate}, #{sort}, #{status})
     </insert>
 
     <update id="updateById">

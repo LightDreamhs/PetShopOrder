@@ -11,6 +11,8 @@ import java.math.BigDecimal;
 public class OrderItem extends BaseEntity {
 
     private Long orderId;
+    /** 归属门店（冗余，便于按店统计） */
+    private Long shopId;
     private Long productId;
     private Long skuId;
     private String type;

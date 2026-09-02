@@ -1,6 +1,7 @@
 package com.petshop.order.service.impl;
 
 import com.petshop.order.common.BusinessException;
+import com.petshop.order.common.ShopContext;
 import com.petshop.order.entity.Member;
 import com.petshop.order.entity.MemberLevel;
 import com.petshop.order.entity.Product;
@@ -41,12 +42,13 @@ public class PriceCalculationServiceImpl implements PriceCalculationService {
         BigDecimal serviceAmount = BigDecimal.ZERO;
 
         for (CartItemInput input : items) {
-            Product product = productMapper.selectById(input.getProductId());
+            Product product = productMapper.selectById(input.getProductId(), ShopContext.require(), false);
             if (product == null) {
                 throw new BusinessException("商品不存在: " + input.getProductId());
             }
 
-            List<Sku> skus = skuMapper.selectByProductId(input.getProductId());
+            // SKU 为店铺级：按当前店取价格/会员价
+            List<Sku> skus = skuMapper.selectByProductId(input.getProductId(), ShopContext.require());
             Sku sku;
             if (input.getSkuId() != null) {
                 sku = skus.stream()
@@ -111,16 +113,17 @@ public class PriceCalculationServiceImpl implements PriceCalculationService {
         if (userPhone == null || userPhone.isEmpty()) {
             return null;
         }
-        Long memberId = memberPhoneMapper.selectMemberIdByPhone(userPhone);
+        Long shopId = ShopContext.require();
+        Long memberId = memberPhoneMapper.selectMemberIdByShopAndPhone(shopId, userPhone);
         if (memberId == null) {
             return null;
         }
         Member member = memberMapper.selectById(memberId);
-        if (member == null || member.getLevelId() == null) {
+        if (member == null || member.getLevelId() == null || !shopId.equals(member.getShopId())) {
             return null;
         }
         MemberLevel level = memberLevelMapper.selectById(member.getLevelId());
-        if (level == null || level.getDiscountRate() == null) {
+        if (level == null || level.getDiscountRate() == null || !shopId.equals(level.getShopId())) {
             return null;
         }
         return level.getDiscountRate();

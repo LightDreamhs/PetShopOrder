@@ -11,6 +11,8 @@ import java.math.BigDecimal;
 public class Orders extends BaseEntity {
 
     private String orderNo;
+    /** 归属门店 */
+    private Long shopId;
     private Long userId;
     private String customerPhoneSnapshot;
     private String customerName;

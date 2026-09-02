@@ -1,5 +1,6 @@
 package com.petshop.order.service.impl;
 
+import com.petshop.order.common.ShopContext;
 import com.petshop.order.mapper.StatsMapper;
 import com.petshop.order.service.StatsService;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +17,9 @@ public class StatsServiceImpl implements StatsService {
 
     @Override
     public Map<String, Object> getOverview() {
-        Map<String, Object> result = statsMapper.selectOverview();
+        // 统计口径：当前请求上下文的门店
+        Long shopId = ShopContext.require();
+        Map<String, Object> result = statsMapper.selectOverview(shopId);
         if (result.get("todayAmount") != null) {
             result.put("todayAmount", result.get("todayAmount").toString());
         }
@@ -31,7 +34,7 @@ public class StatsServiceImpl implements StatsService {
         if (!"DAY".equals(period) && !"WEEK".equals(period) && !"MONTH".equals(period)) {
             throw new com.petshop.order.common.BusinessException("period 参数只支持 DAY、WEEK、MONTH");
         }
-        List<Map<String, Object>> trends = statsMapper.selectOrderTrends(period);
+        List<Map<String, Object>> trends = statsMapper.selectOrderTrends(period, ShopContext.require());
         for (Map<String, Object> item : trends) {
             if (item.get("amount") != null) {
                 item.put("amount", item.get("amount").toString());
@@ -45,7 +48,7 @@ public class StatsServiceImpl implements StatsService {
         if (limit == null || limit <= 0) {
             limit = 10;
         }
-        List<Map<String, Object>> ranking = statsMapper.selectMemberRanking(limit);
+        List<Map<String, Object>> ranking = statsMapper.selectMemberRanking(limit, ShopContext.require());
         for (Map<String, Object> item : ranking) {
             if (item.get("totalAmount") != null) {
                 item.put("totalAmount", item.get("totalAmount").toString());

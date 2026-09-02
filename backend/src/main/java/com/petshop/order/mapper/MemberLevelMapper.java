@@ -9,7 +9,7 @@ import java.util.List;
 @Mapper
 public interface MemberLevelMapper {
 
-    List<MemberLevel> selectList();
+    List<MemberLevel> selectList(@Param("shopId") Long shopId);
 
     MemberLevel selectById(@Param("id") Long id);
 
