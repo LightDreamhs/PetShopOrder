@@ -1,12 +1,32 @@
 # PetShopOrder 开发进度
 
-> 更新时间：2026-07-16
+> 更新时间：2026-09-03
 
 ## 项目概况
 
 宠物店点单系统，顾客(H5)浏览商品下单，商家(Admin)管理商品/会员/订单。
 
 **技术栈：** Spring Boot 3.3.6 / Vue 3 + TypeScript / Vant 4(H5) / Element Plus(Admin) / MySQL 8.0 / Sa-Token / 腾讯地图 JS API GL
+
+## 多店改造 — Phase 1 数据底座已落地（2026-09-03）
+
+> 详细规划见 `docs/多店扩展规划.md`。测试门店：佳兆业店（code `main`，承接存量数据）、二江寺站（code `erjiangsi`）。
+
+| 项 | 说明 |
+|---|---|
+| 数据库 | 新增 `shop` / `shop_config` / `shop_delivery_tier`（替代 system_config 系三表，旧表保留一个版本周期）；`sku/orders/order_item/appointment/member/member_level/member_phone` 加 `shop_id`；`sku` 加店铺级 `status` 上下架；`member_phone` 唯一约束改 `(shop_id, phone)`（同手机号可跨店建档）；`admin_user`/`operation_log` 加可空 `shop_id`（NULL=总部）。存量库迁移脚本 `backend/sql/migration_multi_store_v1.sql`（**生产部署需手动进容器执行**），`init.sql` 已同步多店化 |
+| 后端 | `ShopContext`(ThreadLocal) + `ShopResolveInterceptor`：C 端按请求头 `X-Shop-Code` 定店（缺省回退默认店，写接口校验门店营业状态），管理端按员工 `admin_user.shop_id` 定店、BOSS 可用 `X-Shop-Id` 切店；`SystemConfig` 系列更名 `ShopConfig` 对应新表；计价/配送/下单/预约/会员/统计/通知/操作日志全链路按店过滤；商品为「平台目录 + 店铺 SKU」模型（价格/会员价/库存/上下架按店）；新增 `/api/admin/shops`（列表/当前店）与 `/api/app/shops`（免登） |
+| 前端 | 零改动（Phase 1 目标即单店行为零回归）；店铺 CRUD/切店器 UI 留待 Phase 2/3 |
+| 验证 | API 12 项（两店商品列表/SKU 价格/同手机号双店会员身份与服务折扣/配送半径与运费/订单归属落库/歇业拒单/营业时段/BOSS 切店/店长越权 6 项）+ 浏览器 H5 下单全流程与 Admin 三页回归，全部通过 |
+
+## 安全修复 — 管理端账号体系隔离（2026-09-03）
+
+| 项 | 说明 |
+|---|---|
+| 漏洞 1：跨端身份混淆 | C 端与管理端此前共用同一 Sa-Token loginType，`app_user.id` 与 `admin_user.id` 撞号时，C 端顾客登录态会被管理端解析为同 id 管理员（提权，C 端 id=1 即为 BOSS）。修复：管理端拆分独立账号体系 `StpAdminUtil`（loginType=admin，官方多账号方案，cookie 名 `satoken-admin`），管理端 12 文件替换，`StpInterfaceImpl` 仅对 admin 体系解析角色；C 端不动，双端同浏览器可共存 |
+| 漏洞 2：管理端接口无鉴权 | `/api/admin/**` 此前仅靠注解拦截（无注解即不生效），订单列表/详情等接口匿名可访问（详情含未脱敏手机号）。修复：`SaTokenConfig` 路由级强制登录（除 `/api/admin/auth/login` 外全部要求 admin 体系已登录），角色细分仍由各控制器 checkRole 完成 |
+| 部署注意 | 上线本修复后管理员需重新登录一次（cookie 名变更，预期行为）。生产漏洞已存在月余且 id=1 必撞 BOSS，建议尽快发布 |
+| 验证 | 匿名/C 端 token 访问管理端全部 401；BOSS 登录/切店/统计正常；同浏览器双体系共存（H5 会员态与 Admin 登录互不干扰） |
 
 ## 后端 — 已完成
 
@@ -41,7 +61,7 @@
 
 | 模块 | 说明 |
 |------|------|
-| 登录 | 手机号 + 验证码（固定 1234） |
+| 登录 | 手机号 + 验证码（本地 log 模式固定码 123456；生产阿里云 PNVS 动态 6 位码，明文不回传后端） |
 | 首页 | 「用品」/「服务」Tab 切换 + 搜索 + SKU 弹窗 + CartBar |
 | 购物车 | 纯前端 Pinia + localStorage |
 | 结算 | 商品明细 + 会员折扣 + 配送开关 + **腾讯地图选点** + **常用地址管理（列表选择/设默认/删除）** |
