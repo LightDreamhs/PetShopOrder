@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Let's Encrypt 证书续期：certbot renew + reload nginx。
-# 建议 cron 每月执行一次：0 3 1 * * /home/ubuntu/PetShopOrder/deploy/renew-ssl.sh >> /var/log/cert-renew.log 2>&1
+# 建议 cron 每月执行一次：0 3 1 * * /home/ubuntu/PetShopOrder/deploy/renew-ssl.sh >> /home/ubuntu/cert-renew.log 2>&1
+# 日志必须落在 ubuntu 用户可写目录（如 /home/ubuntu/），写 /var/log 会因无权限导致整个 cron 命令失败。
 set -euo pipefail
 
 cd "$(dirname "$0")"

@@ -81,8 +81,10 @@ curl -i https://www.2zg.site/         # 应返回 301 跳转到根域
 Let's Encrypt 证书有效期 90 天。SSH 登录后用 `crontab -e` 添加续期任务（每月 1 号凌晨 3 点）：
 
 ```
-0 3 1 * * /home/ubuntu/PetShopOrder/deploy/renew-ssl.sh >> /var/log/cert-renew.log 2>&1
+0 3 1 * * /home/ubuntu/PetShopOrder/deploy/renew-ssl.sh >> /home/ubuntu/cert-renew.log 2>&1
 ```
+
+> **注意**：日志必须落在 ubuntu 可写目录（如 `/home/ubuntu/`）。写 `/var/log/` 会因无权限导致重定向失败、脚本根本不执行（2026-09 曾因此静默失败两个月）；且脚本需有可执行权限（`chmod +x`），否则 cron 同样跑不动。排查续期是否在跑：`ls -la /home/ubuntu/cert-renew.log`。
 
 > **注意**：上面的 cron 路径是 `/home/ubuntu/PetShopOrder/deploy/renew-ssl.sh`，频率每月一次（renew-ssl.sh 注释里的 cron 示例已同步为此路径与频率）。
 
