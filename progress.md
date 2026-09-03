@@ -1,6 +1,6 @@
 # PetShopOrder 开发进度
 
-> 更新时间：2026-09-03
+> 更新时间：2026-09-04
 
 ## 项目概况
 
@@ -8,9 +8,11 @@
 
 **技术栈：** Spring Boot 3.3.6 / Vue 3 + TypeScript / Vant 4(H5) / Element Plus(Admin) / MySQL 8.0 / Sa-Token / 腾讯地图 JS API GL
 
-## 多店改造 — Phase 1 数据底座已落地（2026-09-03）
+## 多店改造 — Phase 1~3 已落地（2026-09-03/04）
 
-> 详细规划见 `docs/多店扩展规划.md`。测试门店：佳兆业店（code `main`，承接存量数据）、二江寺站（code `erjiangsi`）。
+> 详细规划见 `docs/多店扩展规划.md`。测试门店：佳兆业店（code `main`，承接存量数据）、二江寺店（code `erjiangsi`）。
+
+### Phase 1 多店数据底座（2026-09-03）
 
 | 项 | 说明 |
 |---|---|
