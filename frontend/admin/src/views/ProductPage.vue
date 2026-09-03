@@ -100,6 +100,7 @@ function addSkuRow() {
     price: '0.00',
     memberPrice: null,
     duration: productForm.type === 'SERVICE' ? (isMainService ? 60 : 0) : null,
+    status: 'ON_SALE',
     sort: productForm.skus.length + 1,
   })
 }
@@ -189,6 +190,7 @@ async function handleProductSubmit() {
         price: s.price,
         memberPrice: productForm.type === 'GOODS' ? s.memberPrice : null,
         duration: productForm.type === 'SERVICE' ? (s.duration ?? null) : null,
+        status: s.status || 'ON_SALE',
         sort: s.sort,
       })),
     }
@@ -432,6 +434,7 @@ onMounted(() => {
               <span style="width: 100px">原价(元)</span>
               <span v-if="productForm.type === 'GOODS'" style="width: 100px">会员价(元)</span>
               <span v-if="productForm.type === 'SERVICE'" style="width: 110px">时长(分钟)</span>
+              <span style="width: 80px">本店在售</span>
               <span style="width: 100px">排序</span>
               <span style="width: 24px"></span>
             </div>
@@ -454,6 +457,12 @@ onMounted(() => {
                   placeholder="如：90"
                   style="width: 110px"
                   controls-position="right"
+                />
+                <el-switch
+                  v-model="sku.status"
+                  active-value="ON_SALE"
+                  inactive-value="OFF_SALE"
+                  style="width: 80px"
                 />
                 <el-input-number v-model="sku.sort" :min="0" :max="999" style="width: 100px" controls-position="right" />
                 <el-button link type="danger" @click="removeSkuRow(index)">

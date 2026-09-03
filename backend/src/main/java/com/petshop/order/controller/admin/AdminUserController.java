@@ -44,6 +44,7 @@ public class AdminUserController {
         user.setPasswordHash(req.getPassword());
         user.setRealName(req.getRealName());
         user.setRole(req.getRole());
+        user.setShopId(req.getShopId());
         AdminUser created = adminUserService.create(user);
         return R.ok(toMap(created));
     }
@@ -54,6 +55,7 @@ public class AdminUserController {
         AdminUser user = new AdminUser();
         user.setRealName(req.getRealName());
         user.setRole(req.getRole());
+        user.setShopId(req.getShopId());
         AdminUser updated = adminUserService.update(id, user);
         return R.ok(toMap(updated));
     }
@@ -81,15 +83,16 @@ public class AdminUserController {
     }
 
     private Map<String, Object> toMap(AdminUser u) {
-        return Map.of(
-                "id", u.getId(),
-                "username", u.getUsername(),
-                "realName", u.getRealName() != null ? u.getRealName() : "",
-                "role", u.getRole(),
-                "roleLabel", ROLE_LABELS.getOrDefault(u.getRole(), ""),
-                "status", u.getStatus() != null && u.getStatus() == 1 ? "ENABLED" : "DISABLED",
-                "lastLoginTime", u.getLastLoginTime() != null ? u.getLastLoginTime().format(FMT) : ""
-        );
+        Map<String, Object> m = new java.util.LinkedHashMap<>();
+        m.put("id", u.getId());
+        m.put("username", u.getUsername());
+        m.put("realName", u.getRealName() != null ? u.getRealName() : "");
+        m.put("role", u.getRole());
+        m.put("roleLabel", ROLE_LABELS.getOrDefault(u.getRole(), ""));
+        m.put("shopId", u.getShopId());
+        m.put("status", u.getStatus() != null && u.getStatus() == 1 ? "ENABLED" : "DISABLED");
+        m.put("lastLoginTime", u.getLastLoginTime() != null ? u.getLastLoginTime().format(FMT) : "");
+        return m;
     }
 
     @Data
@@ -102,6 +105,8 @@ public class AdminUserController {
         private String realName;
         @NotBlank(message = "角色不能为空")
         private String role;
+        /** 归属门店；NULL=总部（BOSS 跨店） */
+        private Long shopId;
     }
 
     @Data
@@ -110,6 +115,8 @@ public class AdminUserController {
         private String realName;
         @NotBlank(message = "角色不能为空")
         private String role;
+        /** 归属门店；NULL=总部（BOSS 跨店） */
+        private Long shopId;
     }
 
     @Data

@@ -26,6 +26,21 @@ export interface AdminProfile {
   roleLabel: string
 }
 
+// ========== 门店（多店） ==========
+export interface ShopInfo {
+  id: number
+  code: string
+  name: string
+  phone: string | null
+  address: string | null
+  shopLat: number
+  shopLng: number
+  status: 'OPEN' | 'CLOSED'
+  sort: number
+  isCurrent?: boolean
+  entryUrl?: string
+}
+
 // ========== 商品 ==========
 export type ServiceCategory = 'MAIN_SERVICE' | 'ADDON_SERVICE' | ''
 
@@ -49,6 +64,7 @@ export interface SkuDetail {
   price: string
   memberPrice: string | null
   duration?: number | null
+  status?: 'ON_SALE' | 'OFF_SALE'
   sort: number
 }
 
@@ -236,6 +252,7 @@ export interface AdminUser {
   realName: string
   role: 'BOSS' | 'MANAGER' | 'STAFF'
   roleLabel: string
+  shopId: number | null
   status: 'ENABLED' | 'DISABLED'
 }
 
@@ -244,6 +261,7 @@ export interface AdminUserForm {
   password: string
   realName: string
   role: 'MANAGER' | 'STAFF'
+  shopId: number | null
 }
 
 // ========== 预约看板 ==========

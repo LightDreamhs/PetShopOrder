@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { Fold, Expand, SwitchButton } from '@element-plus/icons-vue'
+import { useShopStore } from '@/stores/shop'
+import { Fold, Expand, SwitchButton, Shop } from '@element-plus/icons-vue'
 
 interface MenuEntry {
   path: string
@@ -14,8 +15,20 @@ interface MenuEntry {
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const shopStore = useShopStore()
 
 const isCollapsed = ref(false)
+
+onMounted(() => {
+  // 拉取门店信息：BOSS 建切店器选项；店长/店员展示归属店名
+  shopStore.init()
+})
+
+/** BOSS 切店后整页刷新，让各页面数据按新店重新拉取 */
+function handleShopSwitch(id: number) {
+  shopStore.switchShop(id)
+  window.location.reload()
+}
 
 // 高亮：按前缀匹配当前路径，与路由表 path 对齐
 const activeMenu = computed(() => {
@@ -46,6 +59,7 @@ function handleMenuSelect(path: string) {
 
 async function handleLogout() {
   await authStore.logout()
+  shopStore.reset()
   router.push('/login')
 }
 </script>
@@ -107,6 +121,31 @@ async function handleLogout() {
       <el-header class="top-header">
         <div class="header-left">
           <h2 class="page-title">{{ route.meta.title }}</h2>
+
+          <!-- 门店切换器：BOSS 可切店；店长/店员固定显示归属店 -->
+          <div v-if="shopStore.isBoss && shopStore.shops.length > 0" class="shop-switcher">
+            <el-icon class="shop-icon"><Shop /></el-icon>
+            <el-select
+              :model-value="shopStore.currentShop?.id"
+              class="shop-select"
+              size="default"
+              @change="handleShopSwitch"
+            >
+              <el-option
+                v-for="s in shopStore.shops"
+                :key="s.id"
+                :value="s.id"
+                :label="s.name"
+              >
+                <span>{{ s.name }}</span>
+                <el-tag v-if="s.status === 'CLOSED'" size="small" type="info" class="shop-status-tag">歇业</el-tag>
+              </el-option>
+            </el-select>
+          </div>
+          <div v-else-if="!shopStore.isBoss && shopStore.boundShop" class="shop-switcher">
+            <el-icon class="shop-icon"><Shop /></el-icon>
+            <span class="shop-bound-name">{{ shopStore.boundShop.name }}</span>
+          </div>
         </div>
 
         <div class="header-right">
@@ -299,6 +338,39 @@ async function handleLogout() {
 .header-left {
   display: flex;
   align-items: center;
+}
+
+/* ========== 门店切换器 ========== */
+.shop-switcher {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 20px;
+  padding-left: 20px;
+  border-left: 1px solid #eee;
+}
+
+.shop-icon {
+  color: var(--brand-color);
+  font-size: 18px;
+}
+
+.shop-select {
+  width: 160px;
+
+  :deep(.el-select__wrapper) {
+    font-weight: 600;
+  }
+}
+
+.shop-status-tag {
+  margin-left: 8px;
+}
+
+.shop-bound-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a2e;
 }
 
 .page-title {

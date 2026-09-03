@@ -16,4 +16,11 @@ public interface ShopMapper {
     Shop selectDefault();
 
     List<Shop> selectAll();
+
+    int insert(Shop shop);
+
+    int updateById(Shop shop);
+
+    int updateStatus(@org.apache.ibatis.annotations.Param("id") Long id,
+                     @org.apache.ibatis.annotations.Param("status") String status);
 }

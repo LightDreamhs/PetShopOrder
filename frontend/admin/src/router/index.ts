@@ -39,6 +39,12 @@ const router = createRouter({
           meta: { title: '会员管理', icon: 'User', roles: ['BOSS', 'MANAGER'] },
         },
         {
+          path: 'shops',
+          name: 'Shops',
+          component: () => import('@/views/ShopManagePage.vue'),
+          meta: { title: '门店管理', icon: 'Shop', roles: ['BOSS'] },
+        },
+        {
           path: 'settings',
           name: 'Settings',
           component: () => import('@/views/SystemConfigPage.vue'),

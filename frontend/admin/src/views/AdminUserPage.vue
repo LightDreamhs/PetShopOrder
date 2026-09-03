@@ -2,8 +2,10 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getAdminUsers, createAdminUser, updateAdminUser, updateAdminUserStatus, resetAdminUserPassword, deleteAdminUser } from '@/api/admin-user'
+import { useShopStore } from '@/stores/shop'
 import type { AdminUser } from '@/types'
 
+const shopStore = useShopStore()
 const users = ref<AdminUser[]>([])
 const loading = ref(false)
 
@@ -17,13 +19,26 @@ async function fetchUsers() {
   }
 }
 
+onMounted(() => {
+  fetchUsers()
+  // 归属店下拉选项
+  shopStore.init()
+})
+
+function shopName(shopId: number | null) {
+  if (!shopId) return '总部'
+  return shopStore.shops.find((s) => s.id === shopId)?.name || `门店#${shopId}`
+}
+
 // ==================== 新增 ====================
 const createVisible = ref(false)
 const createLoading = ref(false)
-const createForm = ref({ username: '', password: '', realName: '', role: 'STAFF' as 'MANAGER' | 'STAFF' })
+const createForm = ref<{ username: string; password: string; realName: string; role: 'MANAGER' | 'STAFF'; shopId: number | null }>({
+  username: '', password: '', realName: '', role: 'STAFF', shopId: null,
+})
 
 function openCreate() {
-  createForm.value = { username: '', password: '', realName: '', role: 'STAFF' }
+  createForm.value = { username: '', password: '', realName: '', role: 'STAFF', shopId: shopStore.currentShop?.id ?? null }
   createVisible.value = true
 }
 
@@ -48,10 +63,12 @@ async function handleCreate() {
 // ==================== 编辑 ====================
 const editVisible = ref(false)
 const editLoading = ref(false)
-const editForm = ref({ id: 0, realName: '', role: 'STAFF' as 'MANAGER' | 'STAFF' })
+const editForm = ref<{ id: number; realName: string; role: 'MANAGER' | 'STAFF'; shopId: number | null }>({
+  id: 0, realName: '', role: 'STAFF', shopId: null,
+})
 
 function openEdit(row: AdminUser) {
-  editForm.value = { id: row.id, realName: row.realName, role: row.role as 'MANAGER' | 'STAFF' }
+  editForm.value = { id: row.id, realName: row.realName, role: row.role as 'MANAGER' | 'STAFF', shopId: row.shopId }
   editVisible.value = true
 }
 
@@ -60,7 +77,7 @@ async function handleEdit() {
   if (!f.realName) { ElMessage.warning('请输入姓名'); return }
   editLoading.value = true
   try {
-    await updateAdminUser(f.id, { realName: f.realName, role: f.role })
+    await updateAdminUser(f.id, { realName: f.realName, role: f.role, shopId: f.shopId })
     ElMessage.success('更新成功')
     editVisible.value = false
     fetchUsers()
@@ -162,6 +179,12 @@ onMounted(() => {
           </template>
         </el-table-column>
 
+        <el-table-column label="归属店" width="130" align="center">
+          <template #default="{ row }">
+            <span :class="{ 'text-muted': !row.shopId }">{{ shopName(row.shopId) }}</span>
+          </template>
+        </el-table-column>
+
         <el-table-column prop="status" label="状态" width="100" align="center">
           <template #default="{ row }">
             <el-tag :type="row.status === 'ENABLED' ? 'success' : 'danger'" size="small" effect="plain">
@@ -209,6 +232,17 @@ onMounted(() => {
             <el-radio value="STAFF">店员</el-radio>
           </el-radio-group>
         </el-form-item>
+        <el-form-item label="归属店" required>
+          <el-select v-model="createForm.shopId" placeholder="选择归属门店" style="width: 100%">
+            <el-option
+              v-for="s in shopStore.shops"
+              :key="s.id"
+              :value="s.id"
+              :label="s.name"
+            />
+          </el-select>
+          <div class="form-tip">店长/店员仅能查看和操作归属店的数据</div>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="createVisible = false">取消</el-button>
@@ -227,6 +261,16 @@ onMounted(() => {
             <el-radio value="MANAGER">店长</el-radio>
             <el-radio value="STAFF">店员</el-radio>
           </el-radio-group>
+        </el-form-item>
+        <el-form-item label="归属店" required>
+          <el-select v-model="editForm.shopId" placeholder="选择归属门店" style="width: 100%">
+            <el-option
+              v-for="s in shopStore.shops"
+              :key="s.id"
+              :value="s.id"
+              :label="s.name"
+            />
+          </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -263,6 +307,13 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 16px;
+}
+
+.form-tip {
+  font-size: 12px;
+  color: #999;
+  line-height: 1.5;
+  margin-top: 4px;
 }
 
 .pwd-tip {

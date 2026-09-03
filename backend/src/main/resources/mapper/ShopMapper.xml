@@ -19,4 +19,26 @@
         SELECT * FROM shop ORDER BY sort ASC, id ASC
     </select>
 
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO shop (code, name, phone, address, shop_lat, shop_lng, status, sort)
+        VALUES (#{code}, #{name}, #{phone}, #{address}, #{shopLat}, #{shopLng},
+                #{status}, #{sort})
+    </insert>
+
+    <update id="updateById" parameterType="com.petshop.order.entity.Shop">
+        UPDATE shop
+        SET code = #{code},
+            name = #{name},
+            phone = #{phone},
+            address = #{address},
+            shop_lat = #{shopLat},
+            shop_lng = #{shopLng},
+            sort = #{sort}
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateStatus">
+        UPDATE shop SET status = #{status} WHERE id = #{id}
+    </update>
+
 </mapper>

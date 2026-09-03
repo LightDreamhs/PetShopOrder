@@ -21,4 +21,13 @@ public interface ShopService {
 
     /** 校验门店存在且营业中（下单/预约等写路径用） */
     Shop requireOpenShop(Long shopId);
+
+    /** 新建门店（BOSS）：编码唯一校验 + 默认店铺配置落库 */
+    Shop create(Shop shop);
+
+    /** 编辑门店（BOSS）：坐标同步到店铺配置 */
+    Shop update(Long id, Shop shop);
+
+    /** 营业/歇业切换（BOSS） */
+    void updateStatus(Long id, String status);
 }

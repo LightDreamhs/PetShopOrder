@@ -13,6 +13,10 @@ async function bootstrap() {
   app.use(pinia)
   app.use(router)
 
+  // 多店进店识别：解析 ?s={code} 并校验当前店，须在首屏请求前完成
+  const { useShopStore } = await import('@/stores/shop')
+  await useShopStore().init()
+
   app.mount('#app')
 }
 

@@ -7,6 +7,15 @@ const request = axios.create({
   withCredentials: true,
 })
 
+// 多店：BOSS 切店目标随请求头下发，后端据此解析当前店（店长/店员由后端按归属强制限定）
+request.interceptors.request.use((config) => {
+  const saved = localStorage.getItem('petshop_admin_shop_id')
+  if (saved) {
+    config.headers['X-Shop-Id'] = saved
+  }
+  return config
+})
+
 request.interceptors.response.use(
   (res) => {
     if (res.data.code !== 200) {

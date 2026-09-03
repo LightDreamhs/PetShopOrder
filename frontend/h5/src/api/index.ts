@@ -8,6 +8,15 @@ const request = axios.create({
   withCredentials: true,
 })
 
+// 多店：所有请求携带当前门店编码，后端 ShopResolveInterceptor 据此解析当前店
+request.interceptors.request.use((config) => {
+  const code = localStorage.getItem('petshop_shop_code')
+  if (code) {
+    config.headers['X-Shop-Code'] = code
+  }
+  return config
+})
+
 // 统一处理登录态丢失：清状态并跳登录页。
 // 后端 NotLoginException 被全局异常处理器包成 HTTP 200 + body code=401，
 // 所以此处既兼容标准 HTTP 401，也兼容业务 code=401。

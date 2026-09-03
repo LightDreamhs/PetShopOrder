@@ -140,6 +140,8 @@ public class AdminProductController {
         sku.setMemberPrice(s.getMemberPrice());
         sku.setDuration(s.getDuration());
         sku.setStock(-1);
+        // 店铺级上下架；缺省在售
+        sku.setStatus("OFF_SALE".equals(s.getStatus()) ? "OFF_SALE" : "ON_SALE");
         sku.setSort(s.getSort() != null ? s.getSort() : 0);
         return sku;
     }
@@ -179,14 +181,15 @@ public class AdminProductController {
     }
 
     private Map<String, Object> toSkuMap(Sku s) {
-        return Map.of(
-                "id", s.getId(),
-                "specName", s.getSpecName(),
-                "price", s.getPrice().toPlainString(),
-                "memberPrice", s.getMemberPrice() != null ? s.getMemberPrice().toPlainString() : "",
-                "duration", s.getDuration() != null ? s.getDuration() : 0,
-                "sort", s.getSort()
-        );
+        Map<String, Object> m = new java.util.LinkedHashMap<>();
+        m.put("id", s.getId());
+        m.put("specName", s.getSpecName());
+        m.put("price", s.getPrice().toPlainString());
+        m.put("memberPrice", s.getMemberPrice() != null ? s.getMemberPrice().toPlainString() : "");
+        m.put("duration", s.getDuration() != null ? s.getDuration() : 0);
+        m.put("status", s.getStatus() != null ? s.getStatus() : "ON_SALE");
+        m.put("sort", s.getSort());
+        return m;
     }
 
     @Data
@@ -214,6 +217,8 @@ public class AdminProductController {
         private BigDecimal price;
         private BigDecimal memberPrice;
         private Integer duration;
+        /** 店铺级上下架：ON_SALE / OFF_SALE */
+        private String status;
         private Integer sort;
     }
 

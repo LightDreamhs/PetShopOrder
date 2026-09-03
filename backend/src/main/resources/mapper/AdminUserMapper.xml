@@ -16,8 +16,8 @@
     </update>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO admin_user (username, password_hash, real_name, role, status)
-        VALUES (#{username}, #{passwordHash}, #{realName}, #{role}, #{status})
+        INSERT INTO admin_user (username, password_hash, real_name, role, shop_id, status)
+        VALUES (#{username}, #{passwordHash}, #{realName}, #{role}, #{shopId}, #{status})
     </insert>
 
     <select id="selectAll" resultType="com.petshop.order.entity.AdminUser">
@@ -26,7 +26,7 @@
 
     <update id="updateById">
         UPDATE admin_user
-        SET real_name = #{realName}, role = #{role}
+        SET real_name = #{realName}, role = #{role}, shop_id = #{shopId}
         WHERE id = #{id}
     </update>
 

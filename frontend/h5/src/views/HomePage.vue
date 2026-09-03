@@ -28,6 +28,10 @@
             </div>
             <transition name="mine-fade">
               <div v-if="showMineMenu" class="mine-dropdown">
+                <div class="mine-item" @click="goShops">
+                  <van-icon name="shop-o" size="18" />
+                  <span>切换门店</span>
+                </div>
                 <div class="mine-item" @click="goOrders">
                   <van-icon name="orders-o" size="18" />
                   <span>我的订单</span>
@@ -95,6 +99,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useMemberStore } from '@/stores/member'
+import { useShopStore } from '@/stores/shop'
 import { getProductsByType, getProductDetail } from '@/api/product'
 import { getPublicConfig } from '@/api/config'
 import type { Product, ProductDetail } from '@/types'
@@ -109,6 +114,7 @@ import shopLogo from '@/assets/shop-logo.jpg'
 const router = useRouter()
 const authStore = useAuthStore()
 const memberStore = useMemberStore()
+const shopStore = useShopStore()
 
 const memberBadgeClass = computed(() => {
   const name = memberStore.memberLevelName || ''
@@ -165,6 +171,11 @@ function goOrders() {
   router.push('/orders')
 }
 
+function goShops() {
+  showMineMenu.value = false
+  router.push('/shops')
+}
+
 function goAddresses() {
   showMineMenu.value = false
   router.push('/address/manage')
@@ -181,14 +192,16 @@ async function initAdPopup() {
     if (!d.adEnabled || !d.adImageUrl) return
     const now = new Date()
     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-    if (localStorage.getItem(`ad_shown_${today}`)) return
+    // 按门店去重：每家店的广告每天各弹一次
+    const adKey = `ad_shown_${shopStore.currentCode || 'default'}_${today}`
+    if (localStorage.getItem(adKey)) return
     adConfig.value = {
       adImageUrl: d.adImageUrl,
       adLinkType: d.adLinkType || 'NONE',
       adLinkTarget: d.adLinkTarget || '',
     }
     adVisible.value = true
-    localStorage.setItem(`ad_shown_${today}`, '1')
+    localStorage.setItem(adKey, '1')
   } catch {
     // 广告加载失败不影响首页使用
   }
@@ -197,6 +210,10 @@ async function initAdPopup() {
 onMounted(() => {
   document.addEventListener('click', closeMineMenu)
   initAdPopup()
+  // 会员身份按店隔离：切店后回到首页时按当前店重新拉取
+  if (authStore.isLoggedIn) {
+    memberStore.fetchProfile()
+  }
 })
 
 onBeforeUnmount(() => {

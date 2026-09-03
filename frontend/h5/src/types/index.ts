@@ -313,3 +313,13 @@ export interface AppointmentListItem {
   totalAmount: string
   orderCancelled: number
 }
+
+// 门店（多店）
+export interface ShopInfo {
+  id: number
+  code: string
+  name: string
+  phone: string | null
+  address: string | null
+  status: 'OPEN' | 'CLOSED'
+}
