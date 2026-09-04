@@ -63,6 +63,8 @@ export interface SkuDetail {
   specName: string
   price: string
   memberPrice: string | null
+  /** SKU 图片 URL（未配置时 H5 回退商品主图） */
+  imgUrl?: string | null
   duration?: number | null
   status?: 'ON_SALE' | 'OFF_SALE'
   sort: number

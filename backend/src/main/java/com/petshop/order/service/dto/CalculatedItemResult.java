@@ -9,6 +9,7 @@ public class CalculatedItemResult {
     private Long skuId;
     private String productName;
     private String skuName;
+    private String skuImg;
     private String type;
     private String originalPrice;
     private String dealPrice;

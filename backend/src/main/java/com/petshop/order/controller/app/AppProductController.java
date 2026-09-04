@@ -87,6 +87,7 @@ public class AppProductController {
                         "id", s.getId(),
                         "specName", s.getSpecName(),
                         "price", s.getPrice().toPlainString(),
+                        "imgUrl", s.getImgUrl() != null ? s.getImgUrl() : "",
                         "duration", s.getDuration() != null ? s.getDuration() : 0,
                         "dealPrice", calcDealPrice(s.getPrice(), s.getMemberPrice(), discountRate, product.getType())
                 )).toList()

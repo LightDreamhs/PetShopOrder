@@ -88,6 +88,7 @@ public class PriceCalculationServiceImpl implements PriceCalculationService {
             result.setSkuId(sku.getId());
             result.setProductName(product.getName());
             result.setSkuName(sku.getSpecName());
+            result.setSkuImg(sku.getImgUrl());
             result.setType(product.getType());
             result.setOriginalPrice(originalPrice.toPlainString());
             result.setDealPrice(dealPrice.toPlainString());

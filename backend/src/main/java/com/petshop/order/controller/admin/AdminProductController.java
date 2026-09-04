@@ -138,6 +138,7 @@ public class AdminProductController {
         sku.setSpecName(s.getSpecName());
         sku.setPrice(s.getPrice());
         sku.setMemberPrice(s.getMemberPrice());
+        sku.setImgUrl(s.getImgUrl());
         sku.setDuration(s.getDuration());
         sku.setStock(-1);
         // 店铺级上下架；缺省在售
@@ -186,6 +187,7 @@ public class AdminProductController {
         m.put("specName", s.getSpecName());
         m.put("price", s.getPrice().toPlainString());
         m.put("memberPrice", s.getMemberPrice() != null ? s.getMemberPrice().toPlainString() : "");
+        m.put("imgUrl", s.getImgUrl() != null ? s.getImgUrl() : "");
         m.put("duration", s.getDuration() != null ? s.getDuration() : 0);
         m.put("status", s.getStatus() != null ? s.getStatus() : "ON_SALE");
         m.put("sort", s.getSort());
@@ -216,6 +218,7 @@ public class AdminProductController {
         @NotNull
         private BigDecimal price;
         private BigDecimal memberPrice;
+        private String imgUrl;
         private Integer duration;
         /** 店铺级上下架：ON_SALE / OFF_SALE */
         private String status;

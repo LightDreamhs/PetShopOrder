@@ -16,6 +16,8 @@ public class Sku extends BaseEntity {
     private String specName;
     private BigDecimal price;
     private BigDecimal memberPrice;
+    /** SKU 图片 URL（未配置时前端回退商品主图） */
+    private String imgUrl;
     private Integer duration;
     private Integer stock;
     /** ON_SALE / OFF_SALE（店铺级上下架） */

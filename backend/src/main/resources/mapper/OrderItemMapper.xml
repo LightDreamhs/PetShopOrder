@@ -5,17 +5,17 @@
 
     <insert id="insertBatch">
         INSERT INTO order_item (order_id, shop_id, product_id, sku_id, type, product_name,
-                                sku_name, original_price, deal_price, quantity, subtotal)
+                                sku_name, sku_img, original_price, deal_price, quantity, subtotal)
         VALUES
         <foreach collection="list" item="item" separator=",">
             (#{item.orderId}, #{item.shopId}, #{item.productId}, #{item.skuId}, #{item.type}, #{item.productName},
-             #{item.skuName}, #{item.originalPrice}, #{item.dealPrice}, #{item.quantity}, #{item.subtotal})
+             #{item.skuName}, #{item.skuImg}, #{item.originalPrice}, #{item.dealPrice}, #{item.quantity}, #{item.subtotal})
         </foreach>
     </insert>
 
     <select id="selectByOrderId" resultType="com.petshop.order.entity.OrderItem">
         SELECT id, order_id, shop_id, product_id, sku_id, type, product_name,
-               sku_name, original_price, deal_price, quantity, subtotal,
+               sku_name, sku_img, original_price, deal_price, quantity, subtotal,
                create_time, update_time
         FROM order_item WHERE order_id = #{orderId}
     </select>

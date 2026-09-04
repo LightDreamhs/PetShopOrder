@@ -27,6 +27,7 @@
             <result property="specName" column="sku_spec_name"/>
             <result property="price" column="sku_price"/>
             <result property="memberPrice" column="sku_member_price"/>
+            <result property="imgUrl" column="sku_img_url"/>
             <result property="duration" column="sku_duration"/>
             <result property="stock" column="sku_stock"/>
             <result property="status" column="sku_status"/>
@@ -81,6 +82,7 @@
                s.spec_name AS sku_spec_name,
                s.price AS sku_price,
                s.member_price AS sku_member_price,
+               s.img_url AS sku_img_url,
                s.duration AS sku_duration,
                s.stock AS sku_stock,
                s.status AS sku_status,

@@ -18,6 +18,8 @@ public class OrderItem extends BaseEntity {
     private String type;
     private String productName;
     private String skuName;
+    /** 下单时 SKU 图片快照（SKU 覆盖式更新会重建 id，须落快照） */
+    private String skuImg;
     private BigDecimal originalPrice;
     private BigDecimal dealPrice;
     private Integer quantity;

@@ -32,6 +32,7 @@ export interface SkuPrice {
   id: number
   specName: string
   price: string
+  imgUrl: string | null
   duration: number | null
   dealPrice: string
 }
@@ -66,6 +67,7 @@ export interface CartItem {
   // 缓存的展示数据
   productName: string
   productCoverImg: string | null
+  skuImg: string | null
   skuName: string | null
   type: 'GOODS' | 'SERVICE'
   originalPrice: string
@@ -155,6 +157,7 @@ export interface OrderListItem {
 export interface OrderItemDetail {
   productName: string
   skuName: string | null
+  skuImg: string | null
   type: 'GOODS' | 'SERVICE'
   originalPrice: string
   dealPrice: string

@@ -14,15 +14,15 @@
     </select>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO sku (product_id, shop_id, spec_name, price, member_price, duration, stock, status, sort)
-        VALUES (#{productId}, #{shopId}, #{specName}, #{price}, #{memberPrice}, #{duration}, #{stock}, #{status}, #{sort})
+        INSERT INTO sku (product_id, shop_id, spec_name, price, member_price, img_url, duration, stock, status, sort)
+        VALUES (#{productId}, #{shopId}, #{specName}, #{price}, #{memberPrice}, #{imgUrl}, #{duration}, #{stock}, #{status}, #{sort})
     </insert>
 
     <insert id="insertBatch">
-        INSERT INTO sku (product_id, shop_id, spec_name, price, member_price, duration, stock, status, sort)
+        INSERT INTO sku (product_id, shop_id, spec_name, price, member_price, img_url, duration, stock, status, sort)
         VALUES
         <foreach collection="list" item="item" separator=",">
-            (#{item.productId}, #{item.shopId}, #{item.specName}, #{item.price}, #{item.memberPrice}, #{item.duration}, #{item.stock}, #{item.status}, #{item.sort})
+            (#{item.productId}, #{item.shopId}, #{item.specName}, #{item.price}, #{item.memberPrice}, #{item.imgUrl}, #{item.duration}, #{item.stock}, #{item.status}, #{item.sort})
         </foreach>
     </insert>
 

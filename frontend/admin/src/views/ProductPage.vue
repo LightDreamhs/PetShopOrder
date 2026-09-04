@@ -99,10 +99,21 @@ function addSkuRow() {
     specName: '',
     price: '0.00',
     memberPrice: null,
+    imgUrl: '',
     duration: productForm.type === 'SERVICE' ? (isMainService ? 60 : 0) : null,
     status: 'ON_SALE',
     sort: productForm.skus.length + 1,
   })
+}
+
+async function handleSkuUpload(options: any, sku: SkuDetail) {
+  try {
+    const res = await uploadFile(options.file)
+    sku.imgUrl = res.data.url
+    ElMessage.success('上传成功')
+  } catch {
+    // handled
+  }
 }
 
 function removeSkuRow(index: number) {
@@ -189,6 +200,7 @@ async function handleProductSubmit() {
         specName: s.specName,
         price: s.price,
         memberPrice: productForm.type === 'GOODS' ? s.memberPrice : null,
+        imgUrl: s.imgUrl || undefined,
         duration: productForm.type === 'SERVICE' ? (s.duration ?? null) : null,
         status: s.status || 'ON_SALE',
         sort: s.sort,
@@ -365,7 +377,7 @@ onMounted(() => {
     <el-dialog
       v-model="productDialogVisible"
       :title="productFormMode === 'create' ? '新增商品' : '编辑商品'"
-      width="720px"
+      width="860px"
       :close-on-click-modal="false"
       destroy-on-close
     >
@@ -434,6 +446,7 @@ onMounted(() => {
               <span style="width: 100px">原价(元)</span>
               <span v-if="productForm.type === 'GOODS'" style="width: 100px">会员价(元)</span>
               <span v-if="productForm.type === 'SERVICE'" style="width: 110px">时长(分钟)</span>
+              <span style="width: 80px">SKU图</span>
               <span style="width: 80px">本店在售</span>
               <span style="width: 100px">排序</span>
               <span style="width: 24px"></span>
@@ -458,6 +471,22 @@ onMounted(() => {
                   style="width: 110px"
                   controls-position="right"
                 />
+                <div class="sku-img-cell">
+                  <el-upload
+                    class="sku-img-uploader"
+                    :show-file-list="false"
+                    :http-request="(options: any) => handleSkuUpload(options, sku)"
+                    accept="image/*"
+                  >
+                    <el-avatar v-if="sku.imgUrl" :src="sku.imgUrl" :size="56" shape="square" />
+                    <div v-else class="sku-img-placeholder">
+                      <el-icon :size="18"><Plus /></el-icon>
+                    </div>
+                  </el-upload>
+                  <el-icon v-if="sku.imgUrl" class="sku-img-delete" @click="sku.imgUrl = ''">
+                    <CircleCloseFilled />
+                  </el-icon>
+                </div>
                 <el-switch
                   v-model="sku.status"
                   active-value="ON_SALE"
@@ -567,6 +596,48 @@ onMounted(() => {
 }
 
 /* 上传 */
+.sku-img-cell {
+  position: relative;
+  width: 80px;
+  display: flex;
+  justify-content: center;
+}
+
+.sku-img-uploader {
+  :deep(.el-upload) {
+    border: 1px dashed #ddd;
+    border-radius: 8px;
+    cursor: pointer;
+    overflow: hidden;
+    transition: border-color 0.2s;
+
+    &:hover {
+      border-color: var(--brand-color);
+    }
+  }
+}
+
+.sku-img-placeholder {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fafafa;
+  color: #ccc;
+}
+
+.sku-img-delete {
+  position: absolute;
+  top: -6px;
+  right: 2px;
+  font-size: 16px;
+  color: #909399;
+  background: #fff;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
 .cover-uploader {
   :deep(.el-upload) {
     border: 1px dashed #ddd;

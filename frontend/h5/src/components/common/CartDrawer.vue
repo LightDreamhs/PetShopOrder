@@ -19,6 +19,17 @@
               :key="cartStore.cartKey(item.productId, item.skuId)"
               class="cart-item"
             >
+              <div class="cart-item-thumb">
+                <img
+                  v-if="item.skuImg || item.productCoverImg"
+                  :src="item.skuImg || item.productCoverImg || ''"
+                  alt=""
+                  class="thumb-img"
+                />
+                <div v-else class="thumb-placeholder">
+                  {{ item.type === 'SERVICE' ? '✂️' : '🦴' }}
+                </div>
+              </div>
               <div class="cart-item-info">
                 <div class="cart-item-name">{{ item.productName }}</div>
                 <div v-if="item.skuName" class="cart-item-spec">{{ item.skuName }}</div>
@@ -141,6 +152,29 @@ function goCheckout() {
   &:last-child {
     border-bottom: none;
   }
+}
+
+.cart-item-thumb {
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  margin-right: 12px;
+  border-radius: $radius-sm;
+  overflow: hidden;
+  background: linear-gradient(135deg, #fafafa, #f0f0f0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumb-placeholder {
+  font-size: 24px;
 }
 
 .cart-item-info {

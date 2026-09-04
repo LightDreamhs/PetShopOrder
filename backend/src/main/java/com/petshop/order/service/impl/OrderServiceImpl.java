@@ -202,6 +202,7 @@ public class OrderServiceImpl implements OrderService {
             oi.setType(ci.getType());
             oi.setProductName(ci.getProductName());
             oi.setSkuName(ci.getSkuName());
+            oi.setSkuImg(ci.getSkuImg());
             oi.setOriginalPrice(new BigDecimal(ci.getOriginalPrice()));
             oi.setDealPrice(new BigDecimal(ci.getDealPrice()));
             oi.setQuantity(ci.getQuantity());
@@ -357,6 +358,7 @@ public class OrderServiceImpl implements OrderService {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("productName", item.getProductName());
             m.put("skuName", item.getSkuName());
+            m.put("skuImg", item.getSkuImg() != null ? item.getSkuImg() : "");
             m.put("type", item.getType());
             m.put("originalPrice", item.getOriginalPrice().toPlainString());
             m.put("dealPrice", item.getDealPrice().toPlainString());

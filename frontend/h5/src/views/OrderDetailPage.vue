@@ -46,6 +46,12 @@
         <div class="section-title">商品明细</div>
         <div class="item-list">
           <div v-for="(item, idx) in order.items" :key="idx" class="item-row">
+            <div class="item-thumb">
+              <img v-if="item.skuImg" :src="item.skuImg" alt="" class="thumb-img" />
+              <div v-else class="thumb-placeholder">
+                {{ item.type === 'SERVICE' ? '✂️' : '🦴' }}
+              </div>
+            </div>
             <div class="item-info">
               <span class="item-name">{{ item.productName }}</span>
               <span v-if="item.skuName" class="item-spec">{{ item.skuName }}</span>
@@ -256,6 +262,29 @@ function apptStatusClass(status: AppointmentStatus): string {
   &:last-child {
     border-bottom: none;
   }
+}
+
+.item-thumb {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  margin-right: 10px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #fafafa, #f0f0f0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumb-placeholder {
+  font-size: 22px;
 }
 
 .item-info {
