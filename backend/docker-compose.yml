@@ -25,5 +25,16 @@ services:
       --init-connect='SET NAMES utf8mb4'
       --default-time-zone=+08:00
 
+  redis:
+    image: redis:7-alpine
+    container_name: petorder-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    # AOF 持久化：容器/进程重启后会话不丢（会话存储场景禁止配置 maxmemory 淘汰策略，保持默认 noeviction）
+    command: redis-server --appendonly yes
+
 volumes:
   mysql_data:
+  redis_data:

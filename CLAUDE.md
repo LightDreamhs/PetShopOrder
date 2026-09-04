@@ -7,6 +7,7 @@
 | **IP** | 106.53.178.130 (腾讯云 Ubuntu) |
 | **SSH** | `ssh ubuntu@106.53.178.130` |
 | **Docker** | 27.5.1 / Compose v2.32.4 |
+| **规格** | 2C2G（内存紧张档：已禁用 fwupd 回收 200MB；Redis 需 maxmemory 256mb + noeviction + AOF） |
 
 ---
 

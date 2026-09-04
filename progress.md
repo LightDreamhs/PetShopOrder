@@ -6,7 +6,18 @@
 
 宠物店点单系统，顾客(H5)浏览商品下单，商家(Admin)管理商品/会员/订单。
 
-**技术栈：** Spring Boot 3.3.6 / Vue 3 + TypeScript / Vant 4(H5) / Element Plus(Admin) / MySQL 8.0 / Sa-Token / 腾讯地图 JS API GL
+**技术栈：** Spring Boot 3.3.6 / Vue 3 + TypeScript / Vant 4(H5) / Element Plus(Admin) / MySQL 8.0 / Redis 7 / Sa-Token / 腾讯地图 JS API GL
+
+## Phase 4 部署升级 — 本地 Redis 已接入（2026-09-04）
+
+> 服务器侧（prod compose 加 redis 容器、deploy.sh、COS 异地备份、外部拨测）待上线时实施。
+
+| 项 | 说明 |
+|---|---|
+| 改动 | `backend/docker-compose.yml` 新增 `redis:7-alpine` 容器（`--appendonly yes` AOF 持久化，数据卷 `redis_data`，**禁止配置 maxmemory 淘汰策略**，保持默认 noeviction——会话存储被淘汰=静默掉线）；`pom.xml` 加 `sa-token-redis-jackson` + `spring-boot-starter-data-redis` + `commons-pool2`；`application.yml` 加 `spring.data.redis`（REDIS_HOST/PORT/PASSWORD/DATABASE 环境变量化）；sa-token 业务配置零改动 |
+| 存储结构 | 每个 token 三组 key：`satoken:{loginType}:token:{uuid}`（TTL=timeout 30 天绝对有效期）、`satoken:{loginType}:last-active:{uuid}`（TTL=active-timeout 30 天滑动，每请求续期）、`satoken:{loginType}:session:{loginId}`（账号 Session，含管理端 shopId）；C 端 login / 管理端 admin 两套体系按 key 段天然隔离 |
+| 验证 | ① key 结构与 TTL 实测正确（30 天）；② **重启后端，C 端与 Admin 原 cookie 均仍在线**（旧版内存会话此场景必掉线）；③ **重启 Redis 容器，AOF 恢复后会话仍在**。"backend 重启=全员掉线"这一历史已知行为就此作废 |
+| 服务器参考 | 腾讯云 2C2G 实测余量充足（禁用无用服务 fwupd 后 available 880Mi，Redis 稳态 <50MB）；生产接入时 redis 需挂载数据卷 + AOF + maxmemory 256mb/noeviction |
 
 ## 多店改造 — Phase 1~3 已落地（2026-09-03/04）
 
@@ -330,7 +341,7 @@ WHERE status <> 'CANCELLED'
 
 ```bash
 # MySQL
-cd backend && docker-compose up -d
+cd backend && docker-compose up -d   # MySQL + Redis
 
 # 后端（端口 8080，首次启动自动创建 admin/admin123）
 cd backend && mvn spring-boot:run

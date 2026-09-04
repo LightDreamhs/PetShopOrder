@@ -60,6 +60,21 @@
             <version>${sa-token.version}</version>
         </dependency>
 
+        <!-- Sa-Token 会话持久化到 Redis（重启不掉线 / 多实例共享会话），jackson 序列化 -->
+        <dependency>
+            <groupId>cn.dev33</groupId>
+            <artifactId>sa-token-redis-jackson</artifactId>
+            <version>${sa-token.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-pool2</artifactId>
+        </dependency>
+
         <!-- 阿里云号码认证服务 PNVS（短信验证码发送/核验，同步 SDK） -->
         <dependency>
             <groupId>com.aliyun</groupId>
