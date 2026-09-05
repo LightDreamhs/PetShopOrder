@@ -172,7 +172,7 @@ ALTER TABLE order_item
 实施时与原方案的实际偏差记录：
 
 1. **弹窗形态经验收反馈调整（2026-09-04）**：方案原定「顶部大图 + 缩略图规格卡」，首版照此实施后验收反馈顶图过大。最终形态：**恢复原版「小图头部（76px）+ 文字价格」布局**，小图渲染当前 SKU 图（未配图回退主图），点击小图调用 Vant `showImagePreview` 看大图（占位态不可点，右下角附 `expand-o` 角标）；**规格缩略图卡保留**（56px，随 SKU 图切换）。切换 SKU 时小图与大图预览内容联动。
-2. **DB 迁移未建脚本文件**：按需求方要求，未创建 `migration_sku_img_v1.sql`，改为直接进入 MySQL 容器交互执行两条 `ALTER TABLE`（本地 dev 已执行并验证；生产上线时同样进容器执行）。`init.sql` 已同步更新。
+2. **DB 迁移未建脚本文件**：按需求方要求，未创建 `migration_sku_img_v1.sql`，改为直接进入 MySQL 容器交互执行两条 `ALTER TABLE`（本地 dev 已执行并验证）。生产部署前已补建脚本文件 `backend/sql/migration_sku_img_v1.sql` 供容器执行（见 `deploy/RELEASE-多店上线.md`）。`init.sql` 已同步更新。
 3. **Admin 商品编辑弹窗加宽**：720px → 860px，以容纳「SKU图」列（约 80px），其余列宽未压缩。
 4. **弹窗底部安全区**：未复用全局 `.safe-area-bottom`（避免与 scoped padding 优先级冲突），改在 `.sku-footer` 内直接写 `padding-bottom: calc(8px + env(safe-area-inset-bottom))`。
 5. **验证结果**：`mvn package`、`frontend/h5` 与 `frontend/admin` 的 `pnpm build`（vue-tsc）全部通过；端到端场景（admin 配图/回显/换删图、H5 回退主图、切规格联动大图、全屏预览、加购缩略图、订单快照）在本地（默认店 main）全部验证通过。

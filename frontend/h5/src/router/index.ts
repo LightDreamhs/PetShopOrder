@@ -10,12 +10,6 @@ const router = createRouter({
       meta: { title: '登录' },
     },
     {
-      path: '/shops',
-      name: 'ShopList',
-      component: () => import('@/views/ShopListPage.vue'),
-      meta: { title: '选择门店' },
-    },
-    {
       path: '/',
       name: 'Home',
       component: () => import('@/views/HomePage.vue'),
@@ -56,6 +50,10 @@ const router = createRouter({
       name: 'Appointment',
       component: () => import('@/views/AppointmentPage.vue'),
       meta: { requiresAuth: true, title: '服务预约' },
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      redirect: '/',
     },
   ],
   scrollBehavior() {

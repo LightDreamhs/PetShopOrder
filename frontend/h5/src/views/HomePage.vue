@@ -28,10 +28,6 @@
             </div>
             <transition name="mine-fade">
               <div v-if="showMineMenu" class="mine-dropdown">
-                <div class="mine-item" @click="goShops">
-                  <van-icon name="shop-o" size="18" />
-                  <span>切换门店</span>
-                </div>
                 <div class="mine-item" @click="goOrders">
                   <van-icon name="orders-o" size="18" />
                   <span>我的订单</span>
@@ -169,11 +165,6 @@ function closeMineMenu(e: MouseEvent) {
 function goOrders() {
   showMineMenu.value = false
   router.push('/orders')
-}
-
-function goShops() {
-  showMineMenu.value = false
-  router.push('/shops')
 }
 
 function goAddresses() {

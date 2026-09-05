@@ -1,4 +1,4 @@
-# 生产三容器编排：mysql + backend + frontend(nginx)
+# 生产四容器编排：mysql + redis + backend + frontend(nginx)
 # 用法：docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
 # 首次启动用 nginx.http-only.conf 申请证书（见 init-ssl.sh），完成后 NGINX_CONF 切到 nginx.conf。
 
@@ -27,6 +27,21 @@ services:
     networks:
       - petorder-net
 
+  redis:
+    image: redis:7-alpine
+    container_name: petorder-redis
+    restart: unless-stopped
+    # Sa-Token 会话存储：AOF 持久化防 Redis 自身重启丢会话；
+    # 禁用淘汰策略（保持默认 noeviction），内存吃紧时宁可写入失败也不静默丢会话
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy noeviction
+    # 不映射 6379 到宿主机，仅容器内网络可达
+    expose:
+      - "6379"
+    volumes:
+      - /data/petshop/redis:/data
+    networks:
+      - petorder-net
+
   backend:
     build:
       context: ../backend
@@ -35,6 +50,7 @@ services:
     restart: unless-stopped
     depends_on:
       - mysql
+      - redis
     environment:
       SPRING_PROFILES_ACTIVE: prod
       DB_HOST: mysql
@@ -42,6 +58,8 @@ services:
       DB_NAME: ${DB_NAME:-petshop_order}
       DB_USER: root
       DB_PASSWORD: ${DB_ROOT_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
       UPLOAD_DIR: /app/uploads
       SA_TOKEN_TIMEOUT: ${SA_TOKEN_TIMEOUT:-2592000}
       SA_TOKEN_ACTIVE_TIMEOUT: ${SA_TOKEN_ACTIVE_TIMEOUT:-2592000}
