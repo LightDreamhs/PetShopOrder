@@ -10,7 +10,7 @@
 
 | 项 | 决策 |
 |---|---|
-| 短信 | **暂不切换 aliyun**，保持 log 模式（⚠️ 固定码 123456 可登录任意会员，风险已在 progress.md 重点标注，切换待后续单独安排） |
+| 短信 | ~~暂不切换~~ **已于 2026-09-12 切换 aliyun**（`SMS_PROVIDER=aliyun`，切换后需真机验证登录；固定码 `123456` 通道关闭） |
 | 二江寺店 | **随本次开张，直接营业态创建**（无歇业设计）；顾客入口靠「不发放该店二维码」控制，无参数/旧码落佳兆业店 |
 | 会员等级 | 按佳兆业店现有档位结构在二江寺店做一次性快照新增（不搬会员名单，之后两边独立管理） |
 | 二江寺店坐标/配送/时段/收款码 | 坐标先填大致值可后调；收款码复制佳兆业；配送与时段默认值上线，用户之后在 Admin 精调 |
@@ -72,7 +72,7 @@ vi .env.prod
 
 | 变量 | 操作 |
 |---|---|
-| `SMS_PROVIDER` | **若拍板切换 aliyun**：`log` → `aliyun`（AK/SK 已就绪）；切换后第 8 步必须真机验证登录 |
+| `SMS_PROVIDER` | ~~若拍板切换 aliyun~~ **已切换 `aliyun`（2026-09-12）**，AK/SK 已就绪；切换后第 8 步必须真机验证登录 |
 | Redis 变量 | 无需添加（compose 已内置 `REDIS_HOST: redis`，容器内网直连） |
 
 ## 6. 构建并启动（四容器：mysql + redis + backend + frontend）
@@ -139,6 +139,6 @@ cd deploy && docker compose -f docker-compose.prod.yml --env-file .env.prod up -
 
 ## 11. 上线后收尾
 
-- [ ] `free -h` 复查内存水位（Redis 稳态 <50MB）
-- [ ] 观察 3~7 天后下线旧表：`DROP TABLE system_config_delivery_tier, system_config;`（`system_config_log` 若仍有历史价值可再留）
+- [x] `free -h` 复查内存水位（Redis 稳态 <50MB）
+- [x] 观察 3~7 天后下线旧表：`DROP TABLE system_config_delivery_tier, system_config, system_config_log;`（✅ 已于 2026-09-12 执行，DROP 前已全量备份）
 - [ ] 生产 `git log` 核对与远端 master 一致

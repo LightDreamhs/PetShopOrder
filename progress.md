@@ -1,10 +1,10 @@
 # PetShopOrder 开发进度
 
-> 更新时间：2026-09-06
+> 更新时间：2026-09-12
 
 ## ⚠️ 生产环境待办（重点）
 
-> **【安全提示】生产短信仍为 log 测试模式**：`SMS_PROVIDER=log`，固定验证码 `123456` 可登录任意手机号（即冒充任意会员享受折扣）。阿里云 AK/SK 已配置，仅需把 `deploy/.env.prod` 中 `SMS_PROVIDER` 改为 `aliyun` 并重启 backend，切换后需真机验证登录。**切换前请知悉该风险敞口（自 2026-07-08 上线起存在）**。
+> 【短信】生产已于 **2026-09-12 切换为 aliyun 真实核验**（`SMS_PROVIDER=aliyun`），固定码 `123456` 登录通道关闭。切换后需真机端到端验证一次登录（发码→收码→登录）。
 
 ## 项目概况
 
@@ -22,6 +22,17 @@
 | 存储结构 | 每个 token 三组 key：`satoken:{loginType}:token:{uuid}`（TTL=timeout 30 天绝对有效期）、`satoken:{loginType}:last-active:{uuid}`（TTL=active-timeout 30 天滑动，每请求续期）、`satoken:{loginType}:session:{loginId}`（账号 Session，含管理端 shopId）；C 端 login / 管理端 admin 两套体系按 key 段天然隔离 |
 | 验证 | ① key 结构与 TTL 实测正确（30 天）；② **重启后端，C 端与 Admin 原 cookie 均仍在线**（旧版内存会话此场景必掉线）；③ **重启 Redis 容器，AOF 恢复后会话仍在**。"backend 重启=全员掉线"这一历史已知行为就此作废 |
 | 服务器参考 | 腾讯云 2C2G 实测余量充足（禁用无用服务 fwupd 后 available 880Mi，Redis 稳态 <50MB）；生产接入时 redis 需挂载数据卷 + AOF + maxmemory 256mb/noeviction |
+
+## 多店运营补齐（2026-09-12）
+
+> 二江寺店通知接入 + 飞书卡片带店铺名 + 生产短信切换 + 旧表下线，同批上线。
+
+| 项 | 说明 |
+|---|---|
+| 通知带店铺名 | `NotificationServiceImpl` 注入 `ShopMapper`，按订单 `shopId` 查店铺名（@Async 线程读不到 ShopContext，必须走 DB）。飞书卡片标题改为「佳兆业店 · 🎉 新订单通知」、正文首行加「**店铺**」字段；企微 markdown 同步。订单与预约通知均生效 |
+| 二江寺店 webhook | 生产 SQL 将佳兆业店（shop_id=1）的 `has_qywx_webhook`/`qywx_webhook_url_enc` 复制到二江寺店（shop_id=2）——AES 密钥全局，密文可直接复制，两店共用同一飞书群 |
+| 生产短信切换 | `deploy/.env.prod` `SMS_PROVIDER=log` → `aliyun`，重启 backend 生效；固定码 `123456` 通道关闭 |
+| 旧表下线 | 按 RELEASE 清单观察期满，生产 `DROP TABLE system_config / system_config_delivery_tier / system_config_log`（DROP 前已做全量备份） |
 
 ## 多店改造 — Phase 1~3 已落地（2026-09-03/04）
 

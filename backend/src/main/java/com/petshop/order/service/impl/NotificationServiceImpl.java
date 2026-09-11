@@ -5,8 +5,10 @@ import cn.hutool.crypto.symmetric.AES;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.petshop.order.entity.OrderItem;
 import com.petshop.order.entity.Orders;
+import com.petshop.order.entity.Shop;
 import com.petshop.order.entity.ShopConfig;
 import com.petshop.order.mapper.ShopConfigMapper;
+import com.petshop.order.mapper.ShopMapper;
 import com.petshop.order.service.NotificationService;
 import com.petshop.order.service.dto.AppointmentNotifyInfo;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +36,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 public class NotificationServiceImpl implements NotificationService {
 
     private final ShopConfigMapper shopConfigMapper;
+    private final ShopMapper shopMapper;
     private final ObjectMapper objectMapper;
 
     @Value("${app.webhook.aes-key:PetShop2026Order!}")
@@ -77,6 +80,11 @@ public class NotificationServiceImpl implements NotificationService {
                 return;
             }
 
+            // 两店共用同一通知群，卡片必须标明来源门店
+            Shop shop = shopMapper.selectById(order.getShopId());
+            String shopName = shop != null && shop.getName() != null && !shop.getName().isEmpty()
+                    ? shop.getName() : "未知门店";
+
             String phone = order.getCustomerPhoneSnapshot();
             String customerName = order.getCustomerName();
             String memberInfo = order.getMemberLevelSnapshot() != null ? order.getMemberLevelSnapshot() : "非会员";
@@ -100,10 +108,10 @@ public class NotificationServiceImpl implements NotificationService {
 
             String jsonBody;
             if (isFeishu(webhookUrl)) {
-                jsonBody = buildFeishuCard(order, phone, customerName, memberInfo,
+                jsonBody = buildFeishuCard(order, shopName, phone, customerName, memberInfo,
                         deliveryInfo, deliveryAddress, goodsList, remark, timeStr, appointmentInfo);
             } else {
-                jsonBody = buildQywxMarkdown(order, phone, customerName, memberInfo,
+                jsonBody = buildQywxMarkdown(order, shopName, phone, customerName, memberInfo,
                         deliveryInfo, deliveryAddress, goodsList, remark, timeStr, appointmentInfo);
             }
             if (jsonBody == null) {
@@ -151,7 +159,7 @@ public class NotificationServiceImpl implements NotificationService {
         }
     }
 
-    private String buildFeishuCard(Orders order, String phone, String customerName,
+    private String buildFeishuCard(Orders order, String shopName, String phone, String customerName,
                                     String memberInfo, String deliveryInfo,
                                     String deliveryAddress, String goodsList,
                                     String remark, String timeStr, AppointmentNotifyInfo appointmentInfo) {
@@ -159,11 +167,12 @@ public class NotificationServiceImpl implements NotificationService {
             Map<String, Object> header = new LinkedHashMap<>();
             Map<String, Object> title = new LinkedHashMap<>();
             title.put("tag", "plain_text");
-            title.put("content", appointmentInfo != null ? "📅 新预约通知" : "🎉 新订单通知");
+            title.put("content", shopName + (appointmentInfo != null ? " · 📅 新预约通知" : " · 🎉 新订单通知"));
             header.put("title", title);
             header.put("template", appointmentInfo != null ? "orange" : "turquoise");
 
             StringBuilder md = new StringBuilder();
+            md.append("**店铺**: ").append(shopName).append("\n");
             md.append("**订单号**: ").append(order.getOrderNo()).append("\n");
             md.append("**联系人**: ").append(customerName != null ? customerName : "未填写").append("\n");
             md.append("**电话**: ").append(phone != null ? phone : "未知").append("\n");
@@ -211,13 +220,14 @@ public class NotificationServiceImpl implements NotificationService {
         }
     }
 
-    private String buildQywxMarkdown(Orders order, String phone, String customerName,
+    private String buildQywxMarkdown(Orders order, String shopName, String phone, String customerName,
                                       String memberInfo, String deliveryInfo,
                                       String deliveryAddress, String goodsList,
                                       String remark, String timeStr, AppointmentNotifyInfo appointmentInfo) {
         try {
             StringBuilder content = new StringBuilder();
-            content.append(appointmentInfo != null ? "### 📅 新预约通知\n" : "### 🎉 新订单通知\n");
+            content.append("### ").append(shopName).append(appointmentInfo != null ? " · 📅 新预约通知\n" : " · 🎉 新订单通知\n");
+            content.append("**店铺**: ").append(shopName).append("\n");
             content.append("**订单号**: ").append(order.getOrderNo()).append("\n");
             content.append("**联系人**: ").append(customerName != null ? customerName : "未填写").append("\n");
             content.append("**电话**: ").append(phone != null ? phone : "未知").append("\n");
