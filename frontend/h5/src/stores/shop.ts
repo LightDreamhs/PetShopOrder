@@ -4,9 +4,9 @@ import { getShops } from '@/api/shop'
 import { getStoredShopCode, setStoredShopCode } from '@/utils/shop'
 import type { ShopInfo } from '@/types'
 
-/** 门店对外品牌名（内部店名 ≠ 对外品牌，如佳兆业店对外为「小宠当家」） */
+/** 门店对外品牌名（内部店名 ≠ 对外品牌，如二江寺店对外为「小宠当家」） */
 const SHOP_BRAND_NAMES: Record<string, string> = {
-  main: '小宠当家',
+  erjiangsi: '小宠当家',
 }
 const DEFAULT_BRAND_NAME = '贰掌柜宠物店'
 
