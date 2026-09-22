@@ -4,6 +4,12 @@ import { getShops } from '@/api/shop'
 import { getStoredShopCode, setStoredShopCode } from '@/utils/shop'
 import type { ShopInfo } from '@/types'
 
+/** 门店对外品牌名（内部店名 ≠ 对外品牌，如佳兆业店对外为「小宠当家」） */
+const SHOP_BRAND_NAMES: Record<string, string> = {
+  main: '小宠当家',
+}
+const DEFAULT_BRAND_NAME = '贰掌柜宠物店'
+
 /**
  * 当前门店（H5 多店）。
  * 顾客进店只靠扫码：?s={code} 定店并落 localStorage；无参数时沿用上次门店，
@@ -22,6 +28,11 @@ export const useShopStore = defineStore('shop', () => {
   const fallbackShop = computed(() => shops.value.find((s) => s.status === 'OPEN') || shops.value[0] || null)
 
   const displayShop = computed(() => currentShop.value || fallbackShop.value)
+
+  /** 对外品牌名：按当前店取，未配置的店用默认品牌 */
+  const brandName = computed(
+    () => (displayShop.value && SHOP_BRAND_NAMES[displayShop.value.code]) || DEFAULT_BRAND_NAME,
+  )
 
   async function init() {
     // 1. 扫码参数优先：?s={code}
@@ -61,5 +72,5 @@ export const useShopStore = defineStore('shop', () => {
     }
   }
 
-  return { shops, currentCode, loaded, currentShop, fallbackShop, displayShop, init }
+  return { shops, currentCode, loaded, currentShop, fallbackShop, displayShop, brandName, init }
 })

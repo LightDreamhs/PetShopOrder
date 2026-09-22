@@ -5,8 +5,8 @@
       <div class="home-header">
         <div class="header-left">
           <div class="header-title-row">
-            <img class="header-logo" :src="shopLogo" alt="贰掌柜宠物店" />
-            <h1 class="header-title">贰掌柜宠物店</h1>
+            <img class="header-logo" :src="shopLogo" :alt="shopStore.brandName" />
+            <h1 class="header-title">{{ shopStore.brandName }}</h1>
           </div>
           <span v-if="memberStore.isMember" class="member-badge" :class="memberBadgeClass">
             <van-icon name="crown-o" size="10" />

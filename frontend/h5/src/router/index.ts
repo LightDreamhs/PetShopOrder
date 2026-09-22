@@ -13,7 +13,8 @@ const router = createRouter({
       path: '/',
       name: 'Home',
       component: () => import('@/views/HomePage.vue'),
-      meta: { requiresAuth: true, title: '贰掌柜宠物店' },
+      // 标题用当前店对外品牌名（见 beforeEach 兜底），不在 meta 写死
+      meta: { requiresAuth: true },
     },
     {
       path: '/checkout',
@@ -68,7 +69,8 @@ export function resetAuthCheck() {
 }
 
 router.beforeEach(async (to, _from, next) => {
-  document.title = (to.meta.title as string) || '贰掌柜宠物店'
+  const { useShopStore } = await import('@/stores/shop')
+  document.title = (to.meta.title as string) || useShopStore().brandName
 
   if (!authChecked) {
     const { useAuthStore } = await import('@/stores/auth')

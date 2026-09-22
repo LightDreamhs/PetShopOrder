@@ -3,9 +3,9 @@
     <div class="login-bg-pattern"></div>
     <div class="login-header">
       <div class="login-logo-wrap">
-        <img class="login-logo" :src="shopLogo" alt="贰掌柜宠物店" />
+        <img class="login-logo" :src="shopLogo" :alt="shopStore.brandName" />
       </div>
-      <h1 class="login-title">贰掌柜宠物店</h1>
+      <h1 class="login-title">{{ shopStore.brandName }}</h1>
     </div>
 
     <div class="login-card">
@@ -66,12 +66,14 @@ import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { showToast } from 'vant'
 import { useAuthStore } from '@/stores/auth'
+import { useShopStore } from '@/stores/shop'
 import { useSmsCountdown } from '@/composables/useSmsCountdown'
 import shopLogo from '@/assets/shop-logo.jpg'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const shopStore = useShopStore()
 
 const phone = ref('')
 const code = ref('')
