@@ -3,7 +3,7 @@
     <div class="login-bg-pattern"></div>
     <div class="login-header">
       <div class="login-logo-wrap">
-        <img class="login-logo" :src="shopLogo" :alt="shopStore.brandName" />
+        <img class="login-logo" :src="shopStore.shopLogo" :alt="shopStore.brandName" />
       </div>
       <h1 class="login-title">{{ shopStore.brandName }}</h1>
     </div>
@@ -68,7 +68,6 @@ import { showToast } from 'vant'
 import { useAuthStore } from '@/stores/auth'
 import { useShopStore } from '@/stores/shop'
 import { useSmsCountdown } from '@/composables/useSmsCountdown'
-import shopLogo from '@/assets/shop-logo.jpg'
 
 const router = useRouter()
 const route = useRoute()

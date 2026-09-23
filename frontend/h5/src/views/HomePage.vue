@@ -5,7 +5,7 @@
       <div class="home-header">
         <div class="header-left">
           <div class="header-title-row">
-            <img class="header-logo" :src="shopLogo" :alt="shopStore.brandName" />
+            <img class="header-logo" :src="shopStore.shopLogo" :alt="shopStore.brandName" />
             <h1 class="header-title">{{ shopStore.brandName }}</h1>
           </div>
           <span v-if="memberStore.isMember" class="member-badge" :class="memberBadgeClass">
@@ -105,7 +105,6 @@ import CartBar from '@/components/common/CartBar.vue'
 import IcpFooter from '@/components/common/IcpFooter.vue'
 import SkuSelectorPopup from '@/components/product/SkuSelectorPopup.vue'
 import AdPopup from '@/components/common/AdPopup.vue'
-import shopLogo from '@/assets/shop-logo.jpg'
 
 const router = useRouter()
 const authStore = useAuthStore()

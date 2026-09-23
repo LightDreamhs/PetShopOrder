@@ -2,11 +2,17 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { getShops } from '@/api/shop'
 import { getStoredShopCode, setStoredShopCode } from '@/utils/shop'
+import defaultLogo from '@/assets/shop-logo.jpg'
+import erjiangsiLogo from '@/assets/shop-logo-erjiangsi.jpg'
 import type { ShopInfo } from '@/types'
 
 /** 门店对外品牌名（内部店名 ≠ 对外品牌，如二江寺店对外为「小宠当家」） */
 const SHOP_BRAND_NAMES: Record<string, string> = {
   erjiangsi: '小宠当家',
+}
+/** 门店 logo（未配置的店用默认 logo，如佳兆业店） */
+const SHOP_LOGOS: Record<string, string> = {
+  erjiangsi: erjiangsiLogo,
 }
 const DEFAULT_BRAND_NAME = '贰掌柜宠物店'
 
@@ -32,6 +38,11 @@ export const useShopStore = defineStore('shop', () => {
   /** 对外品牌名：按当前店取，未配置的店用默认品牌 */
   const brandName = computed(
     () => (displayShop.value && SHOP_BRAND_NAMES[displayShop.value.code]) || DEFAULT_BRAND_NAME,
+  )
+
+  /** 对外 logo：按当前店取，未配置的店用默认 logo */
+  const shopLogo = computed(
+    () => (displayShop.value && SHOP_LOGOS[displayShop.value.code]) || defaultLogo,
   )
 
   async function init() {
@@ -72,5 +83,5 @@ export const useShopStore = defineStore('shop', () => {
     }
   }
 
-  return { shops, currentCode, loaded, currentShop, fallbackShop, displayShop, brandName, init }
+  return { shops, currentCode, loaded, currentShop, fallbackShop, displayShop, brandName, shopLogo, init }
 })
