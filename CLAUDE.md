@@ -14,6 +14,7 @@
 ## 包管理器
 
 - 前端使用 **pnpm**，不是 npm
+- 前端（H5/Admin）**本地构建后上传产物**部署，服务器不做 node 构建（`deploy/Dockerfile.frontend` 仅 COPY dist；流程见 `deploy/README.md`「更新前端」）
 
 ## 数据库表结构
 

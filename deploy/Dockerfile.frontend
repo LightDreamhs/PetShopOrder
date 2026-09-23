@@ -1,25 +1,15 @@
 # syntax=docker/dockerfile:1
-# 前端镜像：三阶段构建（pnpm 构建 H5 + Admin → nginx 托管静态产物）
-# 构建上下文为项目根（compose 中 build.context 设为 ..），以便 COPY frontend 整个目录。
-
-# ===== 构建阶段 =====
-FROM node:20-alpine AS builder
-RUN npm install -g pnpm
-WORKDIR /build
-# .dockerignore（项目根）已排除 node_modules / dist，仅拷源码
-COPY frontend ./frontend
-
-# 构建 H5（部署在根域 https://2zg.site/，base 默认 /）
-WORKDIR /build/frontend/h5
-RUN pnpm install && pnpm build
-
-# 构建 Admin（隐秘路径，注入 VITE_BASE_URL）
-WORKDIR /build/frontend/admin
-RUN pnpm install && VITE_BASE_URL=/petshop-admin-7x9k2/ pnpm build
+# 前端镜像：nginx 托管「本地预构建」的静态产物。
+# 服务器 2C2G 跑不动 node 构建（2026-09-23 拍板）：前端一律本地构建后上传产物，
+# 本镜像只做 COPY，不再镜像内 pnpm install/build。
+#   本地构建：cd frontend/h5   && pnpm build
+#             cd frontend/admin && VITE_BASE_URL=/petshop-admin-7x9k2/ pnpm build
+#   上传产物：两个 dist/. 分别 scp 到服务器仓库同路径（见 deploy/README.md「更新前端」）
+# .dockerignore 已放行 frontend/{h5,admin}/dist，仅源码之外额外拷贝这两个产物目录。
 
 # ===== 运行阶段 =====
 FROM nginx:alpine
 # H5 产物 → nginx 根目录；Admin 产物 → 隐秘路径目录（nginx.conf 中 alias 指向）
-COPY --from=builder /build/frontend/h5/dist /usr/share/nginx/html
-COPY --from=builder /build/frontend/admin/dist /usr/share/nginx/admin
+COPY frontend/h5/dist /usr/share/nginx/html
+COPY frontend/admin/dist /usr/share/nginx/admin
 EXPOSE 80

@@ -11,9 +11,11 @@ deploy/
 docs/
 backend-planning/
 
-# 依赖与本地构建产物（镜像内重新 pnpm install/build）
+# 依赖与本地构建产物（前端 dist 例外：本地构建后上传，镜像直接 COPY，见 deploy/Dockerfile.frontend）
 **/node_modules
 **/dist
+!frontend/h5/dist
+!frontend/admin/dist
 
 # 文档
 *.md

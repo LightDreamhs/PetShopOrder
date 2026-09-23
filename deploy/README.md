@@ -100,6 +100,25 @@ cd deploy
 docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build backend
 ```
 
+### 更新前端（H5 / Admin：本地构建 → 上传产物 → 重建容器）
+
+> 服务器 2C2G 跑不动 node 构建（2026-09-23 拍板）：前端一律**本地构建**，
+> `Dockerfile.frontend` 只 COPY 产物（`.dockerignore` 已放行 `frontend/{h5,admin}/dist`）。
+> 注意：服务器上 `git pull` 只更新代码，**前端产物必须按下面步骤单独上传**。
+
+```bash
+# 1) 本地构建（Git Bash，项目根目录）
+cd frontend/h5 && pnpm build && cd ../admin && VITE_BASE_URL=/petshop-admin-7x9k2/ pnpm build && cd ../..
+
+# 2) 上传产物（dist/. 写法保证覆盖内容而不嵌套目录）
+ssh ubuntu@106.53.178.130 "mkdir -p ~/PetShopOrder/frontend/h5/dist ~/PetShopOrder/frontend/admin/dist"
+scp -r frontend/h5/dist/.  ubuntu@106.53.178.130:~/PetShopOrder/frontend/h5/dist/
+scp -r frontend/admin/dist/. ubuntu@106.53.178.130:~/PetShopOrder/frontend/admin/dist/
+
+# 3) 服务器重建 frontend 容器（纯 COPY，秒级）
+ssh ubuntu@106.53.178.130 "cd ~/PetShopOrder/deploy && docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build frontend"
+```
+
 ### 重启服务
 ```bash
 docker compose -f docker-compose.prod.yml --env-file .env.prod restart backend
