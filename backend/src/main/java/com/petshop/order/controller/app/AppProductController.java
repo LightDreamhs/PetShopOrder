@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -73,7 +74,18 @@ public class AppProductController {
             dealPrice = calcDealPrice(cheapest.getPrice(), cheapest.getMemberPrice(), discountRate, product.getType());
         }
 
-        Map<String, Object> result = Map.of(
+        // GOODS 固定会员价取最低价 SKU 的 member_price，供非会员角标展示
+        String memberPrice = null;
+        if ("GOODS".equals(product.getType()) && !skus.isEmpty()) {
+            Sku cheapest = skus.stream()
+                    .min(Comparator.comparing(Sku::getPrice))
+                    .orElse(skus.get(0));
+            if (cheapest.getMemberPrice() != null) {
+                memberPrice = cheapest.getMemberPrice().toPlainString();
+            }
+        }
+
+        Map<String, Object> result = new HashMap<>(Map.of(
                 "id", product.getId(),
                 "name", product.getName(),
                 "description", product.getDescription() != null ? product.getDescription() : "",
@@ -83,16 +95,23 @@ public class AppProductController {
                 "supportDelivery", product.getSupportDelivery() != null && product.getSupportDelivery() == 1,
                 "price", price,
                 "dealPrice", dealPrice,
-                "skus", skus.stream().map(s -> Map.<String, Object>of(
-                        "id", s.getId(),
-                        "specName", s.getSpecName(),
-                        "price", s.getPrice().toPlainString(),
-                        "imgUrl", s.getImgUrl() != null ? s.getImgUrl() : "",
-                        "duration", s.getDuration() != null ? s.getDuration() : 0,
-                        "dealPrice", calcDealPrice(s.getPrice(), s.getMemberPrice(), discountRate, product.getType())
-                )).toList()
-        );
+                "skus", skus.stream().map(s -> toSkuMap(s, discountRate, product.getType())).toList()
+        ));
+        result.put("memberPrice", memberPrice);
         return R.ok(result);
+    }
+
+    private Map<String, Object> toSkuMap(Sku s, BigDecimal discountRate, String type) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", s.getId());
+        map.put("specName", s.getSpecName());
+        map.put("price", s.getPrice().toPlainString());
+        map.put("imgUrl", s.getImgUrl() != null ? s.getImgUrl() : "");
+        map.put("duration", s.getDuration() != null ? s.getDuration() : 0);
+        map.put("dealPrice", calcDealPrice(s.getPrice(), s.getMemberPrice(), discountRate, type));
+        map.put("memberPrice", "GOODS".equals(type) && s.getMemberPrice() != null
+                ? s.getMemberPrice().toPlainString() : null);
+        return map;
     }
 
     private BigDecimal getMemberDiscountRate() {
@@ -142,17 +161,26 @@ public class AppProductController {
         int skuCount = p.getSkuCount() != null ? p.getSkuCount() : 0;
 
         String dealPrice = price;
-        if (discountRate != null && p.getMinPrice() != null) {
+        String memberPrice = null;
+        // 会员要算 dealPrice（任意类型），非会员要取 GOODS 固定会员价做角标展示，两种情况都需要 SKU
+        boolean needSkus = p.getMinPrice() != null
+                && (discountRate != null || "GOODS".equals(p.getType()));
+        if (needSkus) {
             List<Sku> skus = skuMapper.selectByProductId(p.getId(), ShopContext.require());
             if (!skus.isEmpty()) {
                 Sku cheapest = skus.stream()
                         .min(Comparator.comparing(Sku::getPrice))
                         .orElse(skus.get(0));
-                dealPrice = calcDealPrice(cheapest.getPrice(), cheapest.getMemberPrice(), discountRate, p.getType());
+                if (discountRate != null) {
+                    dealPrice = calcDealPrice(cheapest.getPrice(), cheapest.getMemberPrice(), discountRate, p.getType());
+                }
+                if ("GOODS".equals(p.getType()) && cheapest.getMemberPrice() != null) {
+                    memberPrice = cheapest.getMemberPrice().toPlainString();
+                }
             }
         }
 
-        return Map.of(
+        Map<String, Object> result = new HashMap<>(Map.of(
                 "id", p.getId(),
                 "name", p.getName(),
                 "description", p.getDescription() != null ? p.getDescription() : "",
@@ -163,6 +191,8 @@ public class AppProductController {
                 "price", price,
                 "dealPrice", dealPrice,
                 "hasSpec", skuCount > 1
-        );
+        ));
+        result.put("memberPrice", memberPrice);
+        return result;
     }
 }

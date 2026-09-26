@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>会员价展示效果预览 · 非会员视角（仅 GOODS）</title>
+<style>
+  :root {
+    --primary: #ff5a00;
+    --primary-light: #fff5ef;
+    --primary-dark: #e65100;
+    --bg: #f4f4f4;
+    --text: #1a1a1a;
+    --text-secondary: #666666;
+    --text-muted: #999999;
+    --border: #eeeeee;
+    --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --gold: #ffd66e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: #ececec;
+    color: var(--text);
+    padding: 32px 24px 64px;
+  }
+
+  /* ===== 页头 ===== */
+  .page-head { text-align: center; margin-bottom: 28px; }
+  .page-head h1 { font-size: 20px; font-weight: 700; }
+  .page-head p { margin-top: 6px; font-size: 12px; color: var(--text-secondary); }
+  .page-head code {
+    background: #fff; border: 1px solid var(--border); border-radius: 4px;
+    padding: 1px 5px; font-size: 11px; color: var(--primary-dark);
+  }
+  .identity-toggle {
+    margin-top: 14px; display: inline-flex; align-items: center; gap: 10px;
+    background: #fff; border: 1px solid var(--border); border-radius: 20px;
+    padding: 6px 8px 6px 16px; box-shadow: var(--shadow-sm); font-size: 12px; color: var(--text-secondary);
+  }
+  .seg-group { display: inline-flex; background: #f2f2f2; border-radius: 14px; padding: 2px; }
+  .seg {
+    border: none; background: transparent; padding: 5px 16px; font-size: 12px;
+    border-radius: 12px; color: var(--text-secondary); cursor: pointer; transition: all .2s;
+  }
+  .seg.active { background: var(--primary); color: #fff; font-weight: 600; }
+
+  /* ===== 舞台布局 ===== */
+  .stage { display: flex; flex-wrap: wrap; gap: 40px; justify-content: center; align-items: flex-start; }
+  .phone-wrap { width: 375px; }
+  .caption { font-size: 14px; font-weight: 700; margin-bottom: 4px; text-align: center; }
+  .caption .rec { color: var(--primary); font-size: 11px; font-weight: 600; vertical-align: 2px; margin-left: 4px; }
+  .sub-caption { font-size: 11px; color: var(--text-muted); text-align: center; margin-bottom: 12px; }
+
+  /* ===== 手机框 ===== */
+  .phone {
+    width: 375px; background: var(--bg); border-radius: 24px; overflow: hidden;
+    box-shadow: var(--shadow-lg); border: 1px solid #ddd; padding-bottom: 12px;
+  }
+  .brand-bar {
+    background: #fff; display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+  }
+  .brand-name { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; }
+  .brand-dot {
+    width: 22px; height: 22px; border-radius: 6px; background: var(--primary);
+    color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; font-weight: 700;
+  }
+  .join-btn {
+    background: linear-gradient(90deg, var(--primary), #ff8a3d); color: #fff; border: none;
+    border-radius: 14px; padding: 5px 12px; font-size: 11px; font-weight: 600; cursor: pointer;
+  }
+
+  /* ===== 会员引导条（仅策略A） ===== */
+  .member-strip {
+    margin: 8px 12px; background: var(--primary-light); border: 1px solid #ffe3cf;
+    border-radius: var(--radius-sm); padding: 7px 10px; display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--primary-dark); cursor: pointer;
+  }
+  .member-strip svg { flex-shrink: 0; }
+  .member-strip .chev { margin-left: auto; color: #d8a26b; }
+
+  /* ===== 商品卡片（还原 ProductCard 结构） ===== */
+  .card {
+    display: flex; gap: 12px; padding: 12px; margin: 8px 12px;
+    background: #fff; border-radius: var(--radius-md); box-shadow: var(--shadow-sm);
+  }
+  .thumb {
+    flex-shrink: 0; width: 76px; height: 76px; border-radius: var(--radius-sm);
+    background: linear-gradient(135deg, #fafafa, #f0f0f0);
+    display: flex; align-items: center; justify-content: center; font-size: 30px;
+  }
+  .card-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; }
+  .card-name { font-size: 14px; font-weight: 600; line-height: 1.4; }
+  .card-desc { margin-top: 2px; font-size: 12px; color: var(--text-muted); line-height: 1.4;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .price-row { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; }
+  .price-group { display: flex; align-items: baseline; min-width: 0; flex-wrap: wrap; row-gap: 3px; }
+  .price-symbol { color: var(--primary); font-size: 12px; font-weight: 700; }
+  .price-deal { color: var(--primary); font-size: 18px; font-weight: 800; line-height: 1; letter-spacing: -0.5px; }
+  .price-deal-cent { color: var(--primary); font-size: 12px; font-weight: 700; }
+  .price-from { color: var(--primary); font-size: 11px; font-weight: 500; margin-left: 1px; }
+  .price-original { color: var(--text-muted); font-size: 11px; text-decoration: line-through; margin-left: 4px; }
+  .buy-btn {
+    flex-shrink: 0; background: var(--primary); color: #fff; border: none; border-radius: 14px;
+    padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer; min-width: 44px; min-height: 28px;
+    transition: background .2s;
+  }
+  .buy-btn:hover { background: var(--primary-dark); }
+
+  /* ===== 策略A：会员价角标 ===== */
+  .member-badge {
+    display: inline-flex; align-items: center; gap: 3px; margin-left: 4px;
+    background: var(--primary-light); color: var(--primary);
+    font-size: 10.5px; font-weight: 600; padding: 2px 6px; border-radius: 4px; white-space: nowrap;
+  }
+  .member-badge svg { flex-shrink: 0; }
+
+  /* ===== 策略B：会员价为主价 ===== */
+  .vip-tag {
+    display: inline-flex; align-items: center; align-self: center;
+    background: var(--text); color: var(--gold); font-size: 10px; font-weight: 600;
+    letter-spacing: .5px; padding: 2px 6px; border-radius: 4px; margin-right: 5px; white-space: nowrap;
+  }
+  .vip-line { display: flex; align-items: baseline; }
+
+  /* ===== 身份切换（仅作用于策略A） ===== */
+  .member-price-a { display: none; }
+  body.is-member [data-strategy="a"] .guest-price { display: none; }
+  body.is-member [data-strategy="a"] .member-price-a { display: flex; }
+
+  /* ===== 说明注记 ===== */
+  .notes { margin-top: 10px; font-size: 12px; color: var(--text-secondary); line-height: 1.9; padding: 0 4px; }
+  .notes b { color: var(--text); }
+  .notes .tag { color: var(--primary-dark); }
+  .notes .warn { color: #c0392b; }
+
+  /* ===== SKU 弹窗 mock ===== */
+  .popup-section { margin-top: 48px; display: flex; flex-direction: column; align-items: center; }
+  .popup {
+    width: 375px; background: #fff; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+    padding: 16px; position: relative;
+  }
+  .popup-close { position: absolute; top: 14px; right: 16px; color: var(--text-muted); font-size: 18px; line-height: 1; cursor: pointer; }
+  .popup-title { font-size: 15px; font-weight: 700; }
+  .popup-price-row { margin-top: 10px; display: flex; align-items: baseline; }
+  .popup-price-row .price-deal { font-size: 24px; }
+  .spec-label { margin-top: 16px; font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+  .spec-chips { margin-top: 8px; display: flex; gap: 8px; }
+  .chip {
+    padding: 6px 14px; border-radius: 6px; font-size: 12px; border: 1px solid var(--border);
+    background: #f7f7f7; color: var(--text); cursor: pointer;
+  }
+  .chip.active { border-color: var(--primary); background: var(--primary-light); color: var(--primary); font-weight: 600; }
+  .popup-btn {
+    margin-top: 18px; width: 100%; background: var(--primary); color: #fff; border: none;
+    border-radius: 22px; padding: 11px 0; font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  .popup-btn:hover { background: var(--primary-dark); }
+</style>
+</head>
+<body>
+
+<header class="page-head">
+  <h1>会员价展示效果预览 · 非会员视角</h1>
+  <p>范围：仅 GOODS 商品显示固定会员价（取 SKU 的 <code>member_price</code>），SERVICE 商品保持原样</p>
+  <div class="identity-toggle">
+    模拟身份（对比策略 A 的两种渲染）：
+    <span class="seg-group">
+      <button class="seg active" data-role="guest">非会员 isMember=false</button>
+      <button class="seg" data-role="member">会员 isMember=true</button>
+    </span>
+  </div>
+</header>
+
+<main class="stage">
+
+  <!-- ============ 策略 A ============ -->
+  <section class="phone-wrap">
+    <div class="caption">策略 A <span class="rec">推荐</span></div>
+    <div class="sub-caption">售价为主价 + 会员价角标（信息透明，非会员不被误导）</div>
+    <div class="phone" data-strategy="a">
+      <div class="brand-bar">
+        <div class="brand-name"><span class="brand-dot">宠</span>小宠当家</div>
+        <button class="join-btn">开通会员</button>
+      </div>
+
+      <div class="member-strip">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="#ff5a00"><path d="M3 18h18l-1.6-9.2-4.7 3.6L12 5 9.3 12.4 4.6 8.8 3 18zm1.4 2h15.2v1.6H4.4V20z"/></svg>
+        开通会员，宠物好物立享会员价
+        <svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+      </div>
+
+      <!-- GOODS + 会员价 -->
+      <div class="card">
+        <div class="thumb">🦴</div>
+        <div class="card-info">
+          <div class="card-name">冻干鸡胸肉 100g</div>
+          <div class="card-desc">单一肉源 · 高蛋白猫咪零食</div>
+          <div class="price-row">
+            <!-- 非会员：售价 + 会员价角标 -->
+            <div class="price-group guest-price">
+              <span class="price-symbol">¥</span><span class="price-deal">39</span><span class="price-deal-cent">.90</span>
+              <span class="member-badge">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h18l-1.6-9.2-4.7 3.6L12 5 9.3 12.4 4.6 8.8 3 18z"/></svg>
+                会员价 ¥35.90
+              </span>
+            </div>
+            <!-- 会员：会员价为主 + 划线原价（现有 hasDiscount 逻辑） -->
+            <div class="price-group member-price-a">
+              <span class="price-symbol">¥</span><span class="price-deal">35</span><span class="price-deal-cent">.90</span>
+              <span class="price-original">¥39.90</span>
+            </div>
+            <button class="buy-btn">选购</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- GOODS 多规格 + 会员价 -->
+      <div class="card">
+        <div class="thumb">🍖</div>
+        <div class="card-info">
+          <div class="card-name">全价幼猫粮 鸡肉配方</div>
+          <div class="card-desc">1.5kg / 3kg 可选 · 助力健康发育</div>
+          <div class="price-row">
+            <div class="price-group guest-price">
+              <span class="price-symbol">¥</span><span class="price-deal">89</span><span class="price-deal-cent">.00</span>
+              <span class="price-from">起</span>
+              <span class="member-badge">
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h18l-1.6-9.2-4.7 3.6L12 5 9.3 12.4 4.6 8.8 3 18z"/></svg>
+                会员价 ¥79.00 起
+              </span>
+            </div>
+            <div class="price-group member-price-a">
+              <span class="price-symbol">¥</span><span class="price-deal">79</span><span class="price-deal-cent">.00</span>
+              <span class="price-from">起</span>
+              <span class="price-original">¥89.00</span>
+            </div>
+            <button class="buy-btn">选规格</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SERVICE：完全不变 -->
+      <div class="card">
+        <div class="thumb">✂️</div>
+        <div class="card-info">
+          <div class="card-name">精致洗护（小型犬）</div>
+          <div class="card-desc">洗澡 + 造型 · 约 90 分钟</div>
+          <div class="price-row">
+            <div class="price-group">
+              <span class="price-symbol">¥</span><span class="price-deal">128</span><span class="price-deal-cent">.00</span>
+              <span class="price-from">起</span>
+            </div>
+            <button class="buy-btn">去预约</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- GOODS 无会员价：兜底，不显示角标 -->
+      <div class="card">
+        <div class="thumb">🐱</div>
+        <div class="card-info">
+          <div class="card-name">瓦楞纸猫抓板</div>
+          <div class="card-desc">耐磨瓦楞 · 附赠猫薄荷</div>
+          <div class="price-row">
+            <div class="price-group">
+              <span class="price-symbol">¥</span><span class="price-deal">29</span><span class="price-deal-cent">.90</span>
+            </div>
+            <button class="buy-btn">选购</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="notes">
+      · 非会员：主价=售价，旁边加「👑会员价」角标，接口新增 <span class="tag">memberPrice</span> 与 <span class="tag">isMember=false</span><br>
+      · 会员：走现有 <span class="tag">dealPrice</span> 逻辑（会员价为主 + 划线原价），点上方开关可预览<br>
+      · SERVICE 商品与未设会员价的 GOODS：不渲染角标，完全兜底
+    </div>
+  </section>
+
+  <!-- ============ 策略 B ============ -->
+  <section class="phone-wrap">
+    <div class="caption">策略 B</div>
+    <div class="sub-caption">会员价为主价 + 划线原价（山姆风，转化更冲，需注意合规）</div>
+    <div class="phone" data-strategy="b">
+      <div class="brand-bar">
+        <div class="brand-name"><span class="brand-dot">宠</span>小宠当家</div>
+        <button class="join-btn">开通会员</button>
+      </div>
+
+      <!-- GOODS + 会员价 -->
+      <div class="card">
+        <div class="thumb">🦴</div>
+        <div class="card-info">
+          <div class="card-name">冻干鸡胸肉 100g</div>
+          <div class="card-desc">单一肉源 · 高蛋白猫咪零食</div>
+          <div class="price-row">
+            <div class="price-group">
+              <span class="vip-line">
+                <span class="vip-tag">会员价</span>
+                <span class="price-symbol">¥</span><span class="price-deal">35</span><span class="price-deal-cent">.90</span>
+              </span>
+              <span class="price-original">¥39.90</span>
+            </div>
+            <button class="buy-btn">选购</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- GOODS 多规格 + 会员价 -->
+      <div class="card">
+        <div class="thumb">🍖</div>
+        <div class="card-info">
+          <div class="card-name">全价幼猫粮 鸡肉配方</div>
+          <div class="card-desc">1.5kg / 3kg 可选 · 助力健康发育</div>
+          <div class="price-row">
+            <div class="price-group">
+              <span class="vip-line">
+                <span class="vip-tag">会员价</span>
+                <span class="price-symbol">¥</span><span class="price-deal">79</span><span class="price-deal-cent">.00</span>
+                <span class="price-from">起</span>
+              </span>
+              <span class="price-original">¥89.00</span>
+            </div>
+            <button class="buy-btn">选规格</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SERVICE：完全不变 -->
+      <div class="card">
+        <div class="thumb">✂️</div>
+        <div class="card-info">
+          <div class="card-name">精致洗护（小型犬）</div>
+          <div class="card-desc">洗澡 + 造型 · 约 90 分钟</div>
+          <div class="price-row">
+            <div class="price-group">
+              <span class="price-symbol">¥</span><span class="price-deal">128</span><span class="price-deal-cent">.00</span>
+              <span class="price-from">起</span>
+            </div>
+            <button class="buy-btn">去预约</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- GOODS 无会员价：兜底 -->
+      <div class="card">
+        <div class="thumb">🐱</div>
+        <div class="card-info">
+          <div class="card-name">瓦楞纸猫抓板</div>
+          <div class="card-desc">耐磨瓦楞 · 附赠猫薄荷</div>
+          <div class="price-row">
+            <div class="price-group">
+              <span class="price-symbol">¥</span><span class="price-deal">29</span><span class="price-deal-cent">.90</span>
+            </div>
+            <button class="buy-btn">选购</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="notes">
+      · 非会员/会员看到<b>同一价格</b>（与身份无关），主价为会员价 + 黑金「会员价」标签<br>
+      · <span class="warn">风险</span>：非会员加购后结算价是 ¥39.90，与卡片主价不符，易引发客诉；划线价对外展示需确保真实有依据（广告法）
+    </div>
+  </section>
+</main>
+
+<!-- ============ SKU 弹窗价格区（策略 A） ============ -->
+<section class="popup-section">
+  <div class="caption" style="margin-bottom:12px;">SKU 选购弹窗 · 价格区同步效果（策略 A，非会员）</div>
+  <div class="popup">
+    <span class="popup-close">×</span>
+    <div class="popup-title">冻干鸡胸肉 100g</div>
+    <div class="popup-price-row">
+      <span class="price-symbol" style="font-size:14px;">¥</span><span class="price-deal">39</span><span class="price-deal-cent">.90</span>
+      <span class="member-badge" style="font-size:11px; padding:3px 8px; margin-left:8px; align-self:center;">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h18l-1.6-9.2-4.7 3.6L12 5 9.3 12.4 4.6 8.8 3 18z"/></svg>
+        会员价 ¥35.90
+      </span>
+    </div>
+    <div class="spec-label">规格</div>
+    <div class="spec-chips">
+      <span class="chip active">100g</span>
+      <span class="chip">200g</span>
+    </div>
+    <button class="popup-btn">加入购物车</button>
+  </div>
+  <div class="notes" style="max-width:375px;">
+    · SkuSelectorPopup 与 CartDrawer 价格区用同一套角标组件，保证列表/弹窗/购物车展示一致
+  </div>
+</section>
+
+<script>
+  const segs = document.querySelectorAll('.seg');
+  segs.forEach(btn => btn.addEventListener('click', () => {
+    document.body.classList.toggle('is-member', btn.dataset.role === 'member');
+    segs.forEach(b => b.classList.toggle('active', b === btn));
+  }));
+</script>
+</body>
+</html>

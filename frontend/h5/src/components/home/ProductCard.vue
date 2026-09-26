@@ -15,6 +15,12 @@
           <span class="price-deal">{{ product.dealPrice.replace(/^(\d+)\.(\d{2})$/, '$1') }}</span>
           <span class="price-deal-cent">.{{ product.dealPrice.replace(/^(\d+)\.(\d{2})$/, '$2') }}</span>
           <span v-if="product.hasSpec" class="price-from">起</span>
+          <MemberPriceBadge
+            :product-type="product.type"
+            :member-price="product.memberPrice"
+            :original-price="product.price"
+            :from="product.hasSpec"
+          />
           <span v-if="hasDiscount(product.price, product.dealPrice)" class="price-original">
             ¥{{ product.price }}
           </span>
@@ -42,6 +48,7 @@
 import type { Product } from '@/types'
 import { computed } from 'vue'
 import { usePriceDisplay } from '@/composables/usePriceDisplay'
+import MemberPriceBadge from '@/components/common/MemberPriceBadge.vue'
 
 const props = defineProps<{
   product: Product

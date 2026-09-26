@@ -17,7 +17,14 @@
           </div>
           <div class="sku-price-info">
             <div class="sku-name">{{ product?.name }}</div>
-            <div class="sku-price">{{ formatPrice(selectedSku?.dealPrice ?? product?.skus[0]?.dealPrice ?? '0') }}</div>
+            <div class="sku-price-row">
+              <div class="sku-price">{{ formatPrice(selectedSku?.dealPrice ?? product?.skus[0]?.dealPrice ?? '0') }}</div>
+              <MemberPriceBadge
+                :product-type="product?.type ?? 'GOODS'"
+                :member-price="selectedSku?.memberPrice ?? product?.skus[0]?.memberPrice ?? null"
+                :original-price="selectedSku?.price ?? product?.skus[0]?.price ?? '0'"
+              />
+            </div>
             <div v-if="product?.description" class="sku-desc">{{ product.description }}</div>
           </div>
         </div>
@@ -69,6 +76,7 @@ import { showToast, showImagePreview } from 'vant'
 import type { ProductDetail, SkuPrice } from '@/types'
 import { usePriceDisplay } from '@/composables/usePriceDisplay'
 import { useCartStore } from '@/stores/cart'
+import MemberPriceBadge from '@/components/common/MemberPriceBadge.vue'
 
 const props = defineProps<{
   product: ProductDetail | null
@@ -215,6 +223,13 @@ function handleAddToCart() {
   font-weight: 600;
   color: $text;
   line-height: 1.4;
+}
+
+.sku-price-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
 .sku-price {

@@ -24,6 +24,8 @@ export interface Product {
   supportDelivery: boolean
   price: string
   dealPrice: string
+  // GOODS 固定会员价（最低价 SKU 的 member_price），非会员角标展示用；SERVICE 为 null
+  memberPrice: string | null
   hasSpec: boolean
 }
 
@@ -35,6 +37,7 @@ export interface SkuPrice {
   imgUrl: string | null
   duration: number | null
   dealPrice: string
+  memberPrice: string | null
 }
 
 // 商品详情
@@ -46,6 +49,7 @@ export interface ProductDetail {
   type: 'GOODS' | 'SERVICE'
   serviceCategory: 'MAIN_SERVICE' | 'ADDON_SERVICE' | '' | null
   supportDelivery: boolean
+  memberPrice: string | null
   skus: SkuPrice[]
 }
 
