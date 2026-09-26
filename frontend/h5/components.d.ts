@@ -17,6 +17,7 @@ declare module 'vue' {
     CartDrawer: typeof import('./src/components/common/CartDrawer.vue')['default']
     CategorySidebar: typeof import('./src/components/home/CategorySidebar.vue')['default']
     IcpFooter: typeof import('./src/components/common/IcpFooter.vue')['default']
+    MemberPriceBadge: typeof import('./src/components/common/MemberPriceBadge.vue')['default']
     PriceBreakdown: typeof import('./src/components/checkout/PriceBreakdown.vue')['default']
     ProductCard: typeof import('./src/components/home/ProductCard.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

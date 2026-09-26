@@ -15,6 +15,7 @@
 
 - 前端使用 **pnpm**，不是 npm
 - 前端（H5/Admin）**本地构建后上传产物**部署（`deploy/Dockerfile.frontend` 仅 COPY dist；流程见 `deploy/README.md`「更新前端」）。admin base 写死在 vite.config.ts，禁止 VITE_BASE_URL/--base 注入（Git Bash MSYS 会污染产物）。应急时服务器可用 node 容器构建 admin（`deploy/emergency-build-admin.sh`）；H5 产物以服务器为准勿轻动；Dockerfile 禁止加 `# syntax=` 声明（服务器访问 Docker Hub 被墙会卡死 build）
+- **backend 同样本地构建，禁止在服务器上 `docker compose --build backend`**：镜像内 Maven 要从 Central 全量拉依赖（直连 ~126KB/s、冷启动 >1h、层缓存被 prune 后必触发）且 2C2G 编译易 OOM（2026-09-26 实测卡死）。用 `bash deploy/deploy-backend.sh`：本地 mvn 打包 → 上传 jar → 服务器用 `backend/Dockerfile.runtime` 组装运行镜像（秒级）→ compose `--no-deps --no-build` 重建容器。改 Dockerfile 运行阶段时必须同步 `Dockerfile.runtime`；详见 `deploy/README.md`「更新 backend」
 
 ## 数据库表结构
 

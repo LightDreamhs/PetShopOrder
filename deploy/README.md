@@ -92,13 +92,44 @@ docker compose -f docker-compose.prod.yml logs -f frontend
 curl https://2zg.site/health
 ```
 
-### 更新服务（以 backend 为例）
+### 更新 backend（本地构建 jar → 上传 → 服务器组装运行镜像）
+
+> 后端 Dockerfile 的 Maven 阶段要在容器内从 Maven Central 全量拉依赖：服务器直连实测 ~126 KB/s，
+> 冷启动 1 小时起步，2C2G 下编译还易 OOM；且该流程依赖 Docker 层缓存（pom 未变则跳过拉依赖），
+> 缓存一旦被 prune 清掉就必然回到冷启动（2026-09-26 实测卡死 30 分钟+，CPU 空转纯等网络）。
+> 因此 backend 与 frontend 同策略（2026-09-26 拍板）：**本地构建，服务器只组装运行镜像**。
+
 ```bash
-cd /home/ubuntu/PetShopOrder
-git pull
-cd deploy
-docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build backend
+bash deploy/deploy-backend.sh
 ```
+
+等价手工流程：
+
+```bash
+# 1) 本地打包
+cd backend && mvn -q clean package -DskipTests && cd ..
+# 2) 上传 jar 与运行时 Dockerfile
+scp backend/target/app.jar ubuntu@106.53.178.130:~/PetShopOrder/backend/app-deploy.jar
+scp backend/Dockerfile.runtime ubuntu@106.53.178.130:~/PetShopOrder/backend/Dockerfile.runtime
+# 3) 服务器组装运行镜像（秒级，运行阶段配置与 Dockerfile 完全一致）
+ssh ubuntu@106.53.178.130 "cd ~/PetShopOrder/backend && docker build -f Dockerfile.runtime -t deploy-backend:latest ."
+# 4) 重建容器（--no-deps/--no-build 防 compose 连带构建其它服务）
+ssh ubuntu@106.53.178.130 "cd ~/PetShopOrder/deploy && docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --no-deps --no-build backend"
+# 5) 健康检查
+ssh ubuntu@106.53.178.130 "docker inspect --format '{{.State.Health.Status}}' petorder-backend"
+```
+
+> ⚠️ `backend/Dockerfile.runtime` 与 `backend/Dockerfile` 的运行阶段必须逐行一致
+> （JVM 参数、healthcheck、时区、非 root 用户），改其中一份必须同步另一份。
+
+#### 应急：服务器端构建 backend（本地机器不可用时，慎用）
+
+```bash
+ssh ubuntu@106.53.178.130 "cd ~/PetShopOrder && git pull && cd deploy && docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build backend"
+```
+
+> 仅限应急：Maven Central 直连限速，层缓存冷启动后 1 小时起步。
+> 确需走此路径，先给 `backend/Dockerfile` 配阿里云 Maven 镜像源（settings.xml mirror）再执行。
 
 ### 更新前端（H5 / Admin：本地构建 → 上传产物 → 重建容器）
 

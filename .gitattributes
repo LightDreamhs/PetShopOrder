@@ -3,3 +3,5 @@
 # 导致服务器 bash 脚本（shebang ^M）或 nginx 配置解析异常。
 *.sh   text eol=lf
 *.conf text eol=lf
+# Dockerfile 会被 deploy 脚本直接 scp 到服务器构建，CRLF 会破坏 RUN 续行符
+Dockerfile* text eol=lf

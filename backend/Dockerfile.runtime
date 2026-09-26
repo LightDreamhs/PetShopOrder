@@ -1,0 +1,27 @@
+# backend 运行时镜像（配合 deploy/deploy-backend.sh 使用）
+# 与 Dockerfile 的运行阶段逐行一致，仅 COPY 来源不同：使用本地构建后上传的 app-deploy.jar，
+# 跳过服务器上跑不动的 Maven 阶段（原因见 deploy/README.md「更新 backend」）。
+# ⚠️ 运行时配置（JVM 参数/healthcheck/时区/非 root 用户）变更时，必须与 Dockerfile 同步修改！
+FROM eclipse-temurin:17-jre-alpine
+
+# 时区设为上海，避免订单 create_time 回退 UTC（曾导致 Admin 新订单不弹通知）
+ENV TZ=Asia/Shanghai
+RUN apk add --no-cache tzdata curl && \
+    cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+    echo "Asia/Shanghai" > /etc/timezone
+
+# 非 root 用户（uid 1000，与宿主机 /data/petshop 的 owner 对齐，保证 uploads 写入权限）
+RUN addgroup -g 1000 -S app && adduser -u 1000 -S app -G app
+WORKDIR /app
+RUN mkdir -p /app/uploads && chown -R app:app /app
+COPY app-deploy.jar /app/app.jar
+USER app
+
+# JVM 内存上限（单机与 mysql 共存，限制堆避免争用）+ 时区
+ENV JAVA_OPTS="-Xmx512m -Duser.timezone=Asia/Shanghai"
+EXPOSE 8080
+
+# 容器健康探针：调用 /health 端点（HealthController）
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+  CMD curl -fsS http://localhost:8080/health || exit 1
+ENTRYPOINT ["sh","-c","exec java $JAVA_OPTS -jar /app/app.jar"]
