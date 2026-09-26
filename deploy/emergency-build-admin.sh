@@ -16,5 +16,5 @@ docker run --rm \
   sh -c 'npm i -g pnpm@11.9.0 --registry=https://registry.npmmirror.com && pnpm install --frozen-lockfile && pnpm build'
 
 echo ""
-echo "✅ admin 构建完成且自检通过。重建 frontend 容器："
-echo "  cd ~/PetShopOrder/deploy && docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build frontend"
+echo "✅ admin 构建完成且自检通过。重建 frontend 容器（--no-deps 防止连带构建 backend）："
+echo "  cd ~/PetShopOrder/deploy && docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build --no-deps frontend"

@@ -124,7 +124,9 @@ scp -r frontend/h5/dist/.  ubuntu@106.53.178.130:~/PetShopOrder/frontend/h5/dist
 scp -r frontend/admin/dist/. ubuntu@106.53.178.130:~/PetShopOrder/frontend/admin/dist/
 
 # 3) 服务器重建 frontend 容器（纯 COPY，秒级）
-ssh ubuntu@106.53.178.130 "cd ~/PetShopOrder/deploy && docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build frontend"
+#    ⚠️ --no-deps 必须：compose 的 up --build 会把 depends_on 的 backend 拉进构建集，
+#    在服务器上跑完整 Maven 构建（慢、易 OOM，2026-09-26 实测踩坑）
+ssh ubuntu@106.53.178.130 "cd ~/PetShopOrder/deploy && docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build --no-deps frontend"
 ```
 
 > ⚠️ `Dockerfile.frontend` 不要加 `# syntax=docker/dockerfile:1` 之类的 BuildKit 声明：
