@@ -111,7 +111,7 @@
 | 文件 | 用途 | 状态 |
 |---|---|---|
 | `backend/Dockerfile` | 后端镜像多阶段构建（maven→jre-alpine），非 root 运行 | ✅ |
-| `deploy/Dockerfile.frontend` | 前端三阶段构建（H5 + Admin 注入 `VITE_BASE_URL=/petshop-admin-7x9k2/` + nginx） | ✅ |
+| `deploy/Dockerfile.frontend` | 前端镜像（仅 COPY 本地构建的 H5/Admin 产物 + nginx；admin base 写死在 vite.config.ts） | ✅ |
 | `deploy/nginx.conf` | 完整 HTTPS 版（443 + 80→443 跳转 + www→根域跳转 + 隐秘路径 + 安全响应头） | ✅ |
 | `deploy/nginx.http-only.conf` | 首次申请证书专用（仅 80 + acme-challenge 目录） | ✅ |
 | `deploy/docker-compose.prod.yml` | 三容器编排（mysql + backend + frontend），挂载证书目录 | ✅ |
@@ -133,7 +133,7 @@
 - gzip、`client_max_body_size 10m`、健康检查 `/health`
 
 ### 已完成的前端改造 ✅
-- `frontend/admin/vite.config.ts` 已加 `base: process.env.VITE_BASE_URL || '/'`，构建验证通过
+- `frontend/admin/vite.config.ts` base 写死 `'/petshop-admin-7x9k2/'`（`VITE_BASE_URL`/`--base` 注入已废弃：Git Bash MSYS 路径转换会污染产物），构建末尾自动跑 `scripts/check-dist.mjs` 产物自检
 
 ---
 
@@ -169,7 +169,7 @@
 ## 6. 本地验证 ✅
 
 - [x] 后端 `mvn clean package -DskipTests` 确认 jar 产出 + 模块 B 改造无误
-- [x] 前端 admin 带 `VITE_BASE_URL=/petshop-admin-7x9k2/` 构建正确（已验证一次）
+- [x] 前端 admin base 改为 vite.config.ts 写死并加产物自检（原 `VITE_BASE_URL` 注入方式在 Git Bash 下会被 MSYS 转换污染产物，已废弃）
 - [x] （可选）Docker 镜像本地构建通过
 
 ---

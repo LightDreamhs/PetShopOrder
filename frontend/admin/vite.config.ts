@@ -6,9 +6,11 @@ import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig({
-  // 默认根路径（本地开发）；Docker 构建时通过环境变量注入隐秘路径，
-  // 例如 VITE_BASE_URL=/petshop-admin-7x9k2/，避免 admin 入口被直接猜测
-  base: process.env.VITE_BASE_URL || '/',
+  // 隐秘路径写死在配置里，避免 admin 入口被直接猜测。
+  // 禁止改回 VITE_BASE_URL 环境变量或 --base 命令行传参：Git Bash（MSYS）会把
+  // 以 / 开头的值自动转换成 C:/Program Files/Git/...，污染构建产物（白屏根因）。
+  // 副作用：本地 dev 访问地址为 http://localhost:3001/petshop-admin-7x9k2/
+  base: '/petshop-admin-7x9k2/',
   plugins: [
     vue(),
     AutoImport({

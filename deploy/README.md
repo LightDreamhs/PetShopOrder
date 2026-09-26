@@ -105,19 +105,42 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build bac
 > 服务器 2C2G 跑不动 node 构建（2026-09-23 拍板）：前端一律**本地构建**，
 > `Dockerfile.frontend` 只 COPY 产物（`.dockerignore` 已放行 `frontend/{h5,admin}/dist`）。
 > 注意：服务器上 `git pull` 只更新代码，**前端产物必须按下面步骤单独上传**。
+>
+> ⚠️ admin 的 base 写死在 `frontend/admin/vite.config.ts`（`/petshop-admin-7x9k2/`），
+> **禁止**再用 `VITE_BASE_URL=...` 环境变量或 `--base /...` 命令行参数注入：
+> Git Bash（MSYS）会把以 `/` 开头的值自动转换成 `C:/Program Files/Git/...`，污染构建产物导致白屏
+> （2026-09-26 白屏事故根因）。admin 构建末尾会自动跑 `scripts/check-dist.mjs` 拦截坏产物。
 
 ```bash
-# 1) 本地构建（Git Bash，项目根目录）
-cd frontend/h5 && pnpm build && cd ../admin && VITE_BASE_URL=/petshop-admin-7x9k2/ pnpm build && cd ../..
+# 1) 本地构建（Git Bash，项目根目录；admin 构建末尾自动执行产物自检）
+cd frontend/h5 && pnpm build && cd ../admin && pnpm build && cd ../..
 
 # 2) 上传产物（dist/. 写法保证覆盖内容而不嵌套目录）
-ssh ubuntu@106.53.178.130 "mkdir -p ~/PetShopOrder/frontend/h5/dist ~/PetShopOrder/frontend/admin/dist"
+#    admin：先清空远端目录再传，避免旧 hash 文件残留
+#    H5：⚠️ 只做覆盖上传、禁止清空重建——线上 H5 产物可能含站外机器的修复，
+#        上传前先比对 md5：本地 md5sum frontend/h5/dist/index.html vs 服务器同路径
+ssh ubuntu@106.53.178.130 "rm -rf ~/PetShopOrder/frontend/admin/dist && mkdir -p ~/PetShopOrder/frontend/admin/dist ~/PetShopOrder/frontend/h5/dist"
 scp -r frontend/h5/dist/.  ubuntu@106.53.178.130:~/PetShopOrder/frontend/h5/dist/
 scp -r frontend/admin/dist/. ubuntu@106.53.178.130:~/PetShopOrder/frontend/admin/dist/
 
 # 3) 服务器重建 frontend 容器（纯 COPY，秒级）
 ssh ubuntu@106.53.178.130 "cd ~/PetShopOrder/deploy && docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build frontend"
 ```
+
+> ⚠️ `Dockerfile.frontend` 不要加 `# syntax=docker/dockerfile:1` 之类的 BuildKit 声明：
+> 服务器访问 Docker Hub 被墙、腾讯镜像源不含 BuildKit frontend 镜像，加了之后
+> `--build` 会永久卡死（2026-09-26 实测并已移除）。正常情况 `--build` 应秒级完成。
+
+#### 应急：服务器端构建 admin（本地机器不可用时）
+
+服务器 2C2G + swap 4G 可跑通单个前端项目构建（2026-09-26 实测），用 node 容器构建、不污染宿主机：
+
+```bash
+ssh ubuntu@106.53.178.130 "cd ~/PetShopOrder && git pull && bash deploy/emergency-build-admin.sh"
+# 构建成功后重建容器（命令同上第 3 步）
+```
+
+H5 没有应急构建脚本：见上方「H5 产物以服务器为准」警告，勿在服务器上重建 H5。
 
 ### 重启服务
 ```bash

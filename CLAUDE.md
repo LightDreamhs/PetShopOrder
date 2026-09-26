@@ -7,14 +7,14 @@
 | **IP** | 106.53.178.130 (腾讯云 Ubuntu) |
 | **SSH** | `ssh ubuntu@106.53.178.130` |
 | **Docker** | 27.5.1 / Compose v2.32.4 |
-| **规格** | 2C2G（内存紧张档：已禁用 fwupd 回收 200MB；Redis 需 maxmemory 256mb + noeviction + AOF） |
+| **规格** | 2C2G + swap 4G（/swap.img 2G + /swapfile2 2G，2026-09-26 扩容以支持应急构建；已禁用 fwupd 回收 200MB；Redis 需 maxmemory 256mb + noeviction + AOF） |
 
 ---
 
 ## 包管理器
 
 - 前端使用 **pnpm**，不是 npm
-- 前端（H5/Admin）**本地构建后上传产物**部署，服务器不做 node 构建（`deploy/Dockerfile.frontend` 仅 COPY dist；流程见 `deploy/README.md`「更新前端」）
+- 前端（H5/Admin）**本地构建后上传产物**部署（`deploy/Dockerfile.frontend` 仅 COPY dist；流程见 `deploy/README.md`「更新前端」）。admin base 写死在 vite.config.ts，禁止 VITE_BASE_URL/--base 注入（Git Bash MSYS 会污染产物）。应急时服务器可用 node 容器构建 admin（`deploy/emergency-build-admin.sh`）；H5 产物以服务器为准勿轻动；Dockerfile 禁止加 `# syntax=` 声明（服务器访问 Docker Hub 被墙会卡死 build）
 
 ## 数据库表结构
 
